@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M20 15L35 30L20 45" stroke="#E50914" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M45 15L30 30L45 45" stroke="#E50914" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="60" y="35" font-family="Poppins" font-size="24" font-weight="600" fill="#1A1A1A">KRISTAL</text>
+  <text x="60" y="50" font-family="Poppins" font-size="12" font-weight="500" fill="#E50914">STREAMS</text>
+  <text x="120" y="50" font-family="Poppins" font-size="10" font-weight="400" fill="#666666">IPTV</text>
+</svg>

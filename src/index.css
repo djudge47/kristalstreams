@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-color: #e50914;
+  --dark-100: #1a1a1a;
+  --dark-200: #141414;
+  --dark-300: #0a0a0a;
+}
+
+@layer base {
+  body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--dark-300);
+    color: #fff;
+  }
+}
+
+@layer components {
+  .gradient-overlay {
+    @apply absolute inset-0 bg-gradient-to-t from-dark-300 via-dark-300/50 to-transparent;
+  }
+
+  .card {
+    @apply bg-dark-100 rounded-xl border border-gray-800 overflow-hidden transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply hover:border-primary hover:shadow-lg hover:shadow-primary/10 transform hover:-translate-y-1 transition-all duration-300;
+  }
+
+  .btn-primary {
+    @apply bg-primary hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium 
+           transition-all duration-300 hover:shadow-lg hover:shadow-primary/20;
+  }
+
+  .btn-secondary {
+    @apply border border-primary text-primary hover:bg-primary hover:text-white 
+           px-6 py-3 rounded-lg font-medium transition-all duration-300;
+  }
+
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-spacing {
+    @apply py-16 md:py-24;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300;
+  }
+}
