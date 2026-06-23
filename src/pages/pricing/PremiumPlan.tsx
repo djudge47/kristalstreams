@@ -90,7 +90,6 @@ const PremiumPlan: React.FC = () => {
                     </button>
                   ))}
                 </div>
-              </div>
 
               <div className="text-red-400 font-medium">
                 {selectedConnections} Connection{selectedConnections > 1 ? 's' : ''} • 6 Months

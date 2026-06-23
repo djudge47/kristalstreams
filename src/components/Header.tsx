@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo, useCallback } from 'react';
-import { Menu, X, User, Home, ChevronDown, PlayCircle, Facebook, Twitter, Instagram, Youtube, Smartphone } from 'lucide-react';
+import { Menu, X, User, Home, ChevronDown, Facebook, Twitter, Instagram, Youtube, Smartphone } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -67,7 +67,7 @@ const Header: React.FC = memo(() => {
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
             <Link to="/" className="flex items-center text-2xl font-bold text-primary">
-              <PlayCircle className="w-8 h-8 mr-2" />
+              <img src="/logo/ks-mark.png" alt="Kristal Streams" className="h-9 w-auto mr-2" />
               Kristal Streams
             </Link>
           </div>

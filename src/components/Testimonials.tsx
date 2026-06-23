@@ -24,8 +24,7 @@ const testimonials: Testimonial[] = [
     name: 'Michael Stevens',
     title: 'Tech Enthusiast',
     content: 'I love getting the newest Kristal Streams model every 24 months with the Premium plan. The technology keeps improving, and I never have to worry about my device becoming outdated. The mapping technology is especially impressive.',
-    avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=600',scription makes sense. I started with the Basic plan, but upgraded to Standard for the smart mapping. Being able to schedule cleaning when I\'m at work is fantastic.',
-    avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=600',
+    avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=600',
     rating: 5
   },
 ];

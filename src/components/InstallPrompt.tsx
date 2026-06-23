@@ -10,10 +10,13 @@ const InstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isAndroidDevice = /Android/.test(navigator.userAgent);
     setIsIOS(isIOSDevice);
+    setIsAndroid(isAndroidDevice);
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const hasBeenDismissed = localStorage.getItem('installPromptDismissed');
@@ -29,6 +32,12 @@ const InstallPrompt: React.FC = () => {
         };
 
         window.addEventListener('beforeinstallprompt', handler);
+
+        // Android: show the prompt even if beforeinstallprompt never fires
+        // (so the APK download option is still reachable)
+        if (isAndroidDevice) {
+          setTimeout(() => setShowPrompt(true), 3000);
+        }
 
         return () => window.removeEventListener('beforeinstallprompt', handler);
       }
@@ -103,6 +112,37 @@ const InstallPrompt: React.FC = () => {
               <li>Scroll down and tap "Add to Home Screen"</li>
               <li>Tap "Add" in the top right</li>
             </ol>
+          </div>
+        ) : isAndroid ? (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <button
+                onClick={handleDismiss}
+                className="flex-1 px-4 py-2.5 bg-dark-200 hover:bg-dark-300 text-white rounded-lg transition-colors font-medium"
+              >
+                Not Now
+              </button>
+              {deferredPrompt && (
+                <button
+                  onClick={handleInstall}
+                  className="flex-1 px-4 py-2.5 bg-dark-200 hover:bg-dark-300 border border-gray-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  Web App
+                </button>
+              )}
+              <a
+                href="/downloads/KristalStream.apk"
+                download
+                onClick={handleDismiss}
+                className="flex-1 px-4 py-2.5 bg-primary hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                <Download size={18} />
+                Get APK
+              </a>
+            </div>
+            <p className="text-xs text-gray-500 text-center">
+              APK installs directly — allow "unknown sources" if prompted
+            </p>
           </div>
         ) : (
           <div className="flex gap-2">

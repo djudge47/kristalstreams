@@ -90,7 +90,6 @@ const BasicPlan: React.FC = () => {
                     </button>
                   ))}
                 </div>
-              </div>
 
               <div className="text-blue-400 font-medium">
                 {selectedConnections} Connection{selectedConnections > 1 ? 's' : ''} • 1 Month

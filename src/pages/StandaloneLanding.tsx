@@ -15,7 +15,6 @@ import {
   Award,
   ChevronLeft,
   ChevronRight,
-  PlayCircle,
   Facebook,
   Twitter,
   Instagram,
@@ -123,7 +122,7 @@ const StandaloneLanding: React.FC = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center text-2xl font-bold text-red-500">
-              <PlayCircle className="w-8 h-8 mr-2" />
+              <img src="/logo/ks-mark.png" alt="Kristal Streams" className="h-9 w-auto mr-2" />
               Kristal Streams
             </div>
             <div className="flex items-center space-x-4">

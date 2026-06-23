@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Download, Smartphone, Monitor, Tv, Apple, PlayCircle, Chrome, Wifi, Zap, Lock, Bell, HardDrive, CheckCircle } from 'lucide-react';
+import { Download, Smartphone, Monitor, Tv, Apple, Chrome, Wifi, Zap, Lock, Bell, HardDrive, CheckCircle } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -26,9 +26,9 @@ const appDownloads: AppDownload[] = [
     platform: 'Android',
     icon: <Smartphone className="w-8 h-8 text-green-500" />,
     description: 'Stream on your Android phone or tablet with our optimized mobile app.',
-    downloadUrl: '#',
-    version: '2.1.0',
-    size: '45 MB',
+    downloadUrl: '/downloads/KristalStream.apk',
+    version: '1.0.0',
+    size: '8.2 MB',
     requirements: 'Android 7.0+',
     features: [
       'HD & 4K streaming',
@@ -193,6 +193,32 @@ const DownloadApp: React.FC = () => {
             </p>
           </div>
 
+          {/* Android APK Download — Live */}
+          <div className="bg-gradient-to-r from-green-500/10 to-green-500/5 rounded-2xl p-8 border border-green-500/30 mb-16">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-green-500/20 w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Smartphone className="w-8 h-8 text-green-500" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-1">Kristal Streams for Android</h2>
+                  <p className="text-gray-400">Version {appDownloads[0].version} · {appDownloads[0].size} · Android 7.0+</p>
+                </div>
+              </div>
+              <a
+                href={appDownloads[0].downloadUrl}
+                download
+                className="bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2 whitespace-nowrap"
+              >
+                <Download className="w-5 h-5" />
+                Download APK
+              </a>
+            </div>
+            <p className="text-sm text-gray-500 mt-4">
+              This installs directly from our website, not the Play Store. You may need to allow "Install from unknown sources" in your Android settings.
+            </p>
+          </div>
+
           {/* PWA Install Section */}
           {isInstalled ? (
             <div className="bg-gradient-to-r from-green-500/20 to-green-500/10 rounded-2xl p-8 border border-green-500/30 mb-16">
@@ -209,7 +235,7 @@ const DownloadApp: React.FC = () => {
           ) : (
             <div className="bg-gradient-to-r from-primary/20 to-primary/10 rounded-2xl p-8 border border-primary/30 mb-16">
               <div className="text-center">
-                <PlayCircle className="w-16 h-16 text-primary mx-auto mb-4" />
+                <img src="/logo/ks-mark.png" alt="Kristal Streams" className="h-16 w-auto mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-white mb-4">Install Kristal Streams App</h2>
                 <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
                   Install our Progressive Web App for the best experience. Works on all devices with app-like features,
