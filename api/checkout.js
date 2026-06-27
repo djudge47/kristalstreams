@@ -1,4 +1,4 @@
-const Stripe = require('stripe');
+import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -9,7 +9,7 @@ const planNames = {
   ultimate: 'Platinum Plan',
 };
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -56,4 +56,4 @@ module.exports = async function handler(req, res) {
     console.error('Checkout error:', error);
     return res.status(500).json({ error: error.message });
   }
-};
+}
