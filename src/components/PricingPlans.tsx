@@ -133,7 +133,17 @@ export default function PricingPlans() {
                     {plan.devices.map((device) => (
                       <div
                         key={device.count}
-                        className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.03] px-3 py-3"
+                        onClick={() =>
+                          navigate(`/pricing/${plan.name.toLowerCase()}`, {
+                            state: {
+                              tier: plan.name.toLowerCase(),
+                              months: plan.name === 'Bronze' ? 1 : plan.name === 'Silver' ? 3 : plan.name === 'Gold' ? 6 : 12,
+                              connections: device.count,
+                              duration: plan.duration
+                            }
+                          })
+                        }
+                        className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.03] px-3 py-3 cursor-pointer hover:bg-white/10 transition"
                       >
                         <span className="text-sm text-zinc-300">
                           {device.count} Connection
@@ -173,7 +183,7 @@ export default function PricingPlans() {
                       state: {
                         tier: plan.name.toLowerCase(),
                         months: plan.name === 'Bronze' ? 1 : plan.name === 'Silver' ? 3 : plan.name === 'Gold' ? 6 : 12,
-                        connections: plan.name === 'Bronze' ? 1 : plan.name === 'Silver' ? 2 : plan.name === 'Gold' ? 3 : 4,
+                        connections: 1,
                         duration: plan.duration
                       }
                     })
