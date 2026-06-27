@@ -3,78 +3,102 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import InstallPrompt from './components/InstallPrompt'
 
+// Auto-retry for lazy imports when chunks fail to load after a deploy
+function lazyRetry(importFn: () => Promise<any>) {
+  return lazy(() =>
+    importFn().catch(() => {
+      // Chunk failed to load — likely a new deploy changed file names
+      // Reload the page once to get fresh files
+      const hasReloaded = sessionStorage.getItem('chunk-reload');
+      if (!hasReloaded) {
+        sessionStorage.setItem('chunk-reload', 'true');
+        window.location.reload();
+        return { default: () => null };
+      }
+      sessionStorage.removeItem('chunk-reload');
+      // If reload didn't fix it, show error
+      return { default: () => React.createElement('div', { className: 'min-h-screen flex items-center justify-center bg-gray-900' },
+        React.createElement('div', { className: 'text-center' },
+          React.createElement('p', { className: 'text-white text-xl mb-4' }, 'Page failed to load'),
+          React.createElement('button', { onClick: () => window.location.reload(), className: 'bg-red-600 text-white px-6 py-2 rounded-lg' }, 'Reload')
+        )
+      )};
+    })
+  );
+}
 
-const Home = lazy(() => import('./pages/Home'));
-const Pricing = lazy(() => import('./pages/Pricing'));
-const Support = lazy(() => import('./pages/Support'));
-const FreeTrial = lazy(() => import('./pages/FreeTrial'));
-const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const LandingPage = lazy(() => import('./pages/LandingPage'));
-const StandaloneLanding = lazy(() => import('./pages/StandaloneLanding'));
-const Privacy = lazy(() => import('./pages/Privacy'));
-const Terms = lazy(() => import('./pages/Terms'));
-const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
-const Testimonials = lazy(() => import('./pages/Testimonials'));
-const CookiePolicy = lazy(() => import('./pages/CookiePolicy'));
-const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase'));
-const CheckoutPage = lazy(() => import('./pages/pricing/CheckoutPage'));
-const PPV = lazy(() => import('./pages/PPV'));
-const ContentDetail = lazy(() => import('./pages/ContentDetail'));
-const AboutUs = lazy(() => import('./pages/AboutUs'));
-const OurServices = lazy(() => import('./pages/OurServices'));
-const WebTVPlayer = lazy(() => import('./pages/WebTVPlayer'));
-const Reselling = lazy(() => import('./pages/Reselling'));
 
-const GettingStarted = lazy(() => import('./pages/support/GettingStarted'));
-const Billing = lazy(() => import('./pages/support/Billing'));
-const StreamingHelp = lazy(() => import('./pages/support/StreamingHelp'));
-const DeviceSetup = lazy(() => import('./pages/support/DeviceSetup'));
-const NetworkHelp = lazy(() => import('./pages/support/NetworkHelp'));
-const SystemStatus = lazy(() => import('./pages/support/SystemStatus'));
-const Article = lazy(() => import('./pages/support/Article'));
-const SpeedTest = lazy(() => import('./pages/support/SpeedTest'));
-const Guide = lazy(() => import('./pages/support/Guide'));
-const AIChat = lazy(() => import('./pages/support/AIChat'));
-const DownloadApp = lazy(() => import('./pages/DownloadApp'));
-const News = lazy(() => import('./pages/News'));
+const Home = lazyRetry(() => import('./pages/Home'));
+const Pricing = lazyRetry(() => import('./pages/Pricing'));
+const Support = lazyRetry(() => import('./pages/Support'));
+const FreeTrial = lazyRetry(() => import('./pages/FreeTrial'));
+const Login = lazyRetry(() => import('./pages/Login'));
+const Register = lazyRetry(() => import('./pages/Register'));
+const Dashboard = lazyRetry(() => import('./pages/Dashboard'));
+const LandingPage = lazyRetry(() => import('./pages/LandingPage'));
+const StandaloneLanding = lazyRetry(() => import('./pages/StandaloneLanding'));
+const Privacy = lazyRetry(() => import('./pages/Privacy'));
+const Terms = lazyRetry(() => import('./pages/Terms'));
+const RefundPolicy = lazyRetry(() => import('./pages/RefundPolicy'));
+const Testimonials = lazyRetry(() => import('./pages/Testimonials'));
+const CookiePolicy = lazyRetry(() => import('./pages/CookiePolicy'));
+const KnowledgeBase = lazyRetry(() => import('./pages/KnowledgeBase'));
+const CheckoutPage = lazyRetry(() => import('./pages/pricing/CheckoutPage'));
+const PPV = lazyRetry(() => import('./pages/PPV'));
+const ContentDetail = lazyRetry(() => import('./pages/ContentDetail'));
+const AboutUs = lazyRetry(() => import('./pages/AboutUs'));
+const OurServices = lazyRetry(() => import('./pages/OurServices'));
+const WebTVPlayer = lazyRetry(() => import('./pages/WebTVPlayer'));
+const Reselling = lazyRetry(() => import('./pages/Reselling'));
 
-const ClientLayout = lazy(() => import('./pages/client/ClientLayout'));
-const ClientAccount = lazy(() => import('./pages/client/ClientAccount'));
-const ClientSubscription = lazy(() => import('./pages/client/ClientSubscription'));
-const ClientDevices = lazy(() => import('./pages/client/ClientDevices'));
-const ClientHistory = lazy(() => import('./pages/client/ClientHistory'));
-const ClientSecurity = lazy(() => import('./pages/client/ClientSecurity'));
-const ClientSettings = lazy(() => import('./pages/client/ClientSettings'));
-const ClientSupport = lazy(() => import('./pages/client/ClientSupport'));
-const NewTicket = lazy(() => import('./pages/client/NewTicket'));
+const GettingStarted = lazyRetry(() => import('./pages/support/GettingStarted'));
+const Billing = lazyRetry(() => import('./pages/support/Billing'));
+const StreamingHelp = lazyRetry(() => import('./pages/support/StreamingHelp'));
+const DeviceSetup = lazyRetry(() => import('./pages/support/DeviceSetup'));
+const NetworkHelp = lazyRetry(() => import('./pages/support/NetworkHelp'));
+const SystemStatus = lazyRetry(() => import('./pages/support/SystemStatus'));
+const Article = lazyRetry(() => import('./pages/support/Article'));
+const SpeedTest = lazyRetry(() => import('./pages/support/SpeedTest'));
+const Guide = lazyRetry(() => import('./pages/support/Guide'));
+const AIChat = lazyRetry(() => import('./pages/support/AIChat'));
+const DownloadApp = lazyRetry(() => import('./pages/DownloadApp'));
+const News = lazyRetry(() => import('./pages/News'));
 
-const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
-const ChannelManager = lazy(() => import('./pages/admin/ChannelManager'));
-const AdminCustomers = lazy(() => import('./pages/admin/Customers'));
-const AdminTickets = lazy(() => import('./pages/admin/SupportTickets'));
-const AdminAnalytics = lazy(() => import('./pages/admin/Analytics'));
-const AdminSlider = lazy(() => import('./pages/admin/SliderManager'));
-const AdminDemoReel = lazy(() => import('./pages/admin/DemoReelManager'));
-const AdminSchedule = lazy(() => import('./pages/admin/ScheduleManager'));
-const AdminPrograms = lazy(() => import('./pages/admin/ProgramManager'));
-const CRMDashboard = lazy(() => import('./pages/admin/CRMDashboard'));
-const CRMContacts = lazy(() => import('./pages/admin/Contacts'));
-const CRMCompanies = lazy(() => import('./pages/admin/Companies'));
-const CRMDeals = lazy(() => import('./pages/admin/Deals'));
-const CRMActivities = lazy(() => import('./pages/admin/Activities'));
+const ClientLayout = lazyRetry(() => import('./pages/client/ClientLayout'));
+const ClientAccount = lazyRetry(() => import('./pages/client/ClientAccount'));
+const ClientSubscription = lazyRetry(() => import('./pages/client/ClientSubscription'));
+const ClientDevices = lazyRetry(() => import('./pages/client/ClientDevices'));
+const ClientHistory = lazyRetry(() => import('./pages/client/ClientHistory'));
+const ClientSecurity = lazyRetry(() => import('./pages/client/ClientSecurity'));
+const ClientSettings = lazyRetry(() => import('./pages/client/ClientSettings'));
+const ClientSupport = lazyRetry(() => import('./pages/client/ClientSupport'));
+const NewTicket = lazyRetry(() => import('./pages/client/NewTicket'));
 
-const BasicPlan = lazy(() => import('./pages/pricing/BasicPlan'));
-const StandardPlan = lazy(() => import('./pages/pricing/StandardPlan'));
-const PremiumPlan = lazy(() => import('./pages/pricing/PremiumPlan'));
-const UltimatePlan = lazy(() => import('./pages/pricing/UltimatePlan'));
-const AdultPlan = lazy(() => import('./pages/pricing/AdultPlan'));
-const BronzePlan = lazy(() => import('./pages/pricing/BronzePlan'));
-const SilverPlan = lazy(() => import('./pages/pricing/SilverPlan'));
-const GoldPlan = lazy(() => import('./pages/pricing/GoldPlan'));
-const PlatinumPlan = lazy(() => import('./pages/pricing/PlatinumPlan'));
+const AdminLayout = lazyRetry(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard = lazyRetry(() => import('./pages/admin/AdminDashboard'));
+const ChannelManager = lazyRetry(() => import('./pages/admin/ChannelManager'));
+const AdminCustomers = lazyRetry(() => import('./pages/admin/Customers'));
+const AdminTickets = lazyRetry(() => import('./pages/admin/SupportTickets'));
+const AdminAnalytics = lazyRetry(() => import('./pages/admin/Analytics'));
+const AdminSlider = lazyRetry(() => import('./pages/admin/SliderManager'));
+const AdminDemoReel = lazyRetry(() => import('./pages/admin/DemoReelManager'));
+const AdminSchedule = lazyRetry(() => import('./pages/admin/ScheduleManager'));
+const AdminPrograms = lazyRetry(() => import('./pages/admin/ProgramManager'));
+const CRMDashboard = lazyRetry(() => import('./pages/admin/CRMDashboard'));
+const CRMContacts = lazyRetry(() => import('./pages/admin/Contacts'));
+const CRMCompanies = lazyRetry(() => import('./pages/admin/Companies'));
+const CRMDeals = lazyRetry(() => import('./pages/admin/Deals'));
+const CRMActivities = lazyRetry(() => import('./pages/admin/Activities'));
+
+const BasicPlan = lazyRetry(() => import('./pages/pricing/BasicPlan'));
+const StandardPlan = lazyRetry(() => import('./pages/pricing/StandardPlan'));
+const PremiumPlan = lazyRetry(() => import('./pages/pricing/PremiumPlan'));
+const UltimatePlan = lazyRetry(() => import('./pages/pricing/UltimatePlan'));
+const AdultPlan = lazyRetry(() => import('./pages/pricing/AdultPlan'));
+const BronzePlan = lazyRetry(() => import('./pages/pricing/BronzePlan'));
+const SilverPlan = lazyRetry(() => import('./pages/pricing/SilverPlan'));
+const GoldPlan = lazyRetry(() => import('./pages/pricing/GoldPlan'));
+const PlatinumPlan = lazyRetry(() => import('./pages/pricing/PlatinumPlan'));
 
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-900">
@@ -86,6 +110,9 @@ const LoadingFallback = () => (
 );
 
 function App() {
+  // Clear chunk reload flag on successful load
+  sessionStorage.removeItem('chunk-reload');
+  
   return (
     <Router>
       <InstallPrompt />
