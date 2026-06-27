@@ -58,11 +58,20 @@ const Dashboard: React.FC = () => {
 
     const getProfile = async () => {
       try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        // Wait for auth to settle (fixes Google OAuth double-entry)
+        let user = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data, error: authError } = await supabase.auth.getUser();
+          if (!authError && data.user) {
+            user = data.user;
+            break;
+          }
+          // Wait a moment for auth to settle
+          await new Promise(r => setTimeout(r, 500));
+        }
         
-        if (authError) throw authError;
         if (!user) {
-          navigate('/login');
+          if (mounted) navigate('/login');
           return;
         }
 
