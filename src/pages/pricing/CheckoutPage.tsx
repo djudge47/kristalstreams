@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createCheckoutSession } from '../../lib/stripe';
-import { getProductConfig } from '../../lib/stripe-config';
 import { Loader } from 'lucide-react';
 
 interface LocationState {
-  plan: 'basic' | 'standard' | 'premium' | 'ultimate';
-  interval: 'monthly' | 'yearly';
+  plan: string;
+  interval: string;
   price: number;
 }
 
@@ -28,29 +27,10 @@ const CheckoutPage: React.FC = () => {
       setError(null);
       
       try {
-        console.log('Starting checkout with:', {
-          plan: state.plan,
-          interval: state.interval,
-          price: state.price
-        });
-        
-        const productConfig = getProductConfig(state.plan, state.interval);
-        if (!productConfig) {
-          throw new Error('Invalid product configuration');
-        }
-        await createCheckoutSession(productConfig.priceId, productConfig.mode);
+        await createCheckoutSession(state.plan, state.price, state.interval);
       } catch (err) {
         console.error('Checkout error:', err);
-        let errorMessage = 'Failed to start checkout process. Please try again later.';
-        
-        if (err instanceof Error) {
-          if (err.message.includes('Unable to connect to Stripe checkout service')) {
-            errorMessage = 'Unable to connect to the payment service. Please ensure you are connected to Supabase and try again.';
-          } else {
-            errorMessage = err.message;
-          }
-        }
-        
+        const errorMessage = err instanceof Error ? err.message : 'Failed to start checkout. Please try again.';
         setError(errorMessage);
         setLoading(false);
       }
