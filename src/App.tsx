@@ -50,6 +50,22 @@ const ClientSettings = lazy(() => import('./pages/client/ClientSettings'));
 const ClientSupport = lazy(() => import('./pages/client/ClientSupport'));
 const NewTicket = lazy(() => import('./pages/client/NewTicket'));
 
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const ChannelManager = lazy(() => import('./pages/admin/ChannelManager'));
+const AdminCustomers = lazy(() => import('./pages/admin/Customers'));
+const AdminTickets = lazy(() => import('./pages/admin/SupportTickets'));
+const AdminAnalytics = lazy(() => import('./pages/admin/Analytics'));
+const AdminSlider = lazy(() => import('./pages/admin/SliderManager'));
+const AdminDemoReel = lazy(() => import('./pages/admin/DemoReelManager'));
+const AdminSchedule = lazy(() => import('./pages/admin/ScheduleManager'));
+const AdminPrograms = lazy(() => import('./pages/admin/ProgramManager'));
+const CRMDashboard = lazy(() => import('./pages/admin/CRMDashboard'));
+const CRMContacts = lazy(() => import('./pages/admin/Contacts'));
+const CRMCompanies = lazy(() => import('./pages/admin/Companies'));
+const CRMDeals = lazy(() => import('./pages/admin/Deals'));
+const CRMActivities = lazy(() => import('./pages/admin/Activities'));
+
 const BasicPlan = lazy(() => import('./pages/pricing/BasicPlan'));
 const StandardPlan = lazy(() => import('./pages/pricing/StandardPlan'));
 const PremiumPlan = lazy(() => import('./pages/pricing/PremiumPlan'));
@@ -132,7 +148,24 @@ function App() {
               <Route path="support/new" element={<NewTicket />} />
             </Route>
           </Route>
-        </Routes>
+
+          <Route path="admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="channels" element={<ChannelManager />} />
+              <Route path="customers" element={<AdminCustomers />} />
+              <Route path="tickets" element={<AdminTickets />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="slider" element={<AdminSlider />} />
+              <Route path="demo-reel" element={<AdminDemoReel />} />
+              <Route path="schedule" element={<AdminSchedule />} />
+              <Route path="programs" element={<AdminPrograms />} />
+              <Route path="crm" element={<CRMDashboard />} />
+              <Route path="crm/contacts" element={<CRMContacts />} />
+              <Route path="crm/companies" element={<CRMCompanies />} />
+              <Route path="crm/deals" element={<CRMDeals />} />
+              <Route path="crm/activities" element={<CRMActivities />} />
+            </Route>
+          </Routes>
       </Suspense>
     </Router>
   );
