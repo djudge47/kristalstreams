@@ -61,6 +61,27 @@ const Article = lazyRetry(() => import('./pages/support/Article'));
 const SpeedTest = lazyRetry(() => import('./pages/support/SpeedTest'));
 const Guide = lazyRetry(() => import('./pages/support/Guide'));
 const AIChat = lazyRetry(() => import('./pages/support/AIChat'));
+const AIFaq = lazyRetry(() => import('./pages/support/AIFaq'));
+const ChatHistory = lazyRetry(() => import('./pages/support/ChatHistory'));
+const AIHelp = lazyRetry(() => import('./pages/support/AIHelp'));
+const FAQ = lazyRetry(() => import('./pages/support/FAQ'));
+const Buffering = lazyRetry(() => import('./pages/support/Buffering'));
+const LoginHelp = lazyRetry(() => import('./pages/support/LoginHelp'));
+const SyncIssues = lazyRetry(() => import('./pages/support/SyncIssues'));
+const AppCrashes = lazyRetry(() => import('./pages/support/AppCrashes'));
+const TVSetup = lazyRetry(() => import('./pages/support/TVSetup'));
+const MobileSetup = lazyRetry(() => import('./pages/support/MobileSetup'));
+const ComputerSetup = lazyRetry(() => import('./pages/support/ComputerSetup'));
+const ConsoleSetup = lazyRetry(() => import('./pages/support/ConsoleSetup'));
+const Requirements = lazyRetry(() => import('./pages/support/Requirements'));
+const Browsers = lazyRetry(() => import('./pages/support/Browsers'));
+const Apps = lazyRetry(() => import('./pages/support/Apps'));
+const Connection = lazyRetry(() => import('./pages/support/Connection'));
+const Bandwidth = lazyRetry(() => import('./pages/support/Bandwidth'));
+const NetworkTips = lazyRetry(() => import('./pages/support/NetworkTips'));
+const Issues = lazyRetry(() => import('./pages/support/Issues'));
+const Maintenance = lazyRetry(() => import('./pages/support/Maintenance'));
+const StatusHistory = lazyRetry(() => import('./pages/support/StatusHistory'));
 const DownloadApp = lazyRetry(() => import('./pages/DownloadApp'));
 const News = lazyRetry(() => import('./pages/News'));
 
@@ -152,14 +173,35 @@ function App() {
             <Route path="reselling" element={<Reselling />} />
 
             <Route path="support/ai-chat" element={<AIChat />} />
+            <Route path="support/ai-faq" element={<AIFaq />} />
+            <Route path="support/chat-history" element={<ChatHistory />} />
+            <Route path="support/ai-help" element={<AIHelp />} />
             <Route path="support/getting-started" element={<GettingStarted />} />
             <Route path="support/billing" element={<Billing />} />
             <Route path="support/streaming" element={<StreamingHelp />} />
+            <Route path="support/faq" element={<FAQ />} />
+            <Route path="support/buffering" element={<Buffering />} />
+            <Route path="support/login-help" element={<LoginHelp />} />
+            <Route path="support/sync-issues" element={<SyncIssues />} />
+            <Route path="support/app-crashes" element={<AppCrashes />} />
+            <Route path="support/tv-setup" element={<TVSetup />} />
+            <Route path="support/mobile-setup" element={<MobileSetup />} />
+            <Route path="support/computer-setup" element={<ComputerSetup />} />
+            <Route path="support/console-setup" element={<ConsoleSetup />} />
             <Route path="support/devices" element={<DeviceSetup />} />
+            <Route path="support/requirements" element={<Requirements />} />
+            <Route path="support/browsers" element={<Browsers />} />
+            <Route path="support/apps" element={<Apps />} />
+            <Route path="support/speed-test" element={<SpeedTest />} />
+            <Route path="support/connection" element={<Connection />} />
+            <Route path="support/bandwidth" element={<Bandwidth />} />
+            <Route path="support/network-tips" element={<NetworkTips />} />
             <Route path="support/network" element={<NetworkHelp />} />
             <Route path="support/status" element={<SystemStatus />} />
+            <Route path="support/issues" element={<Issues />} />
+            <Route path="support/maintenance" element={<Maintenance />} />
+            <Route path="support/status-history" element={<StatusHistory />} />
             <Route path="support/article/:slug" element={<Article />} />
-            <Route path="support/speed-test" element={<SpeedTest />} />
             <Route path="support/guide/:slug" element={<Guide />} />
             <Route path="download-app" element={<DownloadApp />} />
             <Route path="news" element={<News />} />
