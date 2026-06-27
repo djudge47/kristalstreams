@@ -14,7 +14,10 @@ import {
   Plus,
   Bell,
   Play,
-  Film
+  Film,
+  Settings,
+  Search,
+  Tv
 } from 'lucide-react';
 
 interface Profile {
@@ -41,6 +44,10 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
+  const [channels, setChannels] = useState<any[]>([]);
+  const [selectedChannel, setSelectedChannel] = useState<any>(null);
+  const [channelSearch, setChannelSearch] = useState('');
+  const [channelCategory, setChannelCategory] = useState('all');
   const unreadCount = useNotificationStore((state) => state.unreadCount);
 
   useEffect(() => {
@@ -123,6 +130,19 @@ const Dashboard: React.FC = () => {
       if (unsubscribe) unsubscribe();
     };
   }, [navigate]);
+
+  useEffect(() => {
+    if (showPlayer && channels.length === 0) {
+      const fetchChannels = async () => {
+        const { data } = await supabase.from('channels').select('*').eq('is_active', true).order('name');
+        if (data && data.length > 0) {
+          setChannels(data);
+          setSelectedChannel(data[0]);
+        }
+      };
+      fetchChannels();
+    }
+  }, [showPlayer]);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -213,23 +233,85 @@ const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen py-32 bg-dark-300">
       {showPlayer && (
-        <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center">
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowPlayer(false)}
-              className="p-3 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors shadow-lg"
-            >
-              <span className="text-2xl">✕</span>
-            </button>
-          </div>
-          <div className="w-full h-full max-w-7xl px-4 flex items-center justify-center">
-            <div className="w-full">
-              <VideoPlayer
-                src="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
-                title="Live TV"
-                autoplay={true}
-              />
+        <div className="fixed inset-0 z-[9999] bg-black flex">
+          {/* Channel Sidebar */}
+          <div className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
+            <div className="p-4 border-b border-gray-800">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-bold text-white">Channels</h2>
+                <button onClick={() => setShowPlayer(false)} className="text-gray-400 hover:text-white text-xl">✕</button>
+              </div>
+              <div className="relative mb-2">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input type="text" value={channelSearch} onChange={e => setChannelSearch(e.target.value)}
+                  placeholder="Search channels..." className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-white text-sm" />
+              </div>
+              {channels.length > 0 && (
+                <select value={channelCategory} onChange={e => setChannelCategory(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+                  <option value="all">All Categories</option>
+                  {[...new Set(channels.map(c => c.category).filter(Boolean))].sort().map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              )}
             </div>
+            <div className="flex-1 overflow-y-auto">
+              {channels.length === 0 ? (
+                <div className="p-4 text-center">
+                  <Tv size={32} className="mx-auto text-gray-600 mb-2" />
+                  <p className="text-gray-400 text-sm">No channels available</p>
+                  <p className="text-gray-500 text-xs mt-1">Add channels in the admin panel</p>
+                </div>
+              ) : (
+                channels
+                  .filter(c => {
+                    const matchSearch = c.name?.toLowerCase().includes(channelSearch.toLowerCase());
+                    const matchCat = channelCategory === 'all' || c.category === channelCategory;
+                    return matchSearch && matchCat;
+                  })
+                  .map(channel => (
+                    <button key={channel.id} onClick={() => setSelectedChannel(channel)}
+                      className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${
+                        selectedChannel?.id === channel.id ? 'bg-red-600/20 border-l-2 border-red-500' : 'hover:bg-gray-800'
+                      }`}>
+                      {channel.logo_url ? (
+                        <img src={channel.logo_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center flex-shrink-0">
+                          <Tv size={14} className="text-gray-500" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-white text-sm truncate">{channel.name}</p>
+                        {channel.category && <p className="text-gray-500 text-xs truncate">{channel.category}</p>}
+                      </div>
+                    </button>
+                  ))
+              )}
+            </div>
+          </div>
+
+          {/* Video Player */}
+          <div className="flex-1 flex items-center justify-center p-4">
+            {selectedChannel ? (
+              <div className="w-full max-w-7xl">
+                <div className="mb-4 flex items-center gap-3">
+                  <h3 className="text-white text-xl font-semibold">{selectedChannel.name}</h3>
+                  {selectedChannel.category && <span className="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">{selectedChannel.category}</span>}
+                </div>
+                <VideoPlayer
+                  src={selectedChannel.stream_url}
+                  title={selectedChannel.name}
+                  autoplay={true}
+                />
+              </div>
+            ) : (
+              <div className="text-center">
+                <Tv size={64} className="mx-auto text-gray-600 mb-4" />
+                <p className="text-gray-400 text-lg">Select a channel to start watching</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -261,6 +343,15 @@ const Dashboard: React.FC = () => {
                 <Plus className="w-5 h-5 mr-2" />
                 New Support Ticket
               </button>
+              {profile.email === 'djudge47@gmail.com' && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="flex items-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                >
+                  <Settings className="w-5 h-5 mr-2" />
+                  Admin Panel
+                </button>
+              )}
             </div>
           </div>
           
