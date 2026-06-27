@@ -1,5 +1,5 @@
-const CACHE_NAME = 'kristal-streams-v3';
-const RUNTIME_CACHE = 'kristal-runtime-v3';
+const CACHE_NAME = 'kristal-streams-v4';
+const RUNTIME_CACHE = 'kristal-runtime-v4';
 
 const PRECACHE_URLS = [
   '/',
@@ -30,23 +30,22 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.url.startsWith(self.location.origin)) {
+    // Network first: try fresh content, fall back to cache if offline
     event.respondWith(
-      caches.match(event.request).then(cachedResponse => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        return caches.open(RUNTIME_CACHE).then(cache => {
-          return fetch(event.request).then(response => {
-            if (response && response.status === 200) {
-              cache.put(event.request, response.clone());
-            }
-            return response;
-          }).catch(() => {
-            if (event.request.mode === 'navigate') {
-              return caches.match('/offline.html');
-            }
+      fetch(event.request).then(response => {
+        if (response && response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(RUNTIME_CACHE).then(cache => {
+            cache.put(event.request, responseClone);
           });
+        }
+        return response;
+      }).catch(() => {
+        return caches.match(event.request).then(cachedResponse => {
+          if (cachedResponse) return cachedResponse;
+          if (event.request.mode === 'navigate') {
+            return caches.match('/offline.html');
+          }
         });
       })
     );
