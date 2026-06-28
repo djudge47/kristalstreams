@@ -186,7 +186,7 @@ const Dashboard: React.FC = () => {
           <div className="max-w-6xl mx-auto">
             <div className="animate-pulse space-y-8">
               <div className="h-8 bg-dark-200 rounded w-1/4"></div>
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="h-32 bg-dark-200 rounded-xl"></div>
                 ))}
@@ -244,7 +244,7 @@ const Dashboard: React.FC = () => {
       {showPlayer && (
         <div className="fixed inset-0 z-[9999] bg-black flex">
           {/* Channel Sidebar */}
-          <div className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
+          <div className="w-64 md:w-80 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
             <div className="p-4 border-b border-gray-800">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-bold text-white">Channels</h2>

@@ -72,7 +72,7 @@ const Header: React.FC = memo(() => {
             </Link>
           </div>
 
-          <nav className="hidden md:flex space-x-8">
+          <nav className="hidden lg:flex space-x-8">
             <Link 
               to="/" 
               className="text-gray-300 hover:text-white font-medium transition-colors duration-200 flex items-center"
@@ -131,7 +131,7 @@ const Header: React.FC = memo(() => {
             </div>
           </nav>
 
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden lg:flex items-center space-x-4">
             {user ? (
               <div className="relative">
                 <button 
@@ -208,7 +208,7 @@ const Header: React.FC = memo(() => {
 
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden text-gray-300 hover:text-white transition-colors duration-200"
+            className="lg:hidden text-gray-300 hover:text-white transition-colors duration-200"
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -216,7 +216,7 @@ const Header: React.FC = memo(() => {
       </div>
 
       {isOpen && (
-        <div className="md:hidden bg-dark-200">
+        <div className="lg:hidden bg-dark-200">
           <div className="container mx-auto px-4 py-4">
             <nav className="flex flex-col space-y-4">
               <Link 

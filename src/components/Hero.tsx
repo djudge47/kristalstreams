@@ -205,7 +205,7 @@ const Hero: React.FC = () => {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-16 items-center">
           <div className="max-w-2xl space-y-12">
             <div className="space-y-6">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
