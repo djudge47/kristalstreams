@@ -192,6 +192,36 @@ const DownloadApp: React.FC = () => {
               with optimized performance and exclusive features.
             </p>
           </div>
+
+          {/* Android APK Download */}
+<div className="bg-gradient-to-r from-green-500/10 to-green-500/5 rounded-2xl p-8 border border-green-500/30 mb-8">
+  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+    <div className="flex items-center gap-4">
+      <div className="bg-green-500/20 w-16 h-16 rounded-xl flex items-center justify-center">
+        <Smartphone className="w-8 h-8 text-green-500" />
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-bold text-white">
+          Kristal Streams Android APK
+        </h2>
+
+        <p className="text-gray-400">
+          APK File · 8.6 MB · Android 7.0+
+        </p>
+      </div>
+    </div>
+
+    <a
+      href="/downloads/KristalStreams.apk"
+      download="KristalStreams.apk"
+      className="bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2"
+    >
+      <Download className="w-5 h-5" />
+      Download APK
+    </a>
+  </div>
+</div>
           
           {/* macOS Download — Hosted */}
 <div className="bg-gradient-to-r from-blue-500/10 to-yellow-500/5 rounded-2xl p-8 border border-blue-500/30 mb-16">
