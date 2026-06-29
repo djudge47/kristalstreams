@@ -44,7 +44,7 @@ const appDownloads: AppDownload[] = [
     platform: 'iOS',
     icon: <Apple className="w-8 h-8 text-gray-300" />,
     description: 'Experience seamless streaming on your iPhone or iPad.',
-    downloadUrl: 'https://zl30hmmadap6eroe.public.blob.vercel-storage.com/KristalStreams-website-style-macOS-app-v3.zip',
+    downloadUrl: '#',
     version: '2.1.0',
     size: '52 MB',
     requirements: 'iOS 13.0+',
