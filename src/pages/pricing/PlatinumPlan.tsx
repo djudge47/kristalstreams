@@ -50,7 +50,7 @@ const PlatinumPlan: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen py-32 bg-dark-300">
+    <div className="min-h-screen py-12 bg-dark-300">
       <div className="container mx-auto px-4">
         <div className="max-w-2xl mx-auto">
           <button

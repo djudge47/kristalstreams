@@ -113,7 +113,7 @@ const News: React.FC = () => {
 
   if (selectedArticle) {
     return (
-      <div className="min-h-screen py-32 bg-dark-300">
+      <div className="min-h-screen py-12 bg-dark-300">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <button
@@ -177,7 +177,7 @@ const News: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen py-32 bg-dark-300">
+    <div className="min-h-screen py-12 bg-dark-300">
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">

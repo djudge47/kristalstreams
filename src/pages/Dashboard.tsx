@@ -143,10 +143,19 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (showPlayer && channels.length === 0) {
       const fetchChannels = async () => {
-        const { data } = await supabase.from('channels').select('*').eq('is_active', true).order('name');
-        if (data && data.length > 0) {
-          setChannels(data);
-          setSelectedChannel(data[0]);
+        try {
+          const { data, error: fetchError } = await supabase.from('channels').select('*').order('name');
+          console.log('Channels fetch result:', { data, error: fetchError });
+          if (fetchError) {
+            console.error('Channel fetch error:', fetchError);
+            return;
+          }
+          if (data && data.length > 0) {
+            setChannels(data);
+            setSelectedChannel(data[0]);
+          }
+        } catch (err) {
+          console.error('Channel fetch exception:', err);
         }
       };
       fetchChannels();
@@ -181,7 +190,7 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen py-32 bg-dark-300">
+      <div className="min-h-screen py-12 bg-dark-300">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="animate-pulse space-y-8">
@@ -201,7 +210,7 @@ const Dashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen py-32 bg-dark-300">
+      <div className="min-h-screen py-12 bg-dark-300">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto text-center">
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
@@ -221,7 +230,7 @@ const Dashboard: React.FC = () => {
 
   if (!profile) {
     return (
-      <div className="min-h-screen py-32 bg-dark-300">
+      <div className="min-h-screen py-12 bg-dark-300">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto text-center">
             <User className="w-16 h-16 text-primary mx-auto mb-4" />
@@ -240,7 +249,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen py-32 bg-dark-300">
+    <div className="min-h-screen py-12 bg-dark-300">
       {showPlayer && (
         <div className="fixed inset-0 z-[9999] bg-black flex">
           {/* Channel Sidebar */}

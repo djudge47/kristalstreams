@@ -59,7 +59,7 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen py-32 container-padding">
+    <div className="min-h-screen py-12 container-padding">
       <div className="max-w-md mx-auto">
         <h1 className="text-3xl font-bold text-gradient mb-6">Create Account</h1>
         <div className="bg-dark-100 rounded-xl p-8 border border-gray-800">

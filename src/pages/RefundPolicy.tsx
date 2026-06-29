@@ -8,7 +8,7 @@ const RefundPolicy: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen py-32 bg-dark-300">
+    <div className="min-h-screen py-12 bg-dark-300">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center mb-8">

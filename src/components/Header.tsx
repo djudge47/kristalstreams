@@ -64,9 +64,9 @@ const Header: React.FC = memo(() => {
       }`}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
+        <div className="flex justify-between items-center py-2">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center text-2xl font-bold text-primary">
+            <Link to="/" className="flex items-center text-xl font-bold text-primary">
               <img src="/logo/ks-mark.png" alt="Kristal Streams" className="h-9 w-auto mr-2" />
               Kristal Streams
             </Link>
@@ -206,12 +206,17 @@ const Header: React.FC = memo(() => {
             )}
           </div>
 
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden text-gray-300 hover:text-white transition-colors duration-200"
-          >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="flex items-center gap-2">
+            <Link to="/" className="lg:hidden text-gray-300 hover:text-white transition-colors duration-200 p-1" aria-label="Home">
+              <Home size={22} />
+            </Link>
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="lg:hidden text-gray-300 hover:text-white transition-colors duration-200"
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
       </div>
 
