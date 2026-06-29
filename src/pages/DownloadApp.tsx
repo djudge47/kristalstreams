@@ -1,6 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Download, Smartphone, Monitor, Tv, Apple, Chrome, Wifi, Zap, Lock, Bell, HardDrive, CheckCircle } from 'lucide-react';
 
+import {
+  SiAndroid,
+  SiApple,
+  SiLg,
+  SiRoku,
+  SiNvidia,
+  SiAppletv,
+  SiSamsung,
+  SiGooglecast
+} from 'react-icons/si';
+
+import {
+  FaWindows,
+  FaAmazon
+} from 'react-icons/fa6';
+
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -453,85 +469,96 @@ const DownloadApp: React.FC = () => {
           </div>
 
           {/* Compatible Devices */}
-          <div className="mb-16">
-            <h2 className="text-3xl font-bold text-white text-center mb-12">Compatible Devices</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-                <div className="flex items-center mb-4">
-                  <div className="bg-dark-200 p-3 rounded-lg mr-4">
-                    <Smartphone className="w-8 h-8 text-green-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">Mobile Phones</h3>
-                    <p className="text-sm text-gray-400">iOS & Android</p>
-                  </div>
-                </div>
-                <p className="text-gray-300 mb-4">
-                  Stream on your smartphone with touch-optimized controls and mobile data support.
-                </p>
-                <ul className="space-y-2">
-                  <li className="text-sm text-gray-400 flex items-center">
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
-                    iOS 11.3+ (Safari)
-                  </li>
-                  <li className="text-sm text-gray-400 flex items-center">
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
-                    Android 5.0+ (Chrome)
-                  </li>
-                </ul>
-              </div>
+<div className="mb-16">
+  <div className="text-center mb-10">
+    <h2 className="text-3xl font-bold text-white mb-3">
+      Watch on Your Favorite Devices
+    </h2>
+    <p className="text-gray-400">
+      Kristal Streams works across phones, computers, smart TVs, and streaming devices.
+    </p>
+  </div>
 
-              <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-                <div className="flex items-center mb-4">
-                  <div className="bg-dark-200 p-3 rounded-lg mr-4">
-                    <Monitor className="w-8 h-8 text-blue-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">Desktop</h3>
-                    <p className="text-sm text-gray-400">Windows & macOS</p>
-                  </div>
-                </div>
-                <p className="text-gray-300 mb-4">
-                  Install on your computer for a native desktop app experience with keyboard shortcuts.
-                </p>
-                <ul className="space-y-2">
-                  <li className="text-sm text-gray-400 flex items-center">
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
-                    Windows 10+ (Chrome/Edge)
-                  </li>
-                  <li className="text-sm text-gray-400 flex items-center">
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
-                    macOS 11+ (Chrome/Safari)
-                  </li>
-                </ul>
-              </div>
+  <div className="bg-[#031525] border border-cyan-500/20 rounded-2xl px-6 py-10">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-12">
 
-              <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-                <div className="flex items-center mb-4">
-                  <div className="bg-dark-200 p-3 rounded-lg mr-4">
-                    <Monitor className="w-8 h-8 text-purple-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">Tablets</h3>
-                    <p className="text-sm text-gray-400">iPad & Android</p>
-                  </div>
-                </div>
-                <p className="text-gray-300 mb-4">
-                  Perfect for tablets with responsive design optimized for larger touch screens.
-                </p>
-                <ul className="space-y-2">
-                  <li className="text-sm text-gray-400 flex items-center">
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
-                    iPad/iPad Pro
-                  </li>
-                  <li className="text-sm text-gray-400 flex items-center">
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
-                    Android Tablets
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
+      <div className="text-center">
+        <SiAndroid className="w-16 h-16 mx-auto mb-3 text-green-500" />
+        <h3 className="text-white font-semibold">Android</h3>
+        <p className="text-xs text-gray-400 mt-1">Phones & Tablets</p>
+      </div>
+
+      <div className="text-center">
+        <SiApple className="w-16 h-16 mx-auto mb-3 text-gray-200" />
+        <h3 className="text-white font-semibold">Apple</h3>
+        <p className="text-xs text-gray-400 mt-1">iPhone, iPad & MacBook</p>
+      </div>
+
+      <div className="text-center">
+        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-pink-600 flex items-center justify-center">
+          <span className="text-white text-xl font-bold">im</span>
+        </div>
+        <h3 className="text-white font-semibold">Infomir</h3>
+        <p className="text-xs text-gray-400 mt-1">MAG STB Boxes</p>
+      </div>
+
+      <div className="text-center">
+        <FaWindows className="w-16 h-16 mx-auto mb-3 text-blue-500" />
+        <h3 className="text-white font-semibold">Windows</h3>
+        <p className="text-xs text-gray-400 mt-1">Desktop & Laptop</p>
+      </div>
+
+      <div className="text-center">
+        <FaAmazon className="w-16 h-16 mx-auto mb-3 text-orange-500" />
+        <h3 className="text-white font-semibold">Amazon Fire TV</h3>
+        <p className="text-xs text-gray-400 mt-1">Stick, TV & Cube</p>
+      </div>
+
+      <div className="text-center">
+        <SiLg className="w-16 h-16 mx-auto mb-3 text-red-500" />
+        <h3 className="text-white font-semibold">LG</h3>
+        <p className="text-xs text-gray-400 mt-1">Smart TVs</p>
+      </div>
+
+      <div className="text-center">
+        <SiRoku className="w-16 h-16 mx-auto mb-3 text-purple-500" />
+        <h3 className="text-white font-semibold">Roku</h3>
+        <p className="text-xs text-gray-400 mt-1">Streaming Devices</p>
+      </div>
+
+      <div className="text-center">
+        <SiNvidia className="w-16 h-16 mx-auto mb-3 text-lime-500" />
+        <h3 className="text-white font-semibold">NVIDIA Shield</h3>
+        <p className="text-xs text-gray-400 mt-1">Shield TV</p>
+      </div>
+
+      <div className="text-center">
+        <SiAppletv className="w-16 h-16 mx-auto mb-3 text-gray-200" />
+        <h3 className="text-white font-semibold">Apple TV</h3>
+        <p className="text-xs text-gray-400 mt-1">TV Streaming</p>
+      </div>
+
+      <div className="text-center">
+        <SiSamsung className="w-16 h-16 mx-auto mb-3 text-blue-500" />
+        <h3 className="text-white font-semibold">Samsung</h3>
+        <p className="text-xs text-gray-400 mt-1">Smart TVs</p>
+      </div>
+
+      <div className="text-center">
+        <Tv className="w-16 h-16 mx-auto mb-3 text-green-400" />
+        <h3 className="text-white font-semibold">Android TV</h3>
+        <p className="text-xs text-gray-400 mt-1">Smart TVs & Boxes</p>
+      </div>
+
+      <div className="text-center">
+        <SiGooglecast className="w-16 h-16 mx-auto mb-3 text-cyan-400" />
+        <h3 className="text-white font-semibold">Chromecast</h3>
+        <p className="text-xs text-gray-400 mt-1">TV Streaming</p>
+      </div>
+
+    </div>
+  </div>
+</div>
 
           {/* Additional Info Section */}
           <div className="mt-16 grid md:grid-cols-2 gap-8">
