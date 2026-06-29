@@ -26,7 +26,7 @@ const appDownloads: AppDownload[] = [
     platform: 'Android',
     icon: <Smartphone className="w-8 h-8 text-green-500" />,
     description: 'Stream on your Android phone or tablet with our optimized mobile app.',
-    downloadUrl: '/downloads/KristalStream.apk',
+    downloadUrl: '/downloads/KristalStreams.apk',
     version: '1.0.0',
     size: '8.2 MB',
     requirements: 'Android 7.0+',
@@ -44,7 +44,7 @@ const appDownloads: AppDownload[] = [
     platform: 'iOS',
     icon: <Apple className="w-8 h-8 text-gray-300" />,
     description: 'Experience seamless streaming on your iPhone or iPad.',
-    downloadUrl: '#',
+    downloadUrl: 'https://downloads.kristalstream.com/KristalStreams-Mac.zip',
     version: '2.1.0',
     size: '52 MB',
     requirements: 'iOS 13.0+',
@@ -80,7 +80,7 @@ const appDownloads: AppDownload[] = [
     platform: 'macOS',
     icon: <Apple className="w-8 h-8 text-gray-300" />,
     description: 'Native macOS app optimized for Mac computers.',
-    downloadUrl: '#',
+    downloadUrl: 'https://downloads.kristalstream.com/KristalStreams-Mac.zip',
     version: '1.8.5',
     size: '95 MB',
     requirements: 'macOS 11.0+',
@@ -192,32 +192,31 @@ const DownloadApp: React.FC = () => {
               with optimized performance and exclusive features.
             </p>
           </div>
-
-          {/* Android APK Download — Live */}
-          <div className="bg-gradient-to-r from-green-500/10 to-green-500/5 rounded-2xl p-8 border border-green-500/30 mb-16">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-green-500/20 w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Smartphone className="w-8 h-8 text-green-500" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-1">Kristal Streams for Android</h2>
-                  <p className="text-gray-400">Version {appDownloads[0].version} · {appDownloads[0].size} · Android 7.0+</p>
-                </div>
-              </div>
-              <a
-                href={appDownloads[0].downloadUrl}
-                download
-                className="bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2 whitespace-nowrap"
-              >
-                <Download className="w-5 h-5" />
-                Download APK
-              </a>
-            </div>
-            <p className="text-sm text-gray-500 mt-4">
-              This installs directly from our website, not the Play Store. You may need to allow "Install from unknown sources" in your Android settings.
-            </p>
-          </div>
+          
+          {/* macOS Download — Hosted */}
+<div className="bg-gradient-to-r from-blue-500/10 to-yellow-500/5 rounded-2xl p-8 border border-blue-500/30 mb-16">
+  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+    <div className="flex items-center gap-4">
+      <div className="bg-blue-500/20 w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0">
+        <Apple className="w-8 h-8 text-gray-300" />
+      </div>
+      <div>
+        <h2 className="text-2xl font-bold text-white mb-1">Kristal Streams for macOS</h2>
+        <p className="text-gray-400">Version {appDownloads[3].version} · 141 MB · macOS 11.0+</p>
+      </div>
+    </div>
+    <a
+      href={appDownloads[3].downloadUrl}
+      className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2 whitespace-nowrap"
+    >
+      <Download className="w-5 h-5" />
+      Download for macOS
+    </a>
+  </div>
+  <p className="text-sm text-gray-500 mt-4">
+    This Mac download is hosted outside GitHub because the app package is larger than GitHub's file limit.
+  </p>
+</div>
 
           {/* PWA Install Section */}
           {isInstalled ? (
