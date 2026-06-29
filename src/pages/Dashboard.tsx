@@ -319,7 +319,7 @@ const Dashboard: React.FC = () => {
                   {selectedChannel.category && <span className="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">{selectedChannel.category}</span>}
                 </div>
                 <VideoPlayer
-                  src={selectedChannel.stream_url}
+                  src={selectedChannel.stream_url?.replace('http://', 'https://')}
                   title={selectedChannel.name}
                   autoplay={true}
                 />
