@@ -333,11 +333,17 @@ const Dashboard: React.FC = () => {
                   <h3 className="text-white text-xl font-semibold">{selectedChannel.name}</h3>
                   {selectedChannel.category && <span className="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">{selectedChannel.category}</span>}
                 </div>
-                <VideoPlayer
-                  src={resolvedStreamUrl || ''}
-                  title={selectedChannel.name}
-                  autoplay={true}
-                />
+                {resolvedStreamUrl ? (
+                  <VideoPlayer
+                    src={resolvedStreamUrl}
+                    title={selectedChannel.name}
+                    autoplay={true}
+                  />
+                ) : (
+                  <div className="aspect-video bg-black rounded-lg flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center">
