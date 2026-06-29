@@ -151,7 +151,7 @@ const Dashboard: React.FC = () => {
       })
         .then(r => r.json())
         .then(data => setResolvedStreamUrl(data.url))
-        .catch(() => setResolvedStreamUrl(selectedChannel.stream_url.replace('http://', 'https://')));
+        .catch(() => setResolvedStreamUrl(selectedChannel.stream_url.replace('http://', 'https://').replace(':80/', '/')));
     }
   }, [selectedChannel]);
 
