@@ -1,5 +1,5 @@
-const CACHE_NAME = 'kristal-streams-v4';
-const RUNTIME_CACHE = 'kristal-runtime-v4';
+const CACHE_NAME = 'kristal-streams-v5';
+const RUNTIME_CACHE = 'kristal-runtime-v5';
 
 const PRECACHE_URLS = [
   '/',
@@ -29,8 +29,10 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  if (event.request.url.includes('/api/')) return;
+
   if (event.request.url.startsWith(self.location.origin)) {
-    // Network first: try fresh content, fall back to cache if offline
     event.respondWith(
       fetch(event.request).then(response => {
         if (response && response.status === 200) {
@@ -53,86 +55,32 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', function(event) {
-  let data = {
-    title: 'Kristal Streams',
-    message: 'New content available',
-    url: '/'
-  };
-
+  let data = { title: 'Kristal Streams', message: 'New content available', url: '/' };
   if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data.message = event.data.text();
-    }
+    try { data = event.data.json(); } catch (e) { data.message = event.data.text(); }
   }
-
-  const options = {
-    body: data.message,
-    icon: '/android/icon-192.png',
-    badge: '/android/icon-96.png',
-    vibrate: [200, 100, 200],
-    data: {
-      url: data.url || '/',
-      dateOfArrival: Date.now()
-    },
-    actions: [
-      {
-        action: 'explore',
-        title: 'Watch Now',
-        icon: '/android/icon-96.png'
-      },
-      {
-        action: 'close',
-        title: 'Close',
-        icon: '/android/icon-96.png'
-      }
-    ]
-  };
-
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Kristal Streams', options)
+    self.registration.showNotification(data.title || 'Kristal Streams', {
+      body: data.message,
+      icon: '/android/icon-192.png',
+      badge: '/android/icon-96.png',
+      vibrate: [200, 100, 200],
+      data: { url: data.url || '/' }
+    })
   );
 });
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-
-  if (event.action === 'close') {
-    return;
-  }
-
   const urlToOpen = event.notification.data.url || '/';
-
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(windowClients => {
-        for (let i = 0; i < windowClients.length; i++) {
-          const client = windowClients[i];
-          if (client.url === urlToOpen && 'focus' in client) {
-            return client.focus();
-          }
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      for (let i = 0; i < windowClients.length; i++) {
+        if (windowClients[i].url === urlToOpen && 'focus' in windowClients[i]) {
+          return windowClients[i].focus();
         }
-        if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
-        }
-      })
+      }
+      if (clients.openWindow) return clients.openWindow(urlToOpen);
+    })
   );
 });
-
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-channels') {
-    event.waitUntil(syncChannels());
-  }
-});
-
-async function syncChannels() {
-  try {
-    const cache = await caches.open(RUNTIME_CACHE);
-    const response = await fetch('/api/channels');
-    await cache.put('/api/channels', response.clone());
-    return response;
-  } catch (error) {
-    console.error('Background sync failed:', error);
-  }
-}
