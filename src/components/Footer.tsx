@@ -268,7 +268,18 @@ const Footer: React.FC = memo(() => {
             
             <h4 className="text-lg font-semibold mb-4 mt-6 text-white">Contact Support</h4>
             <ul className="space-y-3">
-              
+              <li className="flex items-start">
+                <Mail size={18} className="text-primary mr-3 mt-1 flex-shrink-0" />
+                <div>
+                  <div className="text-white font-medium text-sm mb-1">Email Support</div>
+                  <a
+                    href="mailto:support@kristalstreams.com"
+                    className="text-gray-400 text-sm hover:text-primary transition-colors duration-200"
+                  >
+                    support@kristalstreams.com
+                  </a>
+                </div>
+              </li>
             </ul>
           </div>
         </div>
