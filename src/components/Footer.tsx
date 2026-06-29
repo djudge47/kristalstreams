@@ -1,5 +1,5 @@
 import React, { useEffect, useState, memo } from 'react';
-import { Facebook, Twitter, Instagram, Youtube, Mail, Phone, Linkedin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Youtube, Mail, Linkedin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getFooterLinks, getFooterSocialLinks } from '../lib/api';
 import NewsletterSignup from './NewsletterSignup';
@@ -268,30 +268,7 @@ const Footer: React.FC = memo(() => {
             
             <h4 className="text-lg font-semibold mb-4 mt-6 text-white">Contact Support</h4>
             <ul className="space-y-3">
-              <li className="flex items-start">
-                <Mail size={18} className="text-primary mr-3 mt-1 flex-shrink-0" />
-                <div>
-                  <div className="text-white font-medium text-sm mb-1">Email Support</div>
-                  <a
-                    href="/support"
-                    className="text-gray-400 text-sm hover:text-primary transition-colors duration-200"
-                  >
-                    support@kristalstreams.com
-                  </a>
-                </div>
-              </li>
-              <li className="flex items-start">
-                <Phone size={18} className="text-primary mr-3 mt-1 flex-shrink-0" />
-                <div>
-                  <div className="text-white font-medium text-sm mb-1">Phone Support</div>
-                  <a 
-                    href="tel:+18005747825"
-                    className="text-gray-400 text-sm hover:text-primary transition-colors duration-200"
-                  >
-                    1-800-KRISTAL (1-800-574-7825)
-                  </a>
-                </div>
-              </li>
+              
             </ul>
           </div>
         </div>
