@@ -1,4 +1,18 @@
-import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const emailSupabase = createClient(
+  'https://wftfxerblhlsxiijtfbo.supabase.co',
+  'sb_publishable_6Jw9XM13q2gvSGnlAGgjIg_YYLFI4Um',
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  }
+);
+
+const SUPPORT_EMAIL = 'support@kristalstream.com';
 
 export interface EmailData {
   to_email: string;
@@ -36,7 +50,7 @@ const sendEmailViaEdgeFunction = async (
   data: Record<string, string>
 ): Promise<boolean> => {
   try {
-    const { data: response, error } = await supabase.functions.invoke('send-email', {
+    const { data: response, error } = await emailSupabase.functions.invoke('send-email', {
       body: {
         type,
         to,
@@ -45,7 +59,7 @@ const sendEmailViaEdgeFunction = async (
     });
 
     if (error) {
-      console.error('Edge function error:', error);
+      console.error('Email function error:', error);
       return false;
     }
 
@@ -56,7 +70,7 @@ const sendEmailViaEdgeFunction = async (
 
     return true;
   } catch (error) {
-    console.error('Error invoking edge function:', error);
+    console.error('Error invoking email function:', error);
     return false;
   }
 };
@@ -70,7 +84,7 @@ export const sendContactEmail = async (emailData: EmailData): Promise<boolean> =
     reply_to: emailData.reply_to || emailData.from_email || emailData.to_email,
   };
 
-  return await sendEmailViaEdgeFunction('contact', 'support@kristalstreams.com', data);
+  return await sendEmailViaEdgeFunction('contact', SUPPORT_EMAIL, data);
 };
 
 export const sendSupportEmail = async (supportData: SupportEmailData): Promise<boolean> => {
@@ -84,14 +98,14 @@ export const sendSupportEmail = async (supportData: SupportEmailData): Promise<b
     reply_to: supportData.user_email,
   };
 
-  return await sendEmailViaEdgeFunction('support', 'support@kristalstreams.com', data);
+  return await sendEmailViaEdgeFunction('support', SUPPORT_EMAIL, data);
 };
 
 export const sendWelcomeEmail = async (welcomeData: WelcomeEmailData): Promise<boolean> => {
   const data = {
     user_name: welcomeData.user_name,
     subscription_plan: welcomeData.subscription_plan || 'Premium',
-    support_email: 'support@kristalstreams.com',
+    support_email: SUPPORT_EMAIL,
     website_url: window.location.origin,
   };
 
