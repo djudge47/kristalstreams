@@ -45,7 +45,6 @@ const EmailForm: React.FC<EmailFormProps> = ({
       [name]: value
     }));
     
-    // Clear status when user starts typing
     if (status !== 'idle') {
       setStatus('idle');
       setErrorMessage('');
@@ -59,7 +58,6 @@ const EmailForm: React.FC<EmailFormProps> = ({
     setErrorMessage('');
 
     try {
-      // Validation
       if (!validateEmail(formData.email)) {
         throw new Error('Please enter a valid email address');
       }
@@ -76,14 +74,12 @@ const EmailForm: React.FC<EmailFormProps> = ({
         throw new Error('Please enter a message');
       }
 
-      // Rate limiting
       const identifier = formData.email;
       if (!emailRateLimit.canSend(identifier)) {
         const remainingTime = Math.ceil(emailRateLimit.getRemainingTime(identifier) / 1000);
         throw new Error(`Too many attempts. Please wait ${remainingTime} seconds before trying again.`);
       }
 
-      // Prepare email data
       const emailData: EmailData = {
         to_email: formData.email,
         from_name: formData.name || 'Website User',
@@ -93,7 +89,6 @@ const EmailForm: React.FC<EmailFormProps> = ({
         reply_to: formData.email
       };
 
-      // Send email
       const success = await sendContactEmail(emailData);
 
       if (success) {
@@ -193,7 +188,6 @@ const EmailForm: React.FC<EmailFormProps> = ({
           />
         </div>
 
-        {/* Status Messages */}
         {status === 'success' && (
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-start">
             <CheckCircle className="text-green-500 w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
@@ -237,7 +231,7 @@ const EmailForm: React.FC<EmailFormProps> = ({
         <p className="text-gray-500 text-sm">
           Our support team will respond within 24 hours at{' '}
           <span className="text-primary font-medium">
-            support@kristalstreams.com
+            support@kristalstream.com
           </span>
         </p>
       </div>
