@@ -1,16 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-
-const emailSupabase = createClient(
-  'https://wftfxerblhlsxiijtfbo.supabase.co',
-  'sb_publishable_6Jw9XM13q2gvSGnlAGgjIg_YYLFI4Um',
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  }
-);
+const EMAIL_FUNCTION_URL =
+  'https://wftfxerblhlsxiijtfbo.supabase.co/functions/v1/resend';
 
 const SUPPORT_EMAIL = 'support@kristalstream.com';
 
@@ -50,21 +39,18 @@ const sendEmailViaEdgeFunction = async (
   data: Record<string, string>
 ): Promise<boolean> => {
   try {
-    const { data: response, error } = await emailSupabase.functions.invoke('send-email', {
-      body: {
-        type,
-        to,
-        data,
+    const response = await fetch(EMAIL_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ type, to, data }),
     });
 
-    if (error) {
-      console.error('Email function error:', error);
-      return false;
-    }
+    const result = await response.json().catch(() => null);
 
-    if (!response?.success) {
-      console.error('Email sending failed:', response);
+    if (!response.ok || !result?.success) {
+      console.error('Email function error:', result || response.statusText);
       return false;
     }
 
