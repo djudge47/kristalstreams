@@ -16,6 +16,13 @@ type ChatRequest = {
   conversationHistory?: ChatMessage[];
 };
 
+const plans = {
+  bronze: { name: 'Bronze', months: 1, prices: [20, 35, 50, 65, 80] },
+  silver: { name: 'Silver', months: 3, prices: [45, 75, 110, 140, 175] },
+  gold: { name: 'Gold', months: 6, prices: [60, 105, 150, 195, 240] },
+  platinum: { name: 'Platinum', months: 12, prices: [95, 165, 235, 305, 375] },
+} as const;
+
 const systemPrompt = `You are the customer support assistant for Kristal Streams.
 
 Use this current information:
@@ -41,12 +48,47 @@ For buffering, recommend checking speed, restarting the router and device, closi
 For HD recommend at least 5 Mbps; for 4K recommend at least 25 Mbps.
 Be concise, accurate, and helpful. Never invent channels, account details, or billing status. For account-specific issues, direct the customer to the support ticket page.`;
 
+function getConnectionCount(text: string): number | null {
+  const matches = [
+    { count: 1, pattern: /\b(1|one)\b/ },
+    { count: 2, pattern: /\b(2|two)\b/ },
+    { count: 3, pattern: /\b(3|three)\b/ },
+    { count: 4, pattern: /\b(4|four)\b/ },
+    { count: 5, pattern: /\b(5|five)\b/ },
+  ];
+
+  for (const item of matches) {
+    if (item.pattern.test(text)) return item.count;
+  }
+
+  return null;
+}
+
+function getPricingResponse(message: string): string | null {
+  const text = message.toLowerCase();
+  if (!/(price|pricing|plan|cost|how much|subscription|connection)/.test(text)) return null;
+
+  const planKey = (Object.keys(plans) as Array<keyof typeof plans>).find((key) => text.includes(key));
+  const connections = getConnectionCount(text);
+
+  if (planKey && connections) {
+    const plan = plans[planKey];
+    const price = plan.prices[connections - 1];
+    return `${plan.name} is $${price} for ${plan.months} month${plan.months === 1 ? '' : 's'} with ${connections} connection${connections === 1 ? '' : 's'}. View or select the plan at /pricing.`;
+  }
+
+  if (planKey) {
+    const plan = plans[planKey];
+    return `${plan.name} is a ${plan.months}-month plan. Prices are: 1 connection $${plan.prices[0]}, 2 $${plan.prices[1]}, 3 $${plan.prices[2]}, 4 $${plan.prices[3]}, and 5 $${plan.prices[4]}.`;
+  }
+
+  return `Kristal Streams plans:\n\n• Bronze — 1 month, starting at $20\n• Silver — 3 months, starting at $45\n• Gold — 6 months, starting at $60\n• Platinum — 12 months, starting at $95\n\nEach plan offers 1 to 5 connection options and the same broad 21,000+ channel lineup. View every option at /pricing.`;
+}
+
 function fallbackResponse(message: string): string {
   const text = message.toLowerCase();
-
-  if (/(price|pricing|plan|cost|subscription)/.test(text)) {
-    return `Kristal Streams plans:\n\n• Bronze — 1 month, starting at $20\n• Silver — 3 months, starting at $45\n• Gold — 6 months, starting at $60\n• Platinum — 12 months, starting at $95\n\nEach plan offers 1 to 5 connection options and the same broad 21,000+ channel lineup. View every option at /pricing.`;
-  }
+  const pricingResponse = getPricingResponse(message);
+  if (pricingResponse) return pricingResponse;
 
   if (/(buffer|freez|lag|slow|loading)/.test(text)) {
     return `Try these steps:\n\n1. Restart the streaming device and router.\n2. Close other bandwidth-heavy apps.\n3. Run the speed test at /support/speed-test.\n4. Try a lower quality setting.\n\nHD generally needs at least 5 Mbps and 4K at least 25 Mbps.`;
@@ -81,6 +123,14 @@ Deno.serve(async (req: Request) => {
     if (!message || typeof message !== 'string') {
       return new Response(JSON.stringify({ error: 'Message is required' }), {
         status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const pricingResponse = getPricingResponse(message);
+    if (pricingResponse) {
+      return new Response(JSON.stringify({ message: pricingResponse }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
