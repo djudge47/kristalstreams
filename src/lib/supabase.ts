@@ -1,45 +1,39 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY; 
+const configuredUrl = import.meta.env.VITE_SUPABASE_URL;
+const configuredAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Validate environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase credentials. Using fallback values.');
+export const hasSupabaseConfig = Boolean(configuredUrl && configuredAnonKey);
+
+const supabaseUrl = configuredUrl || 'https://preview-placeholder.supabase.co';
+const supabaseAnonKey = configuredAnonKey || 'preview-placeholder-key';
+
+if (!hasSupabaseConfig) {
+  console.warn('Supabase preview variables are missing. Public pages will load, but account features are unavailable in this preview.');
 }
 
-if (supabaseUrl && !supabaseUrl.startsWith('https://')) {
-  console.error('Invalid VITE_SUPABASE_URL format. Must start with https://');
-}
-
-if (supabaseAnonKey && !supabaseAnonKey.startsWith('eyJ')) {
-  console.error('Invalid VITE_SUPABASE_ANON_KEY format. Must be a valid JWT token.');
-}
-
-// Create the Supabase client with enhanced configuration
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
+    persistSession: hasSupabaseConfig,
+    autoRefreshToken: hasSupabaseConfig,
+    detectSessionInUrl: hasSupabaseConfig,
     flowType: 'pkce',
     storage: window.localStorage,
-    storageKey: 'supabase.auth.token'
+    storageKey: 'supabase.auth.token',
   },
   global: {
     headers: {
-      'X-Client-Info': 'supabase-js@2.x'
-    }
+      'X-Client-Info': 'supabase-js@2.x',
+    },
   },
-  // Add additional client options for better reliability
   db: {
-    schema: 'public'
+    schema: 'public',
   },
   realtime: {
     params: {
-      eventsPerSecond: 2
-    }
-  }
+      eventsPerSecond: 2,
+    },
+  },
 });
 
 supabase.auth.onAuthStateChange((event) => {
@@ -48,82 +42,46 @@ supabase.auth.onAuthStateChange((event) => {
   }
 });
 
-// Enhanced health check function with better error handling and retry logic
 export const checkSupabaseConnection = async (retries = 3, initialDelay = 1000) => {
-  let lastError = null;
+  if (!hasSupabaseConfig) return false;
+
   let attempt = 0;
-
-  const checkConnection = async () => {
-    try {
-      // Use a simple health check by querying the auth.users system table
-      // This table always exists and is accessible with the service role
-      const { data, error } = await supabase.auth.getSession();
-      
-      if (error) throw error;
-      return true;
-    } catch (err) {
-      throw err;
-    }
-  };
-
   while (attempt < retries) {
     try {
-      const delay = initialDelay * Math.pow(2, attempt);
-
       if (attempt > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, initialDelay * Math.pow(2, attempt)));
       }
 
-      await checkConnection();
+      const { error } = await supabase.auth.getSession();
+      if (error) throw error;
       return true;
-    } catch (err) {
-      lastError = err;
-
+    } catch (error) {
+      attempt += 1;
       if (import.meta.env.DEV) {
-        console.warn(`Supabase connection attempt ${attempt + 1} failed:`, err);
+        console.warn(`Supabase connection attempt ${attempt} failed:`, error);
       }
-
-      attempt++;
     }
-  }
-
-  if (import.meta.env.DEV) {
-    console.error('Failed to establish Supabase connection after all retries:', {
-      error: lastError,
-      url: supabaseUrl,
-      retries,
-      totalTime: initialDelay * (Math.pow(2, retries) - 1)
-    });
   }
 
   return false;
 };
 
-// Initialize connection with more graceful error handling
 const initializeSupabase = async () => {
+  if (!hasSupabaseConfig) {
+    window.dispatchEvent(new CustomEvent('supabase:configurationMissing'));
+    return;
+  }
+
   try {
-    const isConnected = await checkSupabaseConnection();
-    if (!isConnected) {
-      window.dispatchEvent(new CustomEvent('supabase:connectionFailed'));
-    } else {
-      window.dispatchEvent(new CustomEvent('supabase:connected'));
-    }
+    const connected = await checkSupabaseConnection();
+    window.dispatchEvent(new CustomEvent(connected ? 'supabase:connected' : 'supabase:connectionFailed'));
   } catch (error) {
-    if (import.meta.env.DEV) {
-      console.error('Fatal error during Supabase initialization:', error);
-    }
     window.dispatchEvent(new CustomEvent('supabase:error', { detail: error }));
   }
 };
 
-// Run initialization - but don't block app startup
 if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    initializeSupabase();
-  }, 0);
+  window.setTimeout(initializeSupabase, 0);
 }
 
-// Export a function to get connection status
-export const getConnectionStatus = async () => {
-  return await checkSupabaseConnection(1); // Single attempt for status check
-};
+export const getConnectionStatus = async () => checkSupabaseConnection(1);
