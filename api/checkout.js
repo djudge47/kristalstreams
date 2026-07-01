@@ -1,33 +1,21 @@
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const plans = {
-  basic: {
-    name: 'Bronze Plan',
-    months: 1,
-    prices: [20, 35, 50, 65, 80],
-  },
-  standard: {
-    name: 'Silver Plan',
-    months: 3,
-    prices: [45, 75, 110, 140, 175],
-  },
-  premium: {
-    name: 'Gold Plan',
-    months: 6,
-    prices: [60, 105, 150, 195, 240],
-  },
-  ultimate: {
-    name: 'Platinum Plan',
-    months: 12,
-    prices: [95, 165, 235, 305, 375],
-  },
+  basic: { name: 'Bronze Plan', months: 1, prices: [20, 35, 50, 65, 80] },
+  standard: { name: 'Silver Plan', months: 3, prices: [45, 75, 110, 140, 175] },
+  premium: { name: 'Gold Plan', months: 6, prices: [60, 105, 150, 195, 240] },
+  ultimate: { name: 'Platinum Plan', months: 12, prices: [95, 165, 235, 305, 375] },
 };
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return res.status(503).json({
+      error: 'Stripe checkout is not configured for this Vercel preview.'
+    });
   }
 
   try {
@@ -44,6 +32,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid price for the selected plan' });
     }
 
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const connections = connectionIndex + 1;
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -78,6 +67,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ url: session.url });
   } catch (error) {
     console.error('Checkout error:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Stripe could not create the checkout session.' });
   }
 }
