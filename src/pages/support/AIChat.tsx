@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Send, User, Loader } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Bot, Loader, Send, User } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface Message {
@@ -15,82 +15,57 @@ const AIChat: React.FC = () => {
       id: '1',
       role: 'assistant',
       content: 'Hello! I\'m your AI support assistant. How can I help you today? I can assist with:\n\n• Account and subscription questions\n• Streaming issues and troubleshooting\n• Device setup and compatibility\n• Billing and payment inquiries\n• Channel information and EPG\n• Technical support',
-      timestamp: new Date()
-    }
+      timestamp: new Date(),
+    },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!input.trim() || loading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
       content: input.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const conversationHistory = messages.slice(-10).map((message) => ({
+      role: message.role,
+      content: message.content,
+    }));
+
+    setMessages((previous) => [...previous, userMessage]);
     setInput('');
     setLoading(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const { data, error: functionError } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          message: userMessage.content,
+          conversationHistory,
+        },
+      });
 
-      console.log('Sending message to AI:', userMessage.content);
-      console.log('Endpoint:', `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`);
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({
-            message: userMessage.content,
-            sessionId,
-            userId: user?.id || null,
-            conversationHistory: messages.slice(-10).map(m => ({
-              role: m.role,
-              content: m.content
-            }))
-          })
-        }
-      );
-
-      console.log('Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(`Failed to get AI response: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('AI response data:', data);
+      if (functionError) throw functionError;
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.message || 'I apologize, but I encountered an error. Please try again or contact support.',
-        timestamp: new Date()
+        content: data?.message || 'I apologize, but I encountered an error. Please try again or contact support.',
+        timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((previous) => [...previous, assistantMessage]);
 
       if (user?.id) {
         await supabase.from('chat_messages').insert([
@@ -98,37 +73,37 @@ const AIChat: React.FC = () => {
             user_id: user.id,
             session_id: sessionId,
             role: 'user',
-            content: userMessage.content
+            content: userMessage.content,
           },
           {
             user_id: user.id,
             session_id: sessionId,
             role: 'assistant',
-            content: assistantMessage.content
-          }
+            content: assistantMessage.content,
+          },
         ]);
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'I apologize, but I\'m having trouble connecting right now. Please try again in a moment or contact our support team directly.',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'I apologize, but I\'m having trouble connecting right now. Please try again in a moment or contact our support team directly.',
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTime = (date: Date) => {
-    return new Date(date).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
+  const formatTime = (date: Date) => new Date(date).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 
   return (
     <div className="min-h-screen py-32 bg-dark-300">
@@ -207,7 +182,7 @@ const AIChat: React.FC = () => {
               <input
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(event) => setInput(event.target.value)}
                 placeholder="Type your message..."
                 disabled={loading}
                 className="flex-1 bg-dark-200 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary disabled:opacity-50"
