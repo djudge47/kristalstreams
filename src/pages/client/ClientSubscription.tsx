@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AlertCircle, Calendar, CreditCard, Package } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { CreditCard, Package, Calendar, AlertCircle } from 'lucide-react';
 import { restoreSessionAfterStripe } from '../../lib/stripe';
 
 interface Subscription {
@@ -21,29 +21,28 @@ const ClientSubscription: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const initPage = async () => {
+    const loadSubscription = async () => {
       try {
-        // First try to restore session if coming from Stripe
         const restored = await restoreSessionAfterStripe();
-        
-        // Get current session
         const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          // If no session and restoration failed, redirect to login
-          if (!restored) {
-            navigate('/login');
-            return;
-          }
+
+        if (!session && !restored) {
+          navigate('/login');
+          return;
         }
 
-        const { data, error } = await supabase
+        if (!session) {
+          setSubscription(null);
+          return;
+        }
+
+        const { data, error: queryError } = await supabase
           .from('subscriptions')
           .select('*')
-          .eq('user_id', session?.user.id)
+          .eq('user_id', session.user.id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (queryError) throw queryError;
         setSubscription(data);
       } catch (err) {
         console.error('Error loading subscription:', err);
@@ -53,17 +52,15 @@ const ClientSubscription: React.FC = () => {
       }
     };
 
-    initPage();
+    loadSubscription();
   }, [navigate]);
 
   if (loading) {
     return (
-      <div className="animate-pulse">
-        <div className="h-8 bg-dark-200 rounded w-1/4 mb-8"></div>
-        <div className="space-y-4">
-          <div className="h-12 bg-dark-200 rounded"></div>
-          <div className="h-12 bg-dark-200 rounded"></div>
-        </div>
+      <div className="animate-pulse space-y-4">
+        <div className="h-8 bg-dark-200 rounded w-1/4" />
+        <div className="h-12 bg-dark-200 rounded" />
+        <div className="h-12 bg-dark-200 rounded" />
       </div>
     );
   }
@@ -88,24 +85,12 @@ const ClientSubscription: React.FC = () => {
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Plan Type
-                </label>
-                <div className="bg-dark-200 rounded-lg px-4 py-3 text-white">
-                  {subscription.plan_id}
-                </div>
+                <div className="text-sm text-gray-400 mb-2">Plan Type</div>
+                <div className="bg-dark-200 rounded-lg px-4 py-3 text-white">{subscription.plan_id}</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Status
-                </label>
-                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  subscription.status === 'active'
-                    ? 'bg-green-500/20 text-green-500'
-                    : 'bg-yellow-500/20 text-yellow-500'
-                }`}>
-                  {subscription.status}
-                </div>
+                <div className="text-sm text-gray-400 mb-2">Status</div>
+                <div className="bg-dark-200 rounded-lg px-4 py-3 text-white">{subscription.status}</div>
               </div>
             </div>
           </div>
@@ -116,29 +101,13 @@ const ClientSubscription: React.FC = () => {
               <h2 className="text-xl font-semibold text-white">Billing Period</h2>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Current Period Start
-                </label>
-                <div className="bg-dark-200 rounded-lg px-4 py-3 text-white">
-                  {new Date(subscription.current_period_start).toLocaleDateString()}
-                </div>
+              <div className="bg-dark-200 rounded-lg px-4 py-3 text-white">
+                {new Date(subscription.current_period_start).toLocaleDateString()}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Current Period End
-                </label>
-                <div className="bg-dark-200 rounded-lg px-4 py-3 text-white">
-                  {new Date(subscription.current_period_end).toLocaleDateString()}
-                </div>
+              <div className="bg-dark-200 rounded-lg px-4 py-3 text-white">
+                {new Date(subscription.current_period_end).toLocaleDateString()}
               </div>
             </div>
-          </div>
-
-          <div className="flex justify-end">
-            <button className="bg-primary hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
-              Manage Subscription
-            </button>
           </div>
         </div>
       ) : (
@@ -148,7 +117,11 @@ const ClientSubscription: React.FC = () => {
           <p className="text-gray-400 mb-6">
             You don't have an active subscription. Choose a plan to start streaming.
           </p>
-          <button className="bg-primary hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
+          <button
+            type="button"
+            onClick={() => navigate('/pricing')}
+            className="bg-primary hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors duration-200"
+          >
             View Plans
           </button>
         </div>

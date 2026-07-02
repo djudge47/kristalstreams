@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Plus, Pencil, Trash2, Search, X, Save, Tv, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, Save, Tv, Upload, Download } from 'lucide-react';
 
 interface Channel {
   id?: string;
@@ -12,6 +12,37 @@ interface Channel {
   order_num?: number;
   [key: string]: any;
 }
+
+const csvEscape = (value: unknown) => {
+  const text = value === null || value === undefined ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+};
+
+const parseCsvLine = (line: string) => {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      current += '"';
+      i += 1;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current.trim());
+  return values.map((value) => value.replace(/^"|"$/g, ''));
+};
 
 const ChannelManager: React.FC = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -135,6 +166,42 @@ const ChannelManager: React.FC = () => {
     setShowForm(true);
   };
 
+  const handleExportCSV = () => {
+    if (channels.length === 0) {
+      setError('No channels available to export');
+      return;
+    }
+
+    const header = ['name', 'stream_url', 'category', 'logo_url', 'is_active', 'order_num'];
+    const rows = channels.map((channel) => [
+      channel.name,
+      channel.stream_url,
+      channel.category || 'General',
+      channel.logo_url || '',
+      channel.is_active !== false ? 'true' : 'false',
+      channel.order_num || 0,
+    ]);
+
+    const csv = [header, ...rows]
+      .map((row) => row.map(csvEscape).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10);
+
+    link.href = url;
+    link.download = `kristalstream-channels-${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setSuccess(`Exported ${channels.length} channels to CSV`);
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
   const handleBulkImport = async () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -149,15 +216,16 @@ const ChannelManager: React.FC = () => {
 
       if (file.name.endsWith('.csv')) {
         lines.forEach((line: string, i: number) => {
-          if (i === 0) return;
-          const parts = line.split(',').map((p: string) => p.trim().replace(/^"|"$/g, ''));
-          if (parts.length >= 2) {
+          if (i === 0 || !line.trim()) return;
+          const parts = parseCsvLine(line);
+          if (parts.length >= 2 && parts[0] && parts[1]) {
             newChannels.push({
               name: parts[0],
               stream_url: parts[1],
               category: parts[2] || 'General',
               logo_url: parts[3] || '',
-              is_active: true,
+              is_active: parts[4] ? parts[4].toLowerCase() !== 'false' : true,
+              order_num: parts[5] ? parseInt(parts[5], 10) || 0 : 0,
             });
           }
         });
@@ -229,6 +297,14 @@ const ChannelManager: React.FC = () => {
           <p className="text-gray-400 text-sm mt-1">{channels.length} total channels</p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={handleExportCSV}
+            disabled={channels.length === 0}
+            className="flex items-center bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Download size={18} className="mr-2" />
+            Export CSV
+          </button>
           <button
             onClick={handleBulkImport}
             className="flex items-center bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"

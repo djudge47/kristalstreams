@@ -1,111 +1,92 @@
-import React from 'react';
-import { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { sendWelcomeEmail } from '../lib/emailjs';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
 
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+    if (password.length < 8) {
+      setError('Use at least 8 characters for your password.');
+      return;
+    }
 
-      if (error) {
-        if (error.message === 'User already registered') {
-          navigate('/login', { 
-            state: { 
-              message: 'This email is already registered. Please log in instead.' 
-            }
-          });
-          return;
-        }
-        throw error;
-      }
+    if (password !== confirmPassword) {
+      setError('The passwords do not match.');
+      return;
+    }
 
-      // Send welcome email
-      try {
-        await sendWelcomeEmail({
-          user_name: email.split('@')[0], // Use email prefix as name
-          user_email: email,
-          subscription_plan: 'Free Trial'
-        });
-      } catch (emailError) {
-        console.error('Failed to send welcome email:', emailError);
-        // Don't block registration if email fails
-      }
+    setLoading(true);
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      },
+    });
 
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
+    if (signUpError) {
       setLoading(false);
+      if (/already registered|already exists/i.test(signUpError.message)) {
+        navigate('/login', { state: { message: 'This email is already registered. Sign in instead.' } });
+        return;
+      }
+      setError(signUpError.message);
+      return;
+    }
+
+    try {
+      await sendWelcomeEmail({
+        user_name: email.split('@')[0],
+        user_email: email,
+        subscription_plan: 'Free Trial',
+      });
+    } catch (emailError) {
+      console.error('Welcome email failed:', emailError);
+    }
+
+    setLoading(false);
+    if (data.session) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login', { state: { message: 'Account created. Check your email to confirm the account, then sign in.' } });
     }
   };
 
   return (
     <div className="min-h-screen py-12 container-padding">
-      <div className="max-w-md mx-auto">
-        <h1 className="text-3xl font-bold text-gradient mb-6">Create Account</h1>
-        <div className="bg-dark-100 rounded-xl p-8 border border-gray-800">
+      <div className="mx-auto max-w-md">
+        <h1 className="mb-6 text-3xl font-bold text-white">Create Account</h1>
+        <div className="rounded-xl border border-gray-800 bg-dark-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-dark-200 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
-                required
-              />
+              <label htmlFor="email" className="mb-2 block text-sm font-medium text-gray-300">Email Address</label>
+              <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-dark-200 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
-                required
-              />
+              <label htmlFor="password" className="mb-2 block text-sm font-medium text-gray-300">Password</label>
+              <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
             </div>
-            {error && (
-              <div className="text-red-500 text-sm">{error}</div>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-primary"
-            >
-              {loading ? 'Creating account...' : 'Create Account'}
-            </button>
-            <p className="text-sm text-gray-400 text-center">
-              Already have an account?{' '}
-              <Link to="/login" className="text-primary hover:text-primary-dark">
-                Log in
-              </Link>
-            </p>
+            <div>
+              <label htmlFor="confirm-password" className="mb-2 block text-sm font-medium text-gray-300">Confirm Password</label>
+              <input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
+            </div>
+            {error && <div className="rounded-lg border border-red-500/40 bg-red-900/20 p-4 text-sm text-red-300">{error}</div>}
+            <button type="submit" disabled={loading} className="w-full btn-primary">{loading ? 'Creating account...' : 'Create Account'}</button>
+            <p className="text-center text-sm text-gray-400">Already have an account? <Link to="/login" className="text-primary hover:underline">Log in</Link></p>
           </form>
         </div>
       </div>
