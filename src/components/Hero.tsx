@@ -6,8 +6,9 @@ import { supabase } from '../lib/supabase';
 interface Content {
   id: number;
   title: string;
-  image: string;
-  videoPreview: string;
+  posterImage: string;
+  backdropImage: string;
+  videoPreview?: string;
   viewers: number;
   language: string;
   quality: string;
@@ -19,9 +20,23 @@ interface Content {
 
 const content: Content[] = [
   {
+    id: 1,
+    title: 'Sinners',
+    posterImage: 'https://www.themoviedb.org/t/p/w600_and_h900_bestv2/yqsCU5XOP2mkbFamzAqbqntmfav.jpg',
+    backdropImage: 'https://www.framerated.co.uk/wp-content/uploads/2025/04/sinners01-978x652.jpg',
+    viewers: 920000,
+    language: 'Multi',
+    quality: '4K',
+    category: 'new',
+    releaseYear: 2025,
+    rating: 8.5,
+    type: 'movie'
+  },
+  {
     id: 514,
     title: 'The Last of Us',
-    image: 'https://image.tmdb.org/t/p/w1280/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg',
+    posterImage: 'https://image.tmdb.org/t/p/w1280/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg',
+    backdropImage: 'https://image.tmdb.org/t/p/w1280/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-post-apocalyptic-city-streets-4004-large.mp4',
     viewers: 480000,
     language: 'Multi',
@@ -34,7 +49,8 @@ const content: Content[] = [
   {
     id: 508,
     title: 'House of the Dragon',
-    image: 'https://image.tmdb.org/t/p/w1280/1X4h40fcB4WWUmIBK0auT4zRBAV.jpg',
+    posterImage: 'https://image.tmdb.org/t/p/w1280/1X4h40fcB4WWUmIBK0auT4zRBAV.jpg',
+    backdropImage: 'https://image.tmdb.org/t/p/w1280/1X4h40fcB4WWUmIBK0auT4zRBAV.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-medieval-castle-on-a-hill-4544-large.mp4',
     viewers: 680000,
     language: 'Multi',
@@ -47,7 +63,8 @@ const content: Content[] = [
   {
     id: 502,
     title: 'Dune: Part Two',
-    image: 'https://image.tmdb.org/t/p/w1280/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg',
+    posterImage: 'https://image.tmdb.org/t/p/w1280/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg',
+    backdropImage: 'https://image.tmdb.org/t/p/w1280/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-red-desert-landscape-2361-large.mp4',
     viewers: 580000,
     language: 'Multi',
@@ -60,7 +77,8 @@ const content: Content[] = [
   {
     id: 512,
     title: 'Kung Fu Panda 4',
-    image: 'https://image.tmdb.org/t/p/w1280/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg',
+    posterImage: 'https://image.tmdb.org/t/p/w1280/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg',
+    backdropImage: 'https://image.tmdb.org/t/p/w1280/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4',
     viewers: 950000,
     language: 'Multi',
@@ -73,7 +91,8 @@ const content: Content[] = [
   {
     id: 507,
     title: 'Oppenheimer',
-    image: 'https://image.tmdb.org/t/p/w1280/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+    posterImage: 'https://image.tmdb.org/t/p/w1280/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+    backdropImage: 'https://image.tmdb.org/t/p/w1280/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-explosion-with-fire-2771-large.mp4',
     viewers: 890000,
     language: 'Multi',
@@ -86,7 +105,8 @@ const content: Content[] = [
   {
     id: 516,
     title: 'The Equalizer 3',
-    image: 'https://image.tmdb.org/t/p/w1280/b0Ej6fnXAP8fK75hlyi2jKqdhHz.jpg',
+    posterImage: 'https://image.tmdb.org/t/p/w1280/b0Ej6fnXAP8fK75hlyi2jKqdhHz.jpg',
+    backdropImage: 'https://image.tmdb.org/t/p/w1280/b0Ej6fnXAP8fK75hlyi2jKqdhHz.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-city-night-lights-in-the-background-9566-large.mp4',
     viewers: 520000,
     language: 'Multi',
@@ -95,26 +115,14 @@ const content: Content[] = [
     releaseYear: 2024,
     rating: 7.9,
     type: 'movie'
-  },
-  {
-  id: 1,
-  title: 'Sinners',
-  image: 'https://www.themoviedb.org/t/p/w600_and_h900_bestv2/yqsCU5XOP2mkbFamzAqbqntmfav.jpg',
-  category: 'Action',
-  releaseYear: 2025,
-  rating: 8.5,
-  type: 'movie'
-}
+  }
 ];
 
 const Hero: React.FC = () => {
   const navigate = useNavigate();
   const [currentContent, setCurrentContent] = useState<Content>(content[0]);
-  const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [user, setUser] = useState(null);
-  const [showFeatures, setShowFeatures] = useState(false);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -129,30 +137,22 @@ const Hero: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isVideoPlaying) {
-      const interval = setInterval(() => {
-        handleNext();
-      }, 8000);
-      return () => clearInterval(interval);
-    }
-  }, [isVideoPlaying]);
+    const interval = setInterval(() => {
+      setIsTransitioning(true);
+      setCurrentContent(prevContent => {
+        const currentIndex = content.findIndex(item => item.id === prevContent.id);
+        const nextIndex = (currentIndex + 1) % content.length;
+        return content[nextIndex];
+      });
+      setTimeout(() => setIsTransitioning(false), 500);
+    }, 8000);
 
-  const handleNext = () => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-    setDirection('next');
-    setCurrentContent(prevContent => {
-      const currentIndex = content.findIndex(item => item.id === prevContent.id);
-      const nextIndex = (currentIndex + 1) % content.length;
-      return content[nextIndex];
-    });
-    setTimeout(() => setIsTransitioning(false), 500);
-  };
+    return () => clearInterval(interval);
+  }, []);
 
   const handleDotClick = (index: number) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setDirection(index > content.findIndex(item => item.id === currentContent.id) ? 'next' : 'prev');
     setCurrentContent(content[index]);
     setTimeout(() => setIsTransitioning(false), 500);
   };
@@ -168,7 +168,6 @@ const Hero: React.FC = () => {
   const handleLearnMore = () => {
     const featuresSection = document.getElementById('features');
     if (featuresSection) {
-      setShowFeatures(true);
       featuresSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
@@ -177,28 +176,28 @@ const Hero: React.FC = () => {
     <section className="relative w-full h-[85vh] flex items-center overflow-hidden mt-16">
       <div className="absolute inset-0">
         <div className="relative w-full h-full">
-          {currentContent.videoPreview ? (
+          <img
+            src={currentContent.backdropImage}
+            alt=""
+            aria-hidden="true"
+            className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500 ${
+              isTransitioning ? 'opacity-0' : 'opacity-100'
+            }`}
+          />
+
+          {currentContent.videoPreview && (
             <video
               src={currentContent.videoPreview}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+              className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500 ${
                 isTransitioning ? 'opacity-0' : 'opacity-100'
               }`}
               autoPlay
               loop
               muted
               playsInline
-              onPlay={() => setIsVideoPlaying(true)}
-              onPause={() => setIsVideoPlaying(false)}
-            />
-          ) : (
-            <img 
-              src={currentContent.image}
-              alt={currentContent.title}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-                isTransitioning ? 'opacity-0' : 'opacity-100'
-              }`}
             />
           )}
+
           <div className="absolute inset-0 bg-gradient-to-r from-dark-300/95 via-dark-300/80 to-transparent"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-dark-300 via-transparent to-dark-300/30"></div>
         </div>
@@ -211,12 +210,12 @@ const Hero: React.FC = () => {
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
                 Premium Streaming Experience
                 <span className="block text-xl sm:text-2xl lg:text-3xl mt-4 text-primary">
-                  18,000+ Channels • Movies • Sports • Shows
+                  21,000+ Channels • Movies • Sports • Shows
                 </span>
               </h1>
-              
+
               <p className="text-lg text-gray-300 leading-relaxed mt-6">
-                Experience crystal-clear HD and 4K streaming with our global content library. 
+                Experience crystal-clear HD and 4K streaming with our global content library.
                 Watch anywhere, anytime, on any device.
               </p>
             </div>
@@ -225,7 +224,7 @@ const Hero: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center">
                   <Star className="w-5 h-5 text-primary mr-4" />
-                  <span>Live Sports & PPV Events</span>
+                  <span>Live Sports Events</span>
                 </div>
                 <div className="flex items-center">
                   <Star className="w-5 h-5 text-primary mr-4" />
@@ -245,14 +244,14 @@ const Hero: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-8 pt-6">
-              <button 
+              <button
                 onClick={handleStartWatching}
                 className="bg-primary hover:bg-red-700 text-white px-10 py-5 rounded-lg text-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center group"
               >
                 <Play size={28} className="mr-3 group-hover:scale-110 transition-transform duration-200" />
                 Start Free Trial
               </button>
-              <button 
+              <button
                 onClick={handleLearnMore}
                 className="bg-gray-800/80 hover:bg-gray-700 text-white px-10 py-5 rounded-lg text-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center group backdrop-blur-sm"
               >
@@ -267,8 +266,8 @@ const Hero: React.FC = () => {
               <div className="absolute -inset-4 bg-gradient-to-r from-primary/30 to-primary/10 rounded-xl blur-xl"></div>
               <div className="relative bg-dark-200/80 backdrop-blur-sm p-8 rounded-xl border border-gray-800/50 transform hover:scale-[1.02] transition-all duration-300">
                 <div className="aspect-[2/3] rounded-lg overflow-hidden mb-6">
-                  <img 
-                    src={currentContent.image}
+                  <img
+                    src={currentContent.posterImage}
                     alt={currentContent.title}
                     className="w-full h-full object-cover transition-all duration-700 ease-in-out transform hover:scale-110"
                   />
@@ -277,7 +276,7 @@ const Hero: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                     <span className="text-primary font-semibold">
-                      {currentContent.category === 'new' ? 'NEW RELEASE' : 
+                      {currentContent.category === 'new' ? 'NEW RELEASE' :
                        currentContent.category === 'tv' ? 'TV SERIES' : 'FEATURED'}
                     </span>
                   </div>
