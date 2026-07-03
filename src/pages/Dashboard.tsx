@@ -46,7 +46,6 @@ const Dashboard: React.FC = () => {
   const [showPlayer, setShowPlayer] = useState(false);
   const [channels, setChannels] = useState<any[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<any>(null);
-  const [resolvedStreamUrl, setResolvedStreamUrl] = useState<string | null>(null);
   const [channelSearch, setChannelSearch] = useState('');
   const [channelCategory, setChannelCategory] = useState('all');
   const unreadCount = useNotificationStore((state) => state.unreadCount);
@@ -140,20 +139,6 @@ const Dashboard: React.FC = () => {
       if (unsubscribe) unsubscribe();
     };
   }, [navigate]);
-
-  useEffect(() => {
-    if (selectedChannel?.stream_url) {
-      setResolvedStreamUrl(null);
-      fetch('/api/resolve-stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: selectedChannel.stream_url }),
-      })
-        .then(r => r.json())
-        .then(data => setResolvedStreamUrl(data.url))
-        .catch(() => setResolvedStreamUrl(selectedChannel.stream_url.replace('http://', 'https://').replace(':80/', '/')));
-    }
-  }, [selectedChannel]);
 
   useEffect(() => {
     if (showPlayer && channels.length === 0) {
@@ -333,17 +318,11 @@ const Dashboard: React.FC = () => {
                   <h3 className="text-white text-xl font-semibold">{selectedChannel.name}</h3>
                   {selectedChannel.category && <span className="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">{selectedChannel.category}</span>}
                 </div>
-                {resolvedStreamUrl ? (
-                  <VideoPlayer
-                    src={resolvedStreamUrl}
-                    title={selectedChannel.name}
-                    autoplay={true}
-                  />
-                ) : (
-                  <div className="aspect-video bg-black rounded-lg flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-                  </div>
-                )}
+                <VideoPlayer
+                  src={selectedChannel.stream_url}
+                  title={selectedChannel.name}
+                  autoplay={true}
+                />
               </div>
             ) : (
               <div className="text-center">
