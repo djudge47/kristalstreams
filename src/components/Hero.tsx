@@ -6,9 +6,9 @@ import { supabase } from '../lib/supabase';
 interface Content {
   id: number;
   title: string;
-  posterImage: string;
-  backdropImage: string;
-  videoPreview?: string;
+  image: string;
+  poster: string;
+  videoPreview: string;
   viewers: number;
   language: string;
   quality: string;
@@ -16,14 +16,16 @@ interface Content {
   releaseYear: number;
   rating: number;
   type: 'movie' | 'tv';
+  imagePosition?: string;
 }
 
 const content: Content[] = [
   {
     id: 1,
     title: 'Sinners',
-    posterImage: 'https://www.themoviedb.org/t/p/w600_and_h900_bestv2/yqsCU5XOP2mkbFamzAqbqntmfav.jpg',
-    backdropImage: 'https://www.framerated.co.uk/wp-content/uploads/2025/04/sinners01-978x652.jpg',
+    image: 'https://image.tmdb.org/t/p/original/nAxGnGHOsfzufThz20zgmRwKur3.jpg',
+    poster: 'https://image.tmdb.org/t/p/w780/705nQHqe4JGdEisrQmVYmXyjs1U.jpg',
+    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-dark-city-street-at-night-4007-large.mp4',
     viewers: 920000,
     language: 'Multi',
     quality: '4K',
@@ -33,126 +35,161 @@ const content: Content[] = [
     type: 'movie'
   },
   {
-    id: 514,
-    title: 'The Last of Us',
-    posterImage: 'https://image.tmdb.org/t/p/w1280/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg',
-    backdropImage: 'https://image.tmdb.org/t/p/w1280/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg',
-    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-post-apocalyptic-city-streets-4004-large.mp4',
-    viewers: 480000,
+    id: 2,
+    title: 'Avengers: Doomsday',
+    image: 'https://image.tmdb.org/t/p/original/rGyYhezSXlgk3sqOgGSNooJSXLJ.jpg',
+    poster: 'https://image.tmdb.org/t/p/w780/s2Fkuq0tj7mjAHEdbfQkFkdbeRI.jpg',
+    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-explosion-with-fire-2771-large.mp4',
+    viewers: 1850000,
+    language: 'Multi',
+    quality: '4K',
+    category: 'new',
+    releaseYear: 2026,
+    rating: 9.0,
+    type: 'movie'
+  },
+  {
+    id: 3,
+    title: 'The Mandalorian & Grogu',
+    image: 'https://image.tmdb.org/t/p/original/arjGfQaakBlmfWQGNdG2nFxrpMQ.jpg',
+    poster: 'https://image.tmdb.org/t/p/w780/7QujwMB124KqSPbWlLRHBO5wygE.jpg',
+    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-red-desert-landscape-2361-large.mp4',
+    viewers: 1100000,
+    language: 'Multi',
+    quality: '4K',
+    category: 'new',
+    releaseYear: 2026,
+    rating: 8.9,
+    type: 'movie'
+  },
+  {
+    id: 4,
+    title: 'Severance',
+    image: 'https://image.tmdb.org/t/p/original/ixgFmf1X59PUZam2qbAfskx2gQr.jpg',
+    poster: 'https://image.tmdb.org/t/p/w780/Rb7sga832Cyqvafd7CqOzbwdK4.jpg',
+    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-city-night-lights-in-the-background-9566-large.mp4',
+    viewers: 780000,
     language: 'Multi',
     quality: '4K',
     category: 'tv',
-    releaseYear: 2023,
+    releaseYear: 2025,
+    rating: 8.7,
+    type: 'tv'
+  },
+  {
+    id: 5,
+    title: 'Andor Season 2',
+    image: 'https://image.tmdb.org/t/p/original/6YncDyLRRVHp98fvGYOXXv2hflu.jpg',
+    poster: 'https://image.tmdb.org/t/p/w780/ugkhd9olFiJwDgO3tK1ZrPxUdxQ.jpg',
+    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-post-apocalyptic-city-streets-4004-large.mp4',
+    viewers: 860000,
+    language: 'Multi',
+    quality: '4K',
+    category: 'tv',
+    releaseYear: 2025,
     rating: 8.8,
     type: 'tv'
   },
   {
-    id: 508,
-    title: 'House of the Dragon',
-    posterImage: 'https://image.tmdb.org/t/p/w1280/1X4h40fcB4WWUmIBK0auT4zRBAV.jpg',
-    backdropImage: 'https://image.tmdb.org/t/p/w1280/1X4h40fcB4WWUmIBK0auT4zRBAV.jpg',
+    id: 6,
+    title: 'Superman',
+    image: 'https://image.tmdb.org/t/p/original/eU7IfdWq8KQy0oNd4kKXS0QUR08.jpg',
+    imagePosition: 'center top',
+    poster: 'https://image.tmdb.org/t/p/w780/wPLysNDLffQLOVebZQCbXJEv6E6.jpg',
+    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4',
+    viewers: 1400000,
+    language: 'Multi',
+    quality: '4K',
+    category: 'new',
+    releaseYear: 2025,
+    rating: 7.8,
+    type: 'movie'
+  },
+  {
+    id: 7,
+    title: 'The White Lotus S3',
+    image: 'https://image.tmdb.org/t/p/original/qVBIAcZkK5j6WRq7JehJcOMbdgb.jpg',
+    poster: 'https://image.tmdb.org/t/p/w780/3mpkSKUAkN1UGqrrigmxWbe9q9D.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-medieval-castle-on-a-hill-4544-large.mp4',
-    viewers: 680000,
+    viewers: 690000,
     language: 'Multi',
     quality: '4K',
     category: 'tv',
-    releaseYear: 2024,
-    rating: 8.5,
+    releaseYear: 2025,
+    rating: 8.2,
     type: 'tv'
-  },
-  {
-    id: 502,
-    title: 'Dune: Part Two',
-    posterImage: 'https://image.tmdb.org/t/p/w1280/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg',
-    backdropImage: 'https://image.tmdb.org/t/p/w1280/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg',
-    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-red-desert-landscape-2361-large.mp4',
-    viewers: 580000,
-    language: 'Multi',
-    quality: '4K',
-    category: 'new',
-    releaseYear: 2024,
-    rating: 8.7,
-    type: 'movie'
-  },
-  {
-    id: 512,
-    title: 'Kung Fu Panda 4',
-    posterImage: 'https://image.tmdb.org/t/p/w1280/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg',
-    backdropImage: 'https://image.tmdb.org/t/p/w1280/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg',
-    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4',
-    viewers: 950000,
-    language: 'Multi',
-    quality: '4K',
-    category: 'new',
-    releaseYear: 2024,
-    rating: 7.3,
-    type: 'movie'
-  },
-  {
-    id: 507,
-    title: 'Oppenheimer',
-    posterImage: 'https://image.tmdb.org/t/p/w1280/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
-    backdropImage: 'https://image.tmdb.org/t/p/w1280/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
-    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-explosion-with-fire-2771-large.mp4',
-    viewers: 890000,
-    language: 'Multi',
-    quality: '4K',
-    category: 'new',
-    releaseYear: 2024,
-    rating: 9.1,
-    type: 'movie'
-  },
-  {
-    id: 516,
-    title: 'The Equalizer 3',
-    posterImage: 'https://image.tmdb.org/t/p/w1280/b0Ej6fnXAP8fK75hlyi2jKqdhHz.jpg',
-    backdropImage: 'https://image.tmdb.org/t/p/w1280/b0Ej6fnXAP8fK75hlyi2jKqdhHz.jpg',
-    videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-city-night-lights-in-the-background-9566-large.mp4',
-    viewers: 520000,
-    language: 'Multi',
-    quality: '4K',
-    category: 'new',
-    releaseYear: 2024,
-    rating: 7.9,
-    type: 'movie'
   }
 ];
 
 const Hero: React.FC = () => {
   const navigate = useNavigate();
   const [currentContent, setCurrentContent] = useState<Content>(content[0]);
+  const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [user, setUser] = useState(null);
-
+  const [showFeatures, setShowFeatures] = useState(false);
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
+    let mounted = true;
+    let subscription: any;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user || null);
-    });
+    const checkUser = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted) {
+          setUser(session?.user || null);
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    const timeoutId = setTimeout(checkUser, 500);
+
+    const setupSubscription = async () => {
+      try {
+        const { data } = supabase.auth.onAuthStateChange((_, session) => {
+          if (mounted) {
+            setUser(session?.user || null);
+          }
+        });
+        subscription = data.subscription;
+      } catch (error) {
+        console.error('Auth subscription error:', error);
+      }
+    };
+
+    setupSubscription();
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setIsTransitioning(true);
-      setCurrentContent(prevContent => {
-        const currentIndex = content.findIndex(item => item.id === prevContent.id);
-        const nextIndex = (currentIndex + 1) % content.length;
-        return content[nextIndex];
-      });
-      setTimeout(() => setIsTransitioning(false), 500);
-    }, 8000);
-
+    const interval = setInterval(handleNext, 8000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleNext = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setDirection('next');
+    setCurrentContent(prevContent => {
+      const currentIndex = content.findIndex(item => item.id === prevContent.id);
+      const nextIndex = (currentIndex + 1) % content.length;
+      return content[nextIndex];
+    });
+    setTimeout(() => setIsTransitioning(false), 500);
+  };
 
   const handleDotClick = (index: number) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
+    setDirection(index > content.findIndex(item => item.id === currentContent.id) ? 'next' : 'prev');
     setCurrentContent(content[index]);
     setTimeout(() => setIsTransitioning(false), 500);
   };
@@ -168,6 +205,7 @@ const Hero: React.FC = () => {
   const handleLearnMore = () => {
     const featuresSection = document.getElementById('features');
     if (featuresSection) {
+      setShowFeatures(true);
       featuresSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
@@ -177,35 +215,22 @@ const Hero: React.FC = () => {
       <div className="absolute inset-0">
         <div className="relative w-full h-full">
           <img
-            src={currentContent.backdropImage}
-            alt=""
-            aria-hidden="true"
-            className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500 ${
+            src={currentContent.image}
+            alt={currentContent.title}
+            loading="eager"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
               isTransitioning ? 'opacity-0' : 'opacity-100'
             }`}
+            style={currentContent.imagePosition ? { objectPosition: currentContent.imagePosition } : undefined}
           />
-
-          {currentContent.videoPreview && (
-            <video
-              src={currentContent.videoPreview}
-              className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500 ${
-                isTransitioning ? 'opacity-0' : 'opacity-100'
-              }`}
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
-          )}
-
           <div className="absolute inset-0 bg-gradient-to-r from-dark-300/95 via-dark-300/80 to-transparent"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-dark-300 via-transparent to-dark-300/30"></div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-16 items-center">
-          <div className="max-w-2xl space-y-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+          <div className="max-w-2xl space-y-8 lg:space-y-12">
             <div className="space-y-6">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
                 Premium Streaming Experience
@@ -213,14 +238,14 @@ const Hero: React.FC = () => {
                   21,000+ Channels • Movies • Sports • Shows
                 </span>
               </h1>
-
+              
               <p className="text-lg text-gray-300 leading-relaxed mt-6">
-                Experience crystal-clear HD and 4K streaming with our global content library.
+                Experience crystal-clear HD and 4K streaming with our global content library. 
                 Watch anywhere, anytime, on any device.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-8 text-base text-gray-300">
+            <div className="grid grid-cols-2 gap-4 md:gap-8 text-sm sm:text-base text-gray-300">
               <div className="space-y-4">
                 <div className="flex items-center">
                   <Star className="w-5 h-5 text-primary mr-4" />
@@ -243,19 +268,19 @@ const Hero: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-8 pt-6">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-2 sm:pt-6">
               <button
                 onClick={handleStartWatching}
-                className="bg-primary hover:bg-red-700 text-white px-10 py-5 rounded-lg text-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center group"
+                className="bg-primary hover:bg-red-700 text-white px-6 sm:px-10 py-4 sm:py-5 rounded-lg text-base sm:text-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center justify-center group"
               >
-                <Play size={28} className="mr-3 group-hover:scale-110 transition-transform duration-200" />
+                <Play size={22} className="mr-3 group-hover:scale-110 transition-transform duration-200" />
                 Start Free Trial
               </button>
               <button
                 onClick={handleLearnMore}
-                className="bg-gray-800/80 hover:bg-gray-700 text-white px-10 py-5 rounded-lg text-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center group backdrop-blur-sm"
+                className="bg-gray-800/80 hover:bg-gray-700 text-white px-6 sm:px-10 py-4 sm:py-5 rounded-lg text-base sm:text-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center justify-center group backdrop-blur-sm"
               >
-                <Info size={28} className="mr-3 group-hover:rotate-12 transition-transform duration-200" />
+                <Info size={22} className="mr-3 group-hover:rotate-12 transition-transform duration-200" />
                 Learn More
               </button>
             </div>
@@ -267,8 +292,11 @@ const Hero: React.FC = () => {
               <div className="relative bg-dark-200/80 backdrop-blur-sm p-8 rounded-xl border border-gray-800/50 transform hover:scale-[1.02] transition-all duration-300">
                 <div className="aspect-[2/3] rounded-lg overflow-hidden mb-6">
                   <img
-                    src={currentContent.posterImage}
+                    src={currentContent.poster}
                     alt={currentContent.title}
+                    loading="lazy"
+                    width="350"
+                    height="525"
                     className="w-full h-full object-cover transition-all duration-700 ease-in-out transform hover:scale-110"
                   />
                 </div>
@@ -276,7 +304,7 @@ const Hero: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                     <span className="text-primary font-semibold">
-                      {currentContent.category === 'new' ? 'NEW RELEASE' :
+                      {currentContent.category === 'new' ? 'NEW RELEASE' : 
                        currentContent.category === 'tv' ? 'TV SERIES' : 'FEATURED'}
                     </span>
                   </div>
