@@ -184,10 +184,9 @@ export default async function handler(req: VercelRequestLike, res: VercelRespons
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
-  const proxySecret = process.env.STREAM_PROXY_SECRET;
 
-  if (!supabaseUrl || !supabaseAnonKey || !proxySecret) {
-    res.status(503).json({ error: 'The secure stream relay is not configured yet.' });
+  if (!supabaseUrl || !supabaseAnonKey) {
+    res.status(503).json({ error: 'Supabase is not configured for this deployment.' });
     return;
   }
 
@@ -215,6 +214,8 @@ export default async function handler(req: VercelRequestLike, res: VercelRespons
     res.status(401).json({ error: 'Your session has expired. Please sign in again.' });
     return;
   }
+
+  const proxySecret = `${userData.user.id}:${accessToken}`;
 
   try {
     const encryptedToken = firstQueryValue(req.query.token);
