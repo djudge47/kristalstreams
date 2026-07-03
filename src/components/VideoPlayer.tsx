@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, memo } from 'react';
 import Hls from 'hls.js';
 import { Play, Pause, Volume2, VolumeX, Maximize, Settings } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface VideoPlayerProps {
   src: string;
@@ -22,6 +23,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const [resolvedSrc, setResolvedSrc] = useState(src);
+  const [sessionAuthToken, setSessionAuthToken] = useState<string | undefined>();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -33,6 +36,66 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const effectiveAuthToken = authToken || sessionAuthToken;
+  const usesSecureRelay = resolvedSrc.includes('/api/stream');
+
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) {
+        setSessionAuthToken(data.session?.access_token);
+      }
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        setSessionAuthToken(session?.access_token);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const resolveStreamSource = async () => {
+      setError(null);
+      setIsLoading(true);
+
+      if (!src.startsWith('http://')) {
+        setResolvedSrc(src);
+        return;
+      }
+
+      const { data: channel, error: channelError } = await supabase
+        .from('channels')
+        .select('id')
+        .eq('stream_url', src)
+        .single();
+
+      if (!mounted) return;
+
+      if (channelError || !channel?.id) {
+        setError('This channel could not be verified.');
+        setIsLoading(false);
+        return;
+      }
+
+      setResolvedSrc(`/api/stream?channel=${encodeURIComponent(String(channel.id))}`);
+    };
+
+    resolveStreamSource();
+
+    return () => {
+      mounted = false;
+    };
+  }, [src]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -53,7 +116,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
     video.removeAttribute('src');
     video.load();
 
-    const isHLS = src.includes('.m3u8') || src.includes('/api/stream');
+    if (usesSecureRelay && !effectiveAuthToken) {
+      return;
+    }
+
+    const isHLS = resolvedSrc.includes('.m3u8') || usesSecureRelay;
 
     if (isHLS) {
       if (Hls.isSupported()) {
@@ -63,14 +130,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
           backBufferLength: 90,
           xhrSetup: (xhr) => {
             xhr.withCredentials = false;
-            if (authToken) {
-              xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+            if (usesSecureRelay && effectiveAuthToken) {
+              xhr.setRequestHeader('Authorization', `Bearer ${effectiveAuthToken}`);
             }
           }
         });
 
         hlsRef.current = hls;
-        hls.loadSource(src);
+        hls.loadSource(resolvedSrc);
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -108,11 +175,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
           }
         };
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        if (authToken && src.includes('/api/stream')) {
+        if (usesSecureRelay) {
           setError('Secure Live TV playback is not supported in this browser.');
           setIsLoading(false);
         } else {
-          video.src = src;
+          video.src = resolvedSrc;
           setIsLoading(false);
           if (autoplay) {
             video.play().catch(() => setIsPlaying(false));
@@ -123,13 +190,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
         setIsLoading(false);
       }
     } else {
-      video.src = src;
+      video.src = resolvedSrc;
       setIsLoading(false);
       if (autoplay) {
         video.play().catch(() => setIsPlaying(false));
       }
     }
-  }, [src, autoplay, authToken]);
+  }, [resolvedSrc, autoplay, effectiveAuthToken, usesSecureRelay]);
 
   useEffect(() => {
     const video = videoRef.current;
