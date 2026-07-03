@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Info, Play, Star } from 'lucide-react';
+import { Play, Info, Star } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Content {
@@ -29,7 +29,7 @@ const content: Content[] = [
     category: 'tv',
     releaseYear: 2023,
     rating: 8.8,
-    type: 'tv',
+    type: 'tv'
   },
   {
     id: 508,
@@ -42,7 +42,7 @@ const content: Content[] = [
     category: 'tv',
     releaseYear: 2024,
     rating: 8.5,
-    type: 'tv',
+    type: 'tv'
   },
   {
     id: 502,
@@ -55,7 +55,7 @@ const content: Content[] = [
     category: 'new',
     releaseYear: 2024,
     rating: 8.7,
-    type: 'movie',
+    type: 'movie'
   },
   {
     id: 512,
@@ -68,7 +68,7 @@ const content: Content[] = [
     category: 'new',
     releaseYear: 2024,
     rating: 7.3,
-    type: 'movie',
+    type: 'movie'
   },
   {
     id: 507,
@@ -81,7 +81,7 @@ const content: Content[] = [
     category: 'new',
     releaseYear: 2024,
     rating: 9.1,
-    type: 'movie',
+    type: 'movie'
   },
   {
     id: 516,
@@ -94,153 +94,203 @@ const content: Content[] = [
     category: 'new',
     releaseYear: 2024,
     rating: 7.9,
-    type: 'movie',
+    type: 'movie'
   },
   {
-    id: 1,
-    title: 'Sinners',
-    image: 'https://www.themoviedb.org/t/p/w600_and_h900_bestv2/yqsCU5XOP2mkbFamzAqbqntmfav.jpg',
-    videoPreview: '',
-    viewers: 640000,
-    language: 'English',
-    quality: '4K',
-    category: 'new',
-    releaseYear: 2025,
-    rating: 8.5,
-    type: 'movie',
-  },
+  id: 1,
+  title: 'Sinners',
+  image: 'https://www.themoviedb.org/t/p/w600_and_h900_bestv2/yqsCU5XOP2mkbFamzAqbqntmfav.jpg',
+  category: 'Action',
+  releaseYear: 2025,
+  rating: 8.5,
+  type: 'movie'
+}
 ];
 
 const Hero: React.FC = () => {
   const navigate = useNavigate();
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentContent, setCurrentContent] = useState<Content>(content[0]);
+  const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [user, setUser] = useState<unknown>(null);
-  const currentContent = content[currentIndex];
+  const [user, setUser] = useState(null);
+  const [showFeatures, setShowFeatures] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user || null);
     });
+
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    const interval = window.setInterval(() => {
-      setIsTransitioning(true);
-      setCurrentIndex((index) => (index + 1) % content.length);
-      window.setTimeout(() => setIsTransitioning(false), 500);
-    }, 8000);
-    return () => window.clearInterval(interval);
-  }, []);
+    if (!isVideoPlaying) {
+      const interval = setInterval(() => {
+        handleNext();
+      }, 8000);
+      return () => clearInterval(interval);
+    }
+  }, [isVideoPlaying]);
 
-  const selectSlide = (index: number) => {
-    if (isTransitioning || index === currentIndex) return;
+  const handleNext = () => {
+    if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentIndex(index);
-    window.setTimeout(() => setIsTransitioning(false), 500);
+    setDirection('next');
+    setCurrentContent(prevContent => {
+      const currentIndex = content.findIndex(item => item.id === prevContent.id);
+      const nextIndex = (currentIndex + 1) % content.length;
+      return content[nextIndex];
+    });
+    setTimeout(() => setIsTransitioning(false), 500);
+  };
+
+  const handleDotClick = (index: number) => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setDirection(index > content.findIndex(item => item.id === currentContent.id) ? 'next' : 'prev');
+    setCurrentContent(content[index]);
+    setTimeout(() => setIsTransitioning(false), 500);
+  };
+
+  const handleStartWatching = () => {
+    if (!user) {
+      navigate('/login');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  const handleLearnMore = () => {
+    const featuresSection = document.getElementById('features');
+    if (featuresSection) {
+      setShowFeatures(true);
+      featuresSection.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   return (
-    <section className="relative mt-16 flex h-[82vh] min-h-[680px] max-h-[860px] w-full items-center overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden bg-dark-300">
-        <img
-          src={currentContent.image}
-          alt=""
-          aria-hidden="true"
-          className={`absolute inset-0 h-full w-full scale-110 object-cover opacity-30 blur-2xl transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : ''}`}
-        />
-
-        <div className="absolute inset-y-0 right-0 w-full sm:w-[78%] lg:w-[62%]">
-          <img
-            src={currentContent.image}
-            alt=""
-            aria-hidden="true"
-            className={`absolute inset-0 h-full w-full object-contain object-right transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
-          />
-
-          {currentContent.videoPreview && (
+    <section className="relative w-full h-[85vh] flex items-center overflow-hidden mt-16">
+      <div className="absolute inset-0">
+        <div className="relative w-full h-full">
+          {currentContent.videoPreview ? (
             <video
-              key={currentContent.id}
               src={currentContent.videoPreview}
-              poster={currentContent.image}
-              className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+                isTransitioning ? 'opacity-0' : 'opacity-100'
+              }`}
               autoPlay
               loop
               muted
               playsInline
-              onError={(event) => {
-                event.currentTarget.style.display = 'none';
-              }}
+              onPlay={() => setIsVideoPlaying(true)}
+              onPause={() => setIsVideoPlaying(false)}
+            />
+          ) : (
+            <img 
+              src={currentContent.image}
+              alt={currentContent.title}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+                isTransitioning ? 'opacity-0' : 'opacity-100'
+              }`}
             />
           )}
+          <div className="absolute inset-0 bg-gradient-to-r from-dark-300/95 via-dark-300/80 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-dark-300 via-transparent to-dark-300/30"></div>
         </div>
-
-        <div className="absolute inset-0 bg-gradient-to-r from-dark-300 via-dark-300/90 to-dark-300/20" />
-        <div className="absolute inset-0 bg-gradient-to-t from-dark-300 via-transparent to-dark-300/40" />
       </div>
 
-      <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid items-center gap-8 md:grid-cols-2 lg:gap-16">
-          <div className="max-w-2xl space-y-10">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-16 items-center">
+          <div className="max-w-2xl space-y-12">
             <div className="space-y-6">
-              <h1 className="text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
                 Premium Streaming Experience
-                <span className="mt-4 block text-xl text-primary sm:text-2xl lg:text-3xl">
-                  21,000+ Channels • Movies • Sports • Shows
+                <span className="block text-xl sm:text-2xl lg:text-3xl mt-4 text-primary">
+                  18,000+ Channels • Movies • Sports • Shows
                 </span>
               </h1>
-              <p className="text-lg leading-relaxed text-gray-300">
-                Experience crystal-clear HD and 4K streaming with our global content library. Watch anywhere, anytime, on any device.
+              
+              <p className="text-lg text-gray-300 leading-relaxed mt-6">
+                Experience crystal-clear HD and 4K streaming with our global content library. 
+                Watch anywhere, anytime, on any device.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-6 text-gray-300">
-              {['Live Sports & PPV Events', 'Premium Movie Channels', 'International Content', '24/7 Customer Support'].map((feature) => (
-                <div key={feature} className="flex items-center">
-                  <Star className="mr-3 h-5 w-5 text-primary" />
-                  <span>{feature}</span>
+            <div className="grid grid-cols-2 gap-8 text-base text-gray-300">
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <Star className="w-5 h-5 text-primary mr-4" />
+                  <span>Live Sports & PPV Events</span>
                 </div>
-              ))}
+                <div className="flex items-center">
+                  <Star className="w-5 h-5 text-primary mr-4" />
+                  <span>Premium Movie Channels</span>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <Star className="w-5 h-5 text-primary mr-4" />
+                  <span>International Content</span>
+                </div>
+                <div className="flex items-center">
+                  <Star className="w-5 h-5 text-primary mr-4" />
+                  <span>24/7 Customer Support</span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-6 pt-4">
-              <button
-                onClick={() => navigate(user ? '/dashboard' : '/login')}
-                className="group flex items-center rounded-lg bg-primary px-10 py-5 text-lg font-medium text-white transition hover:scale-105 hover:bg-red-700"
+            <div className="flex flex-wrap gap-8 pt-6">
+              <button 
+                onClick={handleStartWatching}
+                className="bg-primary hover:bg-red-700 text-white px-10 py-5 rounded-lg text-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center group"
               >
-                <Play size={28} className="mr-3" />
+                <Play size={28} className="mr-3 group-hover:scale-110 transition-transform duration-200" />
                 Start Free Trial
               </button>
-              <button
-                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-                className="group flex items-center rounded-lg bg-gray-800/80 px-10 py-5 text-lg font-medium text-white backdrop-blur-sm transition hover:scale-105 hover:bg-gray-700"
+              <button 
+                onClick={handleLearnMore}
+                className="bg-gray-800/80 hover:bg-gray-700 text-white px-10 py-5 rounded-lg text-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center group backdrop-blur-sm"
               >
-                <Info size={28} className="mr-3" />
+                <Info size={28} className="mr-3 group-hover:rotate-12 transition-transform duration-200" />
                 Learn More
               </button>
             </div>
           </div>
 
           <div className="hidden lg:block">
-            <div className="relative mx-auto max-w-[300px]">
-              <div className="absolute -inset-4 rounded-xl bg-gradient-to-r from-primary/30 to-primary/10 blur-xl" />
-              <div className="relative rounded-xl border border-gray-800/50 bg-dark-200/80 p-6 backdrop-blur-sm">
-                <div className="mb-5 aspect-[2/3] overflow-hidden rounded-lg">
-                  <img src={currentContent.image} alt={currentContent.title} className="h-full w-full object-cover" />
+            <div className="relative max-w-[350px] mx-auto">
+              <div className="absolute -inset-4 bg-gradient-to-r from-primary/30 to-primary/10 rounded-xl blur-xl"></div>
+              <div className="relative bg-dark-200/80 backdrop-blur-sm p-8 rounded-xl border border-gray-800/50 transform hover:scale-[1.02] transition-all duration-300">
+                <div className="aspect-[2/3] rounded-lg overflow-hidden mb-6">
+                  <img 
+                    src={currentContent.image}
+                    alt={currentContent.title}
+                    className="w-full h-full object-cover transition-all duration-700 ease-in-out transform hover:scale-110"
+                  />
                 </div>
-                <div className="flex items-center gap-3 text-primary">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-                  <span className="font-semibold">{currentContent.category === 'tv' ? 'TV SERIES' : 'NEW RELEASE'}</span>
-                </div>
-                <h3 className="mt-3 text-xl font-semibold text-white">{currentContent.title}</h3>
-                <div className="mt-2 flex items-center gap-3 text-sm text-gray-400">
-                  <span>{Math.round(currentContent.viewers / 1000)}k watching</span>
-                  <span>•</span>
-                  <span>{currentContent.quality}</span>
-                  <span>•</span>
-                  <span>{currentContent.releaseYear}</span>
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                    <span className="text-primary font-semibold">
+                      {currentContent.category === 'new' ? 'NEW RELEASE' : 
+                       currentContent.category === 'tv' ? 'TV SERIES' : 'FEATURED'}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-semibold text-white">{currentContent.title}</h3>
+                    <div className="flex items-center gap-3 text-sm text-gray-400">
+                      <span>{(currentContent.viewers / 1000).toFixed(0)}k watching</span>
+                      <span>•</span>
+                      <span>{currentContent.quality}</span>
+                      <span>•</span>
+                      <span>{currentContent.releaseYear}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -248,13 +298,18 @@ const Hero: React.FC = () => {
         </div>
       </div>
 
-      <div className="absolute bottom-10 left-1/2 z-20 flex -translate-x-1/2 space-x-3">
-        {content.map((item, index) => (
+      <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20">
+        {content.map((_, index) => (
           <button
-            key={item.id}
-            onClick={() => selectSlide(index)}
-            className={`h-2 rounded-full transition-all ${index === currentIndex ? 'w-8 bg-primary' : 'w-2 bg-white/50 hover:bg-white/75'}`}
+            key={index}
+            onClick={() => handleDotClick(index)}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              currentContent.id === content[index].id
+                ? 'bg-primary w-8'
+                : 'bg-white/50 hover:bg-white/75'
+            }`}
             aria-label={`Go to slide ${index + 1}`}
+            disabled={isTransitioning}
           />
         ))}
       </div>
