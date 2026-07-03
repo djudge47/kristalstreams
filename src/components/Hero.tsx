@@ -143,31 +143,42 @@ const Hero: React.FC = () => {
   };
 
   return (
-    <section className="relative mt-16 flex h-[85vh] w-full items-center overflow-hidden">
-      <div className="absolute inset-0 bg-dark-300">
+    <section className="relative mt-16 flex h-[82vh] min-h-[680px] max-h-[860px] w-full items-center overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden bg-dark-300">
         <img
           src={currentContent.image}
           alt=""
           aria-hidden="true"
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+          className={`absolute inset-0 h-full w-full scale-110 object-cover opacity-30 blur-2xl transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : ''}`}
         />
-        {currentContent.videoPreview && (
-          <video
-            key={currentContent.id}
-            src={currentContent.videoPreview}
-            poster={currentContent.image}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
-            autoPlay
-            loop
-            muted
-            playsInline
-            onError={(event) => {
-              event.currentTarget.style.display = 'none';
-            }}
+
+        <div className="absolute inset-y-0 right-0 w-full sm:w-[78%] lg:w-[62%]">
+          <img
+            src={currentContent.image}
+            alt=""
+            aria-hidden="true"
+            className={`absolute inset-0 h-full w-full object-contain object-right transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
           />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-r from-dark-300/95 via-dark-300/80 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-dark-300 via-transparent to-dark-300/30" />
+
+          {currentContent.videoPreview && (
+            <video
+              key={currentContent.id}
+              src={currentContent.videoPreview}
+              poster={currentContent.image}
+              className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+              autoPlay
+              loop
+              muted
+              playsInline
+              onError={(event) => {
+                event.currentTarget.style.display = 'none';
+              }}
+            />
+          )}
+        </div>
+
+        <div className="absolute inset-0 bg-gradient-to-r from-dark-300 via-dark-300/90 to-dark-300/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-dark-300 via-transparent to-dark-300/40" />
       </div>
 
       <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
@@ -213,17 +224,17 @@ const Hero: React.FC = () => {
           </div>
 
           <div className="hidden lg:block">
-            <div className="relative mx-auto max-w-[350px]">
+            <div className="relative mx-auto max-w-[300px]">
               <div className="absolute -inset-4 rounded-xl bg-gradient-to-r from-primary/30 to-primary/10 blur-xl" />
-              <div className="relative rounded-xl border border-gray-800/50 bg-dark-200/80 p-8 backdrop-blur-sm">
-                <div className="mb-6 aspect-[2/3] overflow-hidden rounded-lg">
+              <div className="relative rounded-xl border border-gray-800/50 bg-dark-200/80 p-6 backdrop-blur-sm">
+                <div className="mb-5 aspect-[2/3] overflow-hidden rounded-lg">
                   <img src={currentContent.image} alt={currentContent.title} className="h-full w-full object-cover" />
                 </div>
                 <div className="flex items-center gap-3 text-primary">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
                   <span className="font-semibold">{currentContent.category === 'tv' ? 'TV SERIES' : 'NEW RELEASE'}</span>
                 </div>
-                <h3 className="mt-4 text-2xl font-semibold text-white">{currentContent.title}</h3>
+                <h3 className="mt-3 text-xl font-semibold text-white">{currentContent.title}</h3>
                 <div className="mt-2 flex items-center gap-3 text-sm text-gray-400">
                   <span>{Math.round(currentContent.viewers / 1000)}k watching</span>
                   <span>•</span>
@@ -237,7 +248,7 @@ const Hero: React.FC = () => {
         </div>
       </div>
 
-      <div className="absolute bottom-12 left-1/2 z-20 flex -translate-x-1/2 space-x-3">
+      <div className="absolute bottom-10 left-1/2 z-20 flex -translate-x-1/2 space-x-3">
         {content.map((item, index) => (
           <button
             key={item.id}
