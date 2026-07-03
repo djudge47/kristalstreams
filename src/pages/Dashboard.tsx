@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { subscribeToTickets, getUnreadTicketCount, useNotificationStore } from '../lib/api';
-import VideoPlayer from '../components/VideoPlayer';
+import InstallPrompt from '../components/InstallPrompt';
 import {
   User,
   CreditCard,
@@ -13,11 +13,12 @@ import {
   CheckCircle,
   Plus,
   Bell,
-  Play,
   Film,
-  Settings,
-  Search,
-  Tv
+  Upload,
+  Shield,
+  Download,
+  Smartphone,
+  Wifi,
 } from 'lucide-react';
 
 interface Profile {
@@ -27,6 +28,7 @@ interface Profile {
   subscription_status: string;
   connections_allowed: number;
   active_connections: number;
+  is_admin: boolean | null;
 }
 
 interface Ticket {
@@ -43,11 +45,6 @@ const Dashboard: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showPlayer, setShowPlayer] = useState(false);
-  const [channels, setChannels] = useState<any[]>([]);
-  const [selectedChannel, setSelectedChannel] = useState<any>(null);
-  const [channelSearch, setChannelSearch] = useState('');
-  const [channelCategory, setChannelCategory] = useState('all');
   const unreadCount = useNotificationStore((state) => state.unreadCount);
 
   useEffect(() => {
@@ -58,30 +55,21 @@ const Dashboard: React.FC = () => {
 
     const getProfile = async () => {
       try {
-        // Wait for auth to settle (fixes Google OAuth double-entry)
-        let user = null;
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const { data, error: authError } = await supabase.auth.getUser();
-          if (!authError && data.user) {
-            user = data.user;
-            break;
-          }
-          // Wait a moment for auth to settle
-          await new Promise(r => setTimeout(r, 500));
-        }
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
         
+        if (authError) throw authError;
         if (!user) {
-          if (mounted) navigate('/login');
+          navigate('/login');
           return;
         }
 
         // Subscribe to ticket updates
         unsubscribe = subscribeToTickets(user.id);
-        await getUnreadTicketCount(user.id);
+        await getUnreadTicketCount(user.id).catch(() => {});
 
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select()
+          .select('id, email, full_name, subscription_tier, subscription_status, connections_allowed, active_connections, is_admin')
           .eq('id', user.id)
           .single();
 
@@ -110,6 +98,7 @@ const Dashboard: React.FC = () => {
             throw profileError;
           }
         } else if (mounted) {
+          console.log('[Dashboard] profile loaded:', profile);
           setProfile(profile);
         }
 
@@ -121,12 +110,17 @@ const Dashboard: React.FC = () => {
           .order('created_at', { ascending: false });
 
         if (ticketError) throw ticketError;
-        if (mounted) setTickets(ticketData);
+        if (mounted) setTickets(ticketData ?? []);
 
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error in dashboard:', err);
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+          const msg = err instanceof Error
+            ? err.message
+            : (typeof err === 'object' && err !== null && 'message' in err)
+              ? String((err as { message: unknown }).message)
+              : JSON.stringify(err);
+          setError(msg || 'An unexpected error occurred');
         }
       } finally {
         if (mounted) setLoading(false);
@@ -139,28 +133,6 @@ const Dashboard: React.FC = () => {
       if (unsubscribe) unsubscribe();
     };
   }, [navigate]);
-
-  useEffect(() => {
-    if (showPlayer && channels.length === 0) {
-      const fetchChannels = async () => {
-        try {
-          const { data, error: fetchError } = await supabase.from('channels').select('*').order('name');
-          console.log('Channels fetch result:', { data, error: fetchError });
-          if (fetchError) {
-            console.error('Channel fetch error:', fetchError);
-            return;
-          }
-          if (data && data.length > 0) {
-            setChannels(data);
-            setSelectedChannel(data[0]);
-          }
-        } catch (err) {
-          console.error('Channel fetch exception:', err);
-        }
-      };
-      fetchChannels();
-    }
-  }, [showPlayer]);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -190,12 +162,12 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen py-12 bg-dark-300">
+      <div className="min-h-screen py-32 bg-dark-300">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="animate-pulse space-y-8">
               <div className="h-8 bg-dark-200 rounded w-1/4"></div>
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-3 gap-6">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="h-32 bg-dark-200 rounded-xl"></div>
                 ))}
@@ -210,7 +182,7 @@ const Dashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen py-12 bg-dark-300">
+      <div className="min-h-screen py-32 bg-dark-300">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto text-center">
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
@@ -230,7 +202,7 @@ const Dashboard: React.FC = () => {
 
   if (!profile) {
     return (
-      <div className="min-h-screen py-12 bg-dark-300">
+      <div className="min-h-screen py-32 bg-dark-300">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto text-center">
             <User className="w-16 h-16 text-primary mx-auto mb-4" />
@@ -249,96 +221,12 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen py-12 bg-dark-300">
-      {showPlayer && (
-        <div className="fixed inset-0 z-[9999] bg-black flex">
-          {/* Channel Sidebar */}
-          <div className="w-64 md:w-80 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
-            <div className="p-4 border-b border-gray-800">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-bold text-white">Channels</h2>
-                <button onClick={() => setShowPlayer(false)} className="text-gray-400 hover:text-white text-xl">✕</button>
-              </div>
-              <div className="relative mb-2">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="text" value={channelSearch} onChange={e => setChannelSearch(e.target.value)}
-                  placeholder="Search channels..." className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-white text-sm" />
-              </div>
-              {channels.length > 0 && (
-                <select value={channelCategory} onChange={e => setChannelCategory(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
-                  <option value="all">All Categories</option>
-                  {[...new Set(channels.map(c => c.category).filter(Boolean))].sort().map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {channels.length === 0 ? (
-                <div className="p-4 text-center">
-                  <Tv size={32} className="mx-auto text-gray-600 mb-2" />
-                  <p className="text-gray-400 text-sm">No channels available</p>
-                  <p className="text-gray-500 text-xs mt-1">Add channels in the admin panel</p>
-                </div>
-              ) : (
-                channels
-                  .filter(c => {
-                    const matchSearch = c.name?.toLowerCase().includes(channelSearch.toLowerCase());
-                    const matchCat = channelCategory === 'all' || c.category === channelCategory;
-                    return matchSearch && matchCat;
-                  })
-                  .map(channel => (
-                    <button key={channel.id} onClick={() => setSelectedChannel(channel)}
-                      className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${
-                        selectedChannel?.id === channel.id ? 'bg-red-600/20 border-l-2 border-red-500' : 'hover:bg-gray-800'
-                      }`}>
-                      {channel.logo_url ? (
-                        <img src={channel.logo_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center flex-shrink-0">
-                          <Tv size={14} className="text-gray-500" />
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-white text-sm truncate">{channel.name}</p>
-                        {channel.category && <p className="text-gray-500 text-xs truncate">{channel.category}</p>}
-                      </div>
-                    </button>
-                  ))
-              )}
-            </div>
-          </div>
-
-          {/* Video Player */}
-          <div className="flex-1 flex items-center justify-center p-4">
-            {selectedChannel ? (
-              <div className="w-full max-w-7xl">
-                <div className="mb-4 flex items-center gap-3">
-                  <h3 className="text-white text-xl font-semibold">{selectedChannel.name}</h3>
-                  {selectedChannel.category && <span className="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">{selectedChannel.category}</span>}
-                </div>
-                <VideoPlayer
-                  src={selectedChannel.stream_url}
-                  title={selectedChannel.name}
-                  autoplay={true}
-                />
-              </div>
-            ) : (
-              <div className="text-center">
-                <Tv size={64} className="mx-auto text-gray-600 mb-4" />
-                <p className="text-gray-400 text-lg">Select a channel to start watching</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
+    <div className="min-h-screen py-32 bg-dark-300">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Dashboard</h1>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               {unreadCount > 0 && (
                 <div className="relative">
                   <Bell className="w-6 h-6 text-primary animate-pulse" />
@@ -348,32 +236,48 @@ const Dashboard: React.FC = () => {
                 </div>
               )}
               <button
-                onClick={() => setShowPlayer(true)}
-                className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                onClick={() => navigate('/client/import')}
+                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors duration-200 text-sm"
               >
-                <Play className="w-5 h-5 mr-2" />
-                Watch Live TV
+                <Upload className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Import </span>Channels
               </button>
               <button
                 onClick={() => navigate('/client/support/new')}
-                className="flex items-center bg-primary hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                className="flex items-center bg-primary hover:bg-red-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors duration-200 text-sm"
               >
-                <Plus className="w-5 h-5 mr-2" />
-                New Support Ticket
+                <Plus className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">New </span>Support Ticket
               </button>
-              {profile.email === 'djudge47@gmail.com' && (
-                <button
-                  onClick={() => navigate('/admin')}
-                  className="flex items-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-                >
-                  <Settings className="w-5 h-5 mr-2" />
-                  Admin Panel
-                </button>
-              )}
             </div>
           </div>
-          
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
+
+          {/* Admin toolbar */}
+          {profile?.is_admin === true && (
+            <div className="flex flex-wrap items-center gap-2 bg-amber-600/10 border border-amber-600/30 rounded-xl px-4 py-3 mb-6">
+              <Shield className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="text-amber-400 text-sm font-medium mr-2">Admin</span>
+              {[
+                { label: 'Customers', path: '/admin/customers' },
+                { label: 'Tickets', path: '/admin/tickets' },
+                { label: 'Channels', path: '/admin/channels' },
+                { label: 'Analytics', path: '/admin/analytics' },
+                { label: 'Slider', path: '/admin/slider' },
+                { label: 'Demo Reel', path: '/admin/demo-reel' },
+                { label: 'Schedule', path: '/admin/schedule' },
+              ].map(({ label, path }) => (
+                <button
+                  key={path}
+                  onClick={() => navigate(path)}
+                  className="text-xs bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 hover:text-amber-100 border border-amber-600/30 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-8">
             {/* Account Status */}
             <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
               <div className="flex items-center mb-4">
@@ -400,11 +304,17 @@ const Dashboard: React.FC = () => {
                 <h2 className="text-xl font-semibold text-white">Subscription</h2>
               </div>
               <div className="space-y-2">
-                <p className="text-gray-400">Plan: {profile.subscription_tier}</p>
+                <p className="text-gray-400">Plan: <span className="text-white capitalize">{profile.subscription_tier}</span></p>
                 <div className="flex items-center text-gray-400">
                   <Monitor className="w-4 h-4 mr-2" />
                   {profile.active_connections} / {profile.connections_allowed} devices
                 </div>
+                <button
+                  onClick={() => navigate('/pricing')}
+                  className="mt-2 text-primary hover:text-red-400 transition-colors duration-200 text-sm font-medium"
+                >
+                  View Plans
+                </button>
               </div>
             </div>
 
@@ -425,6 +335,9 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* PWA Install Banner */}
+          <PwaInstallBanner />
 
           {/* Recent Support Tickets */}
           <div className="bg-dark-100 rounded-xl border border-gray-800">
@@ -485,6 +398,94 @@ const Dashboard: React.FC = () => {
               )}
             </div>
           </div>
+        </div>
+      </div>
+      <InstallPrompt />
+    </div>
+  );
+};
+
+const PwaInstallBanner: React.FC = () => {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    setIsIOS(isIOSDevice);
+    const standalone = window.matchMedia('(display-mode: standalone)').matches;
+    setIsInstalled(standalone);
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') setIsInstalled(true);
+    setDeferredPrompt(null);
+  };
+
+  if (isInstalled || dismissed) return null;
+
+  return (
+    <div className="bg-dark-100 rounded-xl border border-gray-800 p-6 mb-8">
+      <div className="flex items-start gap-4">
+        <div className="bg-primary/20 p-3 rounded-xl flex-shrink-0">
+          <Smartphone className="w-6 h-6 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-white font-semibold text-lg mb-1">Install Kristal Streams App</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Get the full app experience — launch from your home screen, access content offline, and receive notifications.
+          </p>
+          <div className="flex flex-wrap gap-4 mb-4">
+            {[
+              { icon: Download, label: 'Home screen shortcut' },
+              { icon: Wifi, label: 'Works offline' },
+              { icon: Bell, label: 'Push notifications' },
+            ].map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-2 text-sm text-gray-300">
+                <Icon className="w-4 h-4 text-primary flex-shrink-0" />
+                {label}
+              </div>
+            ))}
+          </div>
+          {isIOS ? (
+            <div className="bg-dark-200 rounded-lg p-4 text-sm text-gray-300">
+              <p className="font-semibold text-white mb-2">Install on iOS:</p>
+              <ol className="space-y-1 list-decimal list-inside">
+                <li>Tap the Share button (square with arrow up)</li>
+                <li>Scroll down and tap "Add to Home Screen"</li>
+                <li>Tap "Add" to confirm</li>
+              </ol>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              {deferredPrompt && (
+                <button
+                  onClick={handleInstall}
+                  className="bg-primary hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  Install App
+                </button>
+              )}
+              <button
+                onClick={() => setDismissed(true)}
+                className="text-gray-400 hover:text-white px-5 py-2.5 rounded-lg border border-gray-700 hover:border-gray-500 font-medium transition-colors text-sm"
+              >
+                Not Now
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
