@@ -82,7 +82,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
       if (!mounted) return;
 
       if (channelError || !channel?.id) {
-        setError('This channel could not be verified.');
+        setError('This channel could not be verified in the channel database.');
         setIsLoading(false);
         return;
       }
@@ -101,101 +101,184 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
     const video = videoRef.current;
     if (!video) return;
 
-    setError(null);
-    setIsLoading(true);
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
+    let cancelled = false;
+    const relayCheckController = new AbortController();
 
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
+    const resetPlayer = () => {
+      setError(null);
+      setIsLoading(true);
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
 
-    video.pause();
-    video.removeAttribute('src');
-    video.load();
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
 
-    if (usesSecureRelay && !effectiveAuthToken) {
-      return;
-    }
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    };
 
-    const isHLS = resolvedSrc.includes('.m3u8') || usesSecureRelay;
+    const readRelayError = async (response: Response): Promise<string> => {
+      const fallback = `Secure stream relay failed with status ${response.status}.`;
 
-    if (isHLS) {
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 90,
-          xhrSetup: (xhr) => {
-            xhr.withCredentials = false;
-            if (usesSecureRelay && effectiveAuthToken) {
-              xhr.setRequestHeader('Authorization', `Bearer ${effectiveAuthToken}`);
-            }
-          }
-        });
-
-        hlsRef.current = hls;
-        hls.loadSource(resolvedSrc);
-        hls.attachMedia(video);
-
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setError(null);
-          setIsLoading(false);
-          if (autoplay) {
-            video.play().catch(() => setIsPlaying(false));
-          }
-        });
-
-        hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                setError('Unable to reach the secure stream. Retrying...');
-                hls.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                setError('The channel returned a media error. Retrying...');
-                hls.recoverMediaError();
-                break;
-              default:
-                setError('This channel could not be played.');
-                setIsLoading(false);
-                hls.destroy();
-                break;
-            }
-          }
-        });
-
-        return () => {
-          hls.destroy();
-          if (hlsRef.current === hls) {
-            hlsRef.current = null;
-          }
-        };
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        if (usesSecureRelay) {
-          setError('Secure Live TV playback is not supported in this browser.');
-          setIsLoading(false);
-        } else {
-          video.src = resolvedSrc;
-          setIsLoading(false);
-          if (autoplay) {
-            video.play().catch(() => setIsPlaying(false));
-          }
+      try {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const body = await response.json() as { error?: string };
+          return body.error || fallback;
         }
-      } else {
+
+        const text = (await response.text()).trim();
+        if (text && !text.startsWith('<!DOCTYPE html')) {
+          return text.slice(0, 240);
+        }
+      } catch {
+        return fallback;
+      }
+
+      return fallback;
+    };
+
+    const startPlayback = async () => {
+      resetPlayer();
+
+      if (usesSecureRelay && !effectiveAuthToken) {
+        return;
+      }
+
+      if (usesSecureRelay && effectiveAuthToken) {
+        try {
+          const relayResponse = await fetch(resolvedSrc, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${effectiveAuthToken}`,
+              Accept: 'application/vnd.apple.mpegurl, application/x-mpegURL, */*',
+            },
+            cache: 'no-store',
+            signal: relayCheckController.signal,
+          });
+
+          if (!relayResponse.ok) {
+            const message = await readRelayError(relayResponse);
+            if (!cancelled) {
+              setError(message);
+              setIsLoading(false);
+            }
+            return;
+          }
+
+          const contentType = relayResponse.headers.get('content-type') || '';
+          const playlistText = await relayResponse.text();
+          const looksLikePlaylist =
+            contentType.includes('mpegurl') ||
+            contentType.includes('m3u8') ||
+            playlistText.trimStart().startsWith('#EXTM3U');
+
+          if (!looksLikePlaylist) {
+            if (!cancelled) {
+              setError('The provider did not return a valid HLS playlist.');
+              setIsLoading(false);
+            }
+            return;
+          }
+        } catch (relayError) {
+          if (cancelled || relayCheckController.signal.aborted) return;
+          const message = relayError instanceof Error ? relayError.message : 'The secure stream relay could not be reached.';
+          setError(`Secure relay check failed: ${message}`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      if (cancelled) return;
+
+      const isHLS = resolvedSrc.includes('.m3u8') || usesSecureRelay;
+
+      if (isHLS) {
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 90,
+            xhrSetup: (xhr) => {
+              xhr.withCredentials = false;
+              if (usesSecureRelay && effectiveAuthToken) {
+                xhr.setRequestHeader('Authorization', `Bearer ${effectiveAuthToken}`);
+              }
+            }
+          });
+
+          hlsRef.current = hls;
+          hls.loadSource(resolvedSrc);
+          hls.attachMedia(video);
+
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            setError(null);
+            setIsLoading(false);
+            if (autoplay) {
+              video.play().catch(() => setIsPlaying(false));
+            }
+          });
+
+          hls.on(Hls.Events.ERROR, (_event, data) => {
+            if (!data.fatal) return;
+
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              setError(`Media playback error: ${data.details}. Retrying...`);
+              hls.recoverMediaError();
+              return;
+            }
+
+            const statusCode = data.response?.code;
+            const statusText = data.response?.text;
+            const detail = statusText || data.details || 'Unknown stream error';
+            setError(statusCode ? `Stream request failed (${statusCode}): ${detail}` : `Stream request failed: ${detail}`);
+            setIsLoading(false);
+            hls.destroy();
+          });
+
+          return;
+        }
+
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          if (usesSecureRelay) {
+            setError('Secure Live TV playback is not supported in this browser.');
+            setIsLoading(false);
+          } else {
+            video.src = resolvedSrc;
+            setIsLoading(false);
+            if (autoplay) {
+              video.play().catch(() => setIsPlaying(false));
+            }
+          }
+          return;
+        }
+
         setError('HLS is not supported in this browser');
         setIsLoading(false);
+        return;
       }
-    } else {
+
       video.src = resolvedSrc;
       setIsLoading(false);
       if (autoplay) {
         video.play().catch(() => setIsPlaying(false));
       }
-    }
+    };
+
+    startPlayback();
+
+    return () => {
+      cancelled = true;
+      relayCheckController.abort();
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
   }, [resolvedSrc, autoplay, effectiveAuthToken, usesSecureRelay]);
 
   useEffect(() => {
@@ -305,7 +388,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
         onClick={togglePlay}
       />
 
-      {isLoading && (
+      {isLoading && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
         </div>
@@ -313,8 +396,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
 
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="text-center px-6">
-            <p className="text-red-500 mb-2">{error}</p>
+          <div className="text-center px-6 max-w-2xl">
+            <p className="text-red-500 mb-4 break-words">{error}</p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-red-700"
