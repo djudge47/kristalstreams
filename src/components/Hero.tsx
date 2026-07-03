@@ -144,21 +144,26 @@ const Hero: React.FC = () => {
 
   return (
     <section className="relative mt-16 flex h-[85vh] w-full items-center overflow-hidden">
-      <div className="absolute inset-0">
-        {currentContent.videoPreview ? (
+      <div className="absolute inset-0 bg-dark-300">
+        <img
+          src={currentContent.image}
+          alt=""
+          aria-hidden="true"
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+        />
+        {currentContent.videoPreview && (
           <video
+            key={currentContent.id}
             src={currentContent.videoPreview}
+            poster={currentContent.image}
             className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
             autoPlay
             loop
             muted
             playsInline
-          />
-        ) : (
-          <img
-            src={currentContent.image}
-            alt={currentContent.title}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+            onError={(event) => {
+              event.currentTarget.style.display = 'none';
+            }}
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-r from-dark-300/95 via-dark-300/80 to-transparent" />
