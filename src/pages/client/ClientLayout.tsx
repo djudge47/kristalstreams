@@ -7,8 +7,7 @@ import {
   Monitor, 
   History,
   Shield,
-  MessageSquare,
-  Upload
+  MessageSquare
 } from 'lucide-react';
 
 const navigation = [
@@ -16,7 +15,6 @@ const navigation = [
   { name: 'Subscription', path: '/client/subscription', icon: CreditCard },
   { name: 'Devices', path: '/client/devices', icon: Monitor },
   { name: 'History', path: '/client/history', icon: History },
-  { name: 'Import Channels', path: '/client/import', icon: Upload },
   { name: 'Security', path: '/client/security', icon: Shield },
   { name: 'Support', path: '/client/support', icon: MessageSquare },
   { name: 'Settings', path: '/client/settings', icon: Settings },
