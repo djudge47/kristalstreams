@@ -16,7 +16,6 @@ type VercelRequestLike = {
   method?: string;
   headers: Record<string, string | string[] | undefined>;
   query: Record<string, string | string[] | undefined>;
-  on: (event: string, listener: () => void) => void;
 };
 
 type VercelResponseLike = {
@@ -75,6 +74,14 @@ function decryptPayload(token: string, secret: string): ProxyPayload {
   }
 
   return payload;
+}
+
+function decodeSource(value: string): string {
+  try {
+    return Buffer.from(value, 'base64url').toString('utf8');
+  } catch {
+    throw new Error('Invalid stream source');
+  }
 }
 
 function isBlockedHost(hostname: string): boolean {
@@ -180,9 +187,7 @@ export default async function handler(req: VercelRequestLike, res: VercelRespons
   const proxySecret = process.env.STREAM_PROXY_SECRET;
 
   if (!supabaseUrl || !supabaseAnonKey || !proxySecret) {
-    res.status(503).json({
-      error: 'The secure stream relay is not configured yet.',
-    });
+    res.status(503).json({ error: 'The secure stream relay is not configured yet.' });
     return;
   }
 
@@ -213,6 +218,7 @@ export default async function handler(req: VercelRequestLike, res: VercelRespons
 
   try {
     const encryptedToken = firstQueryValue(req.query.token);
+    const encodedSource = firstQueryValue(req.query.source);
     let channelId = firstQueryValue(req.query.channel);
     let upstreamUrl: URL;
 
@@ -220,6 +226,22 @@ export default async function handler(req: VercelRequestLike, res: VercelRespons
       const payload = decryptPayload(encryptedToken, proxySecret);
       channelId = payload.channelId;
       upstreamUrl = validateUpstreamUrl(payload.url);
+    } else if (encodedSource) {
+      const source = decodeSource(encodedSource);
+      upstreamUrl = validateUpstreamUrl(source);
+
+      const { data: channel, error: channelError } = await supabase
+        .from('channels')
+        .select('id')
+        .eq('stream_url', source)
+        .single();
+
+      if (channelError || !channel?.id) {
+        res.status(404).json({ error: 'Channel not found or unavailable' });
+        return;
+      }
+
+      channelId = String(channel.id);
     } else {
       if (!channelId) {
         res.status(400).json({ error: 'A channel ID is required' });
