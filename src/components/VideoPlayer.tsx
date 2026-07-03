@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, memo, useCallback } from 'react';
+import React, { useEffect, useRef, useState, memo } from 'react';
 import Hls from 'hls.js';
 import { Play, Pause, Volume2, VolumeX, Maximize, Settings } from 'lucide-react';
 
@@ -7,6 +7,7 @@ interface VideoPlayerProps {
   poster?: string;
   title?: string;
   autoplay?: boolean;
+  authToken?: string;
   onEnded?: () => void;
 }
 
@@ -15,6 +16,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
   poster,
   title,
   autoplay = false,
+  authToken,
   onEnded
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -36,14 +38,35 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
     const video = videoRef.current;
     if (!video) return;
 
-    const isHLS = src.includes('.m3u8');
+    setError(null);
+    setIsLoading(true);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+
+    const isHLS = src.includes('.m3u8') || src.includes('/api/stream');
 
     if (isHLS) {
       if (Hls.isSupported()) {
         const hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          backBufferLength: 90
+          backBufferLength: 90,
+          xhrSetup: (xhr) => {
+            xhr.withCredentials = false;
+            if (authToken) {
+              xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+            }
+          }
         });
 
         hlsRef.current = hls;
@@ -51,25 +74,27 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setError(null);
           setIsLoading(false);
           if (autoplay) {
             video.play().catch(() => setIsPlaying(false));
           }
         });
 
-        hls.on(Hls.Events.ERROR, (event, data) => {
+        hls.on(Hls.Events.ERROR, (_event, data) => {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                setError('Network error - attempting to recover');
+                setError('Unable to reach the secure stream. Retrying...');
                 hls.startLoad();
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
-                setError('Media error - attempting to recover');
+                setError('The channel returned a media error. Retrying...');
                 hls.recoverMediaError();
                 break;
               default:
-                setError('Fatal error - cannot recover');
+                setError('This channel could not be played.');
+                setIsLoading(false);
                 hls.destroy();
                 break;
             }
@@ -77,15 +102,21 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
         });
 
         return () => {
-          if (hlsRef.current) {
-            hlsRef.current.destroy();
+          hls.destroy();
+          if (hlsRef.current === hls) {
+            hlsRef.current = null;
           }
         };
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = src;
-        setIsLoading(false);
-        if (autoplay) {
-          video.play().catch(() => setIsPlaying(false));
+        if (authToken && src.includes('/api/stream')) {
+          setError('Secure Live TV playback is not supported in this browser.');
+          setIsLoading(false);
+        } else {
+          video.src = src;
+          setIsLoading(false);
+          if (autoplay) {
+            video.play().catch(() => setIsPlaying(false));
+          }
         }
       } else {
         setError('HLS is not supported in this browser');
@@ -98,7 +129,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
         video.play().catch(() => setIsPlaying(false));
       }
     }
-  }, [src, autoplay]);
+  }, [src, autoplay, authToken]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -215,7 +246,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
 
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="text-center">
+          <div className="text-center px-6">
             <p className="text-red-500 mb-2">{error}</p>
             <button
               onClick={() => window.location.reload()}
