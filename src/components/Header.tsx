@@ -63,7 +63,7 @@ const Header: React.FC = memo(() => {
         isScrolled ? 'bg-dark-200/95 backdrop-blur-sm' : 'bg-transparent'
       }`}
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 pt-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-2">
           <div className="flex items-center">
             <Link to="/" className="flex items-center text-xl font-bold text-primary">
