@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { Readable } from 'node:stream';
+import * as http from 'node:http';
+import * as https from 'node:https';
+import type { IncomingHttpHeaders, IncomingMessage, RequestOptions } from 'node:http';
 
 export const config = {
   maxDuration: 60,
@@ -26,8 +28,15 @@ type VercelResponseLike = {
   on: (event: string, listener: () => void) => void;
 };
 
+type UpstreamResult = {
+  response: IncomingMessage;
+  finalUrl: URL;
+};
+
 const TOKEN_LIFETIME_MS = 10 * 60 * 1000;
 const UPSTREAM_TIMEOUT_MS = 25_000;
+const MAX_PLAYLIST_BYTES = 5 * 1024 * 1024;
+const MAX_REDIRECTS = 5;
 
 function firstQueryValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -147,6 +156,12 @@ function rewritePlaylist(
     .join('\n');
 }
 
+function getHeader(headers: IncomingHttpHeaders, name: string): string {
+  const value = headers[name.toLowerCase()];
+  if (Array.isArray(value)) return value[0] || '';
+  return value ? String(value) : '';
+}
+
 function isPlaylistResponse(url: URL, contentType: string): boolean {
   return (
     url.pathname.toLowerCase().endsWith('.m3u8') ||
@@ -155,15 +170,105 @@ function isPlaylistResponse(url: URL, contentType: string): boolean {
   );
 }
 
-async function pipeBody(upstreamBody: ReadableStream<Uint8Array>, res: VercelResponseLike): Promise<void> {
-  const nodeStream = Readable.fromWeb(upstreamBody as never);
+function requestUpstream(
+  upstreamUrl: URL,
+  headers: Record<string, string>,
+  redirectCount = 0,
+): Promise<UpstreamResult> {
+  return new Promise((resolve, reject) => {
+    const validatedUrl = validateUpstreamUrl(upstreamUrl.toString());
+    const client = validatedUrl.protocol === 'https:' ? https : http;
 
-  await new Promise<void>((resolve, reject) => {
-    nodeStream.on('error', reject);
+    const options: RequestOptions = {
+      protocol: validatedUrl.protocol,
+      hostname: validatedUrl.hostname,
+      port: validatedUrl.port || undefined,
+      method: 'GET',
+      path: `${validatedUrl.pathname}${validatedUrl.search}`,
+      headers,
+      family: 4,
+    };
+
+    const upstreamRequest = client.request(options, (response) => {
+      const statusCode = response.statusCode || 0;
+      const location = getHeader(response.headers, 'location');
+
+      if ([301, 302, 303, 307, 308].includes(statusCode) && location) {
+        response.resume();
+
+        if (redirectCount >= MAX_REDIRECTS) {
+          reject(new Error('The stream provider redirected too many times.'));
+          return;
+        }
+
+        const redirectedUrl = validateUpstreamUrl(new URL(location, validatedUrl).toString());
+        requestUpstream(redirectedUrl, headers, redirectCount + 1).then(resolve).catch(reject);
+        return;
+      }
+
+      resolve({ response, finalUrl: validatedUrl });
+    });
+
+    upstreamRequest.setTimeout(UPSTREAM_TIMEOUT_MS, () => {
+      const timeoutError = Object.assign(
+        new Error(`The stream provider did not respond within ${UPSTREAM_TIMEOUT_MS / 1000} seconds.`),
+        { code: 'ETIMEDOUT' },
+      );
+      upstreamRequest.destroy(timeoutError);
+    });
+
+    upstreamRequest.on('error', reject);
+    upstreamRequest.end();
+  });
+}
+
+function readResponseBody(response: IncomingMessage, maxBytes: number): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+
+    response.on('data', (chunk: Buffer | string) => {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      totalBytes += buffer.length;
+
+      if (totalBytes > maxBytes) {
+        response.destroy();
+        reject(new Error('The provider returned an unexpectedly large playlist.'));
+        return;
+      }
+
+      chunks.push(buffer);
+    });
+
+    response.on('end', () => resolve(Buffer.concat(chunks)));
+    response.on('error', reject);
+  });
+}
+
+function pipeResponse(response: IncomingMessage, res: VercelResponseLike): Promise<void> {
+  return new Promise((resolve, reject) => {
+    response.on('error', reject);
     res.on('finish', resolve);
     res.on('close', resolve);
-    nodeStream.pipe(res as never);
+    response.pipe(res as never);
   });
+}
+
+function describeNetworkError(error: unknown): string {
+  if (!(error instanceof Error)) return 'Unable to connect to the stream provider.';
+
+  const codedError = error as Error & { code?: string; cause?: { code?: string; message?: string } };
+  const code = codedError.code || codedError.cause?.code;
+  const causeMessage = codedError.cause?.message;
+  const detail = causeMessage || codedError.message;
+
+  if (code === 'ENOTFOUND') return `Provider address could not be found (${code}).`;
+  if (code === 'ECONNREFUSED') return `Provider refused the connection (${code}).`;
+  if (code === 'ETIMEDOUT' || code === 'ESOCKETTIMEDOUT') return `Provider connection timed out (${code}).`;
+  if (code === 'ECONNRESET') return `Provider reset the connection (${code}).`;
+  if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') return `Provider network is unreachable (${code}).`;
+
+  return code ? `Provider connection failed (${code}): ${detail}` : detail;
 }
 
 export default async function handler(req: VercelRequestLike, res: VercelResponseLike) {
@@ -281,11 +386,10 @@ export default async function handler(req: VercelRequestLike, res: VercelRespons
       }
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
     const rangeHeader = req.headers.range;
     const upstreamHeaders: Record<string, string> = {
       Accept: 'application/vnd.apple.mpegurl, application/x-mpegURL, video/*, audio/*, */*',
+      Connection: 'close',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/149 Safari/537.36',
     };
 
@@ -293,30 +397,20 @@ export default async function handler(req: VercelRequestLike, res: VercelRespons
       upstreamHeaders.Range = rangeHeader;
     }
 
-    let upstream: Response;
-    try {
-      upstream = await fetch(upstreamUrl, {
-        method: 'GET',
-        headers: upstreamHeaders,
-        redirect: 'follow',
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
+    const { response: upstream, finalUrl } = await requestUpstream(upstreamUrl, upstreamHeaders);
+    const statusCode = upstream.statusCode || 502;
+    const contentType = getHeader(upstream.headers, 'content-type').toLowerCase();
 
-    const finalUrl = validateUpstreamUrl(upstream.url || upstreamUrl.toString());
-    const contentType = (upstream.headers.get('content-type') || '').toLowerCase();
-
-    if (!upstream.ok && upstream.status !== 206) {
-      res.status(upstream.status || 502).json({
-        error: `The stream provider returned ${upstream.status || 'an error'}.`,
+    if (statusCode < 200 || statusCode >= 300) {
+      upstream.resume();
+      res.status(statusCode).json({
+        error: `The stream provider returned HTTP ${statusCode}.`,
       });
       return;
     }
 
     if (isPlaylistResponse(finalUrl, contentType)) {
-      const playlist = await upstream.text();
+      const playlist = (await readResponseBody(upstream, MAX_PLAYLIST_BYTES)).toString('utf8');
       const rewrittenPlaylist = rewritePlaylist(
         playlist,
         finalUrl.toString(),
@@ -331,23 +425,18 @@ export default async function handler(req: VercelRequestLike, res: VercelRespons
       return;
     }
 
-    res.status(upstream.status);
-    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/octet-stream');
+    res.status(statusCode);
+    res.setHeader('Content-Type', getHeader(upstream.headers, 'content-type') || 'application/octet-stream');
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
 
-    for (const header of ['accept-ranges', 'content-range', 'etag', 'last-modified']) {
-      const value = upstream.headers.get(header);
+    for (const header of ['accept-ranges', 'content-range', 'content-length', 'etag', 'last-modified']) {
+      const value = getHeader(upstream.headers, header);
       if (value) res.setHeader(header, value);
     }
 
-    if (!upstream.body) {
-      res.end();
-      return;
-    }
-
-    await pipeBody(upstream.body, res);
+    await pipeResponse(upstream, res);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unable to load the stream';
+    const message = describeNetworkError(error);
     const status = message.toLowerCase().includes('expired') ? 401 : 502;
     res.status(status).json({ error: message });
   }
