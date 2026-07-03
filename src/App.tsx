@@ -97,6 +97,7 @@ const clientPages = {
   Settings: lazyRetry(() => import('./pages/client/ClientSettings')),
   Support: lazyRetry(() => import('./pages/client/ClientSupport')),
   NewTicket: lazyRetry(() => import('./pages/client/NewTicket')),
+  ImportChannels: lazyRetry(() => import('./pages/client/ImportChannels')),
 };
 
 const adminPages = {
@@ -206,6 +207,7 @@ function App() {
               <Route path="settings" element={<C.Settings />} />
               <Route path="support" element={<C.Support />} />
               <Route path="support/new" element={<C.NewTicket />} />
+              <Route path="import" element={<C.ImportChannels />} />
             </Route>
           </Route>
           <Route path="admin" element={<A.Layout />}>
