@@ -29,7 +29,7 @@ const PPV: React.FC = () => {
       mainEvent: 'Crown Jewel Championship Matches',
       description: 'First Crown Jewel outside Saudi Arabia featuring Cody Rhodes vs Seth Rollins and John Cena vs AJ Styles',
       featured: true,
-      image: 'https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg'
+      image: 'https://images.unsplash.com/photo-1657672825833-7b2ad6fae220?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '2',
@@ -41,7 +41,7 @@ const PPV: React.FC = () => {
       mainEvent: 'Tom Aspinall vs Ciryl Gane',
       description: 'Heavyweight contenders clash in the Middle East',
       featured: true,
-      image: 'https://images.pexels.com/photos/4761792/pexels-photo-4761792.jpeg'
+      image: 'https://images.unsplash.com/photo-1611077479643-5b3c01381f9e?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '3',
@@ -53,7 +53,7 @@ const PPV: React.FC = () => {
       mainEvent: 'Lightweight Championship',
       description: 'Championship action at the world\'s most famous arena',
       featured: true,
-      image: 'https://images.pexels.com/photos/3990856/pexels-photo-3990856.jpeg'
+      image: 'https://images.unsplash.com/photo-1495555499155-29db2c1db3fe?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '4',
@@ -65,7 +65,7 @@ const PPV: React.FC = () => {
       mainEvent: 'WarGames Matches',
       description: 'The ultimate WWE battle featuring dual WarGames cage matches',
       featured: true,
-      image: 'https://images.pexels.com/photos/3621227/pexels-photo-3621227.jpeg'
+      image: 'https://images.unsplash.com/photo-1636391134068-083dd5e3209b?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '5',
@@ -77,7 +77,7 @@ const PPV: React.FC = () => {
       mainEvent: 'Championship Bout TBA',
       description: 'Final UFC PPV before new media deal takes effect in 2026',
       featured: true,
-      image: 'https://images.pexels.com/photos/4761851/pexels-photo-4761851.jpeg'
+      image: 'https://images.unsplash.com/photo-1545191050-96042d612b1f?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '6',
@@ -89,7 +89,7 @@ const PPV: React.FC = () => {
       mainEvent: '30-Man & 30-Woman Royal Rumble Matches',
       description: 'Historic first Royal Rumble outside North America as part of Riyadh Season',
       featured: true,
-      image: 'https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg'
+      image: 'https://images.unsplash.com/photo-1488656711237-487ce1cc53b7?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '7',
@@ -101,7 +101,7 @@ const PPV: React.FC = () => {
       mainEvent: 'All-Star Game',
       description: 'The best basketball players compete in the annual All-Star Game',
       featured: false,
-      image: 'https://images.pexels.com/photos/1884574/pexels-photo-1884574.jpeg'
+      image: 'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '8',
@@ -113,7 +113,7 @@ const PPV: React.FC = () => {
       mainEvent: 'Championship Event TBA',
       description: 'Early 2026 championship action under new broadcast deal',
       featured: false,
-      image: 'https://images.pexels.com/photos/4761792/pexels-photo-4761792.jpeg'
+      image: 'https://images.unsplash.com/photo-1680022548963-1d8e630a272b?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '9',
@@ -125,7 +125,7 @@ const PPV: React.FC = () => {
       mainEvent: 'NFL Championship Game',
       description: 'The biggest game in American sports returns to LA',
       featured: true,
-      image: 'https://images.pexels.com/photos/159607/football-american-football-runner-player-159607.jpeg'
+      image: 'https://images.unsplash.com/photo-1566349872260-a1d88307b698?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '10',
@@ -137,7 +137,7 @@ const PPV: React.FC = () => {
       mainEvent: 'Championship Clincher',
       description: 'Winner-take-all Game 7 for the NBA Championship',
       featured: true,
-      image: 'https://images.pexels.com/photos/1884574/pexels-photo-1884574.jpeg'
+      image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=85'
     }
   ];
 
@@ -225,8 +225,10 @@ const PPV: React.FC = () => {
                 <img
                   src={event.image}
                   alt={event.title}
+                  loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent pointer-events-none" />
                 {event.featured && (
                   <div className="absolute top-4 right-4 bg-primary px-3 py-1 rounded-full flex items-center gap-2">
                     <Star className="w-4 h-4 text-white" fill="white" />
