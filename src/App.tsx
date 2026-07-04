@@ -106,7 +106,6 @@ const adminPages = {
   Analytics: lazyRetry(() => import('./pages/admin/Analytics')),
   Slider: lazyRetry(() => import('./pages/admin/SliderManager')),
   DemoReel: lazyRetry(() => import('./pages/admin/DemoReelManager')),
-  Schedule: lazyRetry(() => import('./pages/admin/ScheduleManager')),
   Programs: lazyRetry(() => import('./pages/admin/ProgramManager')),
   CRM: lazyRetry(() => import('./pages/admin/CRMDashboard')),
   Contacts: lazyRetry(() => import('./pages/admin/Contacts')),
@@ -212,7 +211,6 @@ function App() {
             <Route path="analytics" element={<A.Analytics />} />
             <Route path="slider" element={<A.Slider />} />
             <Route path="demo-reel" element={<A.DemoReel />} />
-            <Route path="schedule" element={<A.Schedule />} />
             <Route path="programs" element={<A.Programs />} />
             <Route path="crm" element={<A.CRM />} />
             <Route path="crm/contacts" element={<A.Contacts />} />
