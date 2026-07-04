@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import InstallPrompt from './components/InstallPrompt';
 import Layout from './components/Layout';
 
@@ -38,7 +38,6 @@ const pages = {
   ContentDetail: lazyRetry(() => import('./pages/ContentDetail')),
   AboutUs: lazyRetry(() => import('./pages/AboutUs')),
   OurServices: lazyRetry(() => import('./pages/OurServices')),
-  WebTVPlayer: lazyRetry(() => import('./pages/WebTVPlayer')),
   Reselling: lazyRetry(() => import('./pages/Reselling')),
   DownloadApp: lazyRetry(() => import('./pages/DownloadApp')),
   News: lazyRetry(() => import('./pages/News')),
@@ -102,7 +101,6 @@ const clientPages = {
 const adminPages = {
   Layout: lazyRetry(() => import('./pages/admin/AdminLayout')),
   Dashboard: lazyRetry(() => import('./pages/admin/AdminDashboard')),
-  Channels: lazyRetry(() => import('./pages/admin/ChannelManager')),
   Customers: lazyRetry(() => import('./pages/admin/Customers')),
   Tickets: lazyRetry(() => import('./pages/admin/SupportTickets')),
   Analytics: lazyRetry(() => import('./pages/admin/Analytics')),
@@ -162,7 +160,6 @@ function App() {
             <Route path="content/:type/:id" element={<P.ContentDetail />} />
             <Route path="about" element={<P.AboutUs />} />
             <Route path="services" element={<P.OurServices />} />
-            <Route path="web-tv-player" element={<P.WebTVPlayer />} />
             <Route path="reselling" element={<P.Reselling />} />
             <Route path="download-app" element={<P.DownloadApp />} />
             <Route path="news" element={<P.News />} />
@@ -197,7 +194,6 @@ function App() {
             <Route path="support/status-history" element={<S.StatusHistory />} />
             <Route path="support/article/:slug" element={<S.Article />} />
             <Route path="support/guide/:slug" element={<S.Guide />} />
-            <Route path="client/import" element={<Navigate to="/admin/channels" replace />} />
             <Route path="client" element={<C.Layout />}>
               <Route path="account" element={<C.Account />} />
               <Route path="subscription" element={<C.Subscription />} />
@@ -211,7 +207,6 @@ function App() {
           </Route>
           <Route path="admin" element={<A.Layout />}>
             <Route index element={<A.Dashboard />} />
-            <Route path="channels" element={<A.Channels />} />
             <Route path="customers" element={<A.Customers />} />
             <Route path="tickets" element={<A.Tickets />} />
             <Route path="analytics" element={<A.Analytics />} />
