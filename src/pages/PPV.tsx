@@ -116,6 +116,18 @@ const PPV: React.FC = () => {
       image: 'https://images.unsplash.com/photo-1636391134068-083dd5e3209b?auto=format&fit=crop&w=1200&q=85'
     },
     {
+      id: '11',
+      title: '2026 NFL Kickoff: Patriots vs Seahawks',
+      date: 'September 9, 2026',
+      time: '8:20 PM ET',
+      venue: 'Lumen Field, Seattle',
+      sport: 'NFL',
+      mainEvent: 'New England Patriots vs Seattle Seahawks',
+      description: 'The 2026 NFL season opens with a prime-time Super Bowl LX rematch in Seattle',
+      featured: true,
+      image: 'https://images.unsplash.com/photo-1566349872260-a1d88307b698?auto=format&fit=crop&w=1200&q=85'
+    },
+    {
       id: '5',
       title: '2026 NHL Heritage Classic',
       date: 'October 25, 2026',
