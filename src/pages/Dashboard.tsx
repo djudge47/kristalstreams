@@ -65,7 +65,6 @@ const Dashboard: React.FC = () => {
 
         if (mounted) setIsAdmin(user.email === ADMIN_EMAIL);
 
-        // Subscribe to ticket updates
         unsubscribe = subscribeToTickets(user.id);
         await getUnreadTicketCount(user.id).catch(() => {});
 
@@ -77,7 +76,6 @@ const Dashboard: React.FC = () => {
 
         if (profileError) {
           if (profileError.code === 'PGRST116') {
-            // Profile doesn't exist, create it
             const newProfile = {
               id: user.id,
               email: user.email,
@@ -104,7 +102,6 @@ const Dashboard: React.FC = () => {
           setProfile(profile);
         }
 
-        // Fetch tickets
         const { data: ticketData, error: ticketError } = await supabase
           .from('support_tickets')
           .select('*')
@@ -247,7 +244,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Admin toolbar */}
           {isAdmin && (
             <div className="flex flex-wrap items-center gap-2 bg-amber-600/10 border border-amber-600/30 rounded-xl px-4 py-3 mb-6">
               <Shield className="w-4 h-4 text-amber-400 shrink-0" />
@@ -258,7 +254,6 @@ const Dashboard: React.FC = () => {
                 { label: 'Analytics', path: '/admin/analytics' },
                 { label: 'Slider', path: '/admin/slider' },
                 { label: 'Demo Reel', path: '/admin/demo-reel' },
-                { label: 'Schedule', path: '/admin/schedule' },
               ].map(({ label, path }) => (
                 <button
                   key={path}
@@ -272,7 +267,6 @@ const Dashboard: React.FC = () => {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-8">
-            {/* Account Status */}
             <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
               <div className="flex items-center mb-4">
                 <User className="text-primary w-6 h-6 mr-3" />
@@ -291,7 +285,6 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Subscription Info */}
             <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
               <div className="flex items-center mb-4">
                 <CreditCard className="text-primary w-6 h-6 mr-3" />
@@ -312,7 +305,6 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Support Status */}
             <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
               <div className="flex items-center mb-4">
                 <MessageSquare className="text-primary w-6 h-6 mr-3" />
@@ -330,10 +322,8 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* PWA Install Banner */}
           <PwaInstallBanner />
 
-          {/* Recent Support Tickets */}
           <div className="bg-dark-100 rounded-xl border border-gray-800">
             <div className="p-6 border-b border-gray-800">
               <h2 className="text-xl font-semibold text-white">Recent Support Tickets</h2>
