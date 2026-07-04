@@ -13,8 +13,6 @@ import {
   CheckCircle,
   Plus,
   Bell,
-  Film,
-  Upload,
   Shield,
   Download,
   Smartphone,
@@ -240,13 +238,6 @@ const Dashboard: React.FC = () => {
                 </div>
               )}
               <button
-                onClick={() => navigate('/client/import')}
-                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors duration-200 text-sm"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Import </span>Channels
-              </button>
-              <button
                 onClick={() => navigate('/client/support/new')}
                 className="flex items-center bg-primary hover:bg-red-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors duration-200 text-sm"
               >
@@ -264,7 +255,6 @@ const Dashboard: React.FC = () => {
               {[
                 { label: 'Customers', path: '/admin/customers' },
                 { label: 'Tickets', path: '/admin/tickets' },
-                { label: 'Channels', path: '/admin/channels' },
                 { label: 'Analytics', path: '/admin/analytics' },
                 { label: 'Slider', path: '/admin/slider' },
                 { label: 'Demo Reel', path: '/admin/demo-reel' },
