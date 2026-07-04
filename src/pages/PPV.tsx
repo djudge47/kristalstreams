@@ -20,16 +20,16 @@ const PPV: React.FC = () => {
 
   const ppvEvents: PPVEvent[] = [
     {
-      id: '1',
-      title: 'WNBA All-Star Game 2026',
-      date: 'July 25, 2026',
-      time: 'Time TBA',
-      venue: 'United Center, Chicago',
-      sport: 'WNBA',
-      mainEvent: 'WNBA All-Star Game',
-      description: 'The league\'s brightest stars meet in Chicago for the 2026 WNBA All-Star showcase',
+      id: '6',
+      title: 'UFC 329: McGregor vs Holloway 2',
+      date: 'July 11, 2026',
+      time: '10:00 PM ET',
+      venue: 'T-Mobile Arena, Las Vegas',
+      sport: 'UFC',
+      mainEvent: 'Conor McGregor vs Max Holloway',
+      description: 'Conor McGregor returns for a blockbuster rematch with former champion Max Holloway during International Fight Week',
       featured: true,
-      image: '/ppv/wnba-all-star-2026.svg'
+      image: 'https://images.unsplash.com/photo-1611077479643-5b3c01381f9e?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '2',
@@ -44,16 +44,28 @@ const PPV: React.FC = () => {
       image: 'https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=1200&q=85'
     },
     {
-      id: '3',
-      title: 'Mayer vs Cameron',
-      date: 'August 29, 2026',
+      id: '1',
+      title: 'WNBA All-Star Game 2026',
+      date: 'July 25, 2026',
       time: 'Time TBA',
-      venue: 'Birmingham, England',
-      sport: 'Boxing',
-      mainEvent: 'Super Welterweight Title Unification',
-      description: 'Mikaela Mayer and Chantelle Cameron meet in a major world-title unification bout',
+      venue: 'United Center, Chicago',
+      sport: 'WNBA',
+      mainEvent: 'WNBA All-Star Game',
+      description: 'The league\'s brightest stars meet in Chicago for the 2026 WNBA All-Star showcase',
       featured: true,
-      image: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=1200&q=85'
+      image: '/ppv/wnba-all-star-2026.svg'
+    },
+    {
+      id: '7',
+      title: 'WWE SummerSlam 2026',
+      date: 'August 1–2, 2026',
+      time: 'Start Time TBA',
+      venue: 'U.S. Bank Stadium, Minneapolis',
+      sport: 'WWE',
+      mainEvent: 'Two-Night SummerSlam',
+      description: 'WWE brings one of its biggest events of the year to Minneapolis for a massive two-night stadium show',
+      featured: true,
+      image: 'https://images.unsplash.com/photo-1488656711237-487ce1cc53b7?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '4',
@@ -68,6 +80,42 @@ const PPV: React.FC = () => {
       image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=85'
     },
     {
+      id: '8',
+      title: 'UFC 330: Makhachev vs Garry',
+      date: 'August 15, 2026',
+      time: '9:00 PM ET',
+      venue: 'Xfinity Mobile Arena, Philadelphia',
+      sport: 'UFC',
+      mainEvent: 'Islam Makhachev vs Ian Machado Garry',
+      description: 'Islam Makhachev defends the welterweight championship against Ian Machado Garry in Philadelphia',
+      featured: true,
+      image: 'https://images.unsplash.com/photo-1680022548963-1d8e630a272b?auto=format&fit=crop&w=1200&q=85'
+    },
+    {
+      id: '3',
+      title: 'Mayer vs Cameron',
+      date: 'August 29, 2026',
+      time: 'Time TBA',
+      venue: 'Birmingham, England',
+      sport: 'Boxing',
+      mainEvent: 'Super Welterweight Title Unification',
+      description: 'Mikaela Mayer and Chantelle Cameron meet in a major world-title unification bout',
+      featured: true,
+      image: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=1200&q=85'
+    },
+    {
+      id: '9',
+      title: 'WWE Money in the Bank 2026',
+      date: 'September 6, 2026',
+      time: 'Start Time TBA',
+      venue: 'Smoothie King Center, New Orleans',
+      sport: 'WWE',
+      mainEvent: 'Men\'s & Women\'s Money in the Bank Matches',
+      description: 'WWE Superstars battle in signature ladder matches for guaranteed future championship opportunities',
+      featured: true,
+      image: 'https://images.unsplash.com/photo-1636391134068-083dd5e3209b?auto=format&fit=crop&w=1200&q=85'
+    },
+    {
       id: '5',
       title: '2026 NHL Heritage Classic',
       date: 'October 25, 2026',
@@ -78,54 +126,6 @@ const PPV: React.FC = () => {
       description: 'Canadian rivals meet outdoors in one of hockey\'s signature showcase events',
       featured: true,
       image: 'https://images.unsplash.com/photo-1580748141549-71748dbe0bdc?auto=format&fit=crop&w=1200&q=85'
-    },
-    {
-      id: '6',
-      title: 'Royal Rumble 2026',
-      date: 'January 31, 2026',
-      time: '3:00 PM ET',
-      venue: 'Riyadh, Saudi Arabia',
-      sport: 'WWE',
-      mainEvent: '30-Man & 30-Woman Royal Rumble Matches',
-      description: 'Historic first Royal Rumble outside North America as part of Riyadh Season',
-      featured: true,
-      image: 'https://images.unsplash.com/photo-1488656711237-487ce1cc53b7?auto=format&fit=crop&w=1200&q=85'
-    },
-    {
-      id: '7',
-      title: 'NBA All-Star Weekend 2026',
-      date: 'February 14, 2026',
-      time: '8:00 PM ET',
-      venue: 'Madison Square Garden, New York',
-      sport: 'NBA',
-      mainEvent: 'All-Star Game',
-      description: 'The best basketball players compete in the annual All-Star Game',
-      featured: false,
-      image: 'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=1200&q=85'
-    },
-    {
-      id: '8',
-      title: 'UFC on Paramount: March Card',
-      date: 'March 7, 2026',
-      time: '10:00 PM ET',
-      venue: 'TBA',
-      sport: 'UFC',
-      mainEvent: 'Championship Event TBA',
-      description: 'Early 2026 championship action under new broadcast deal',
-      featured: false,
-      image: 'https://images.unsplash.com/photo-1680022548963-1d8e630a272b?auto=format&fit=crop&w=1200&q=85'
-    },
-    {
-      id: '9',
-      title: 'Super Bowl LX',
-      date: 'February 8, 2026',
-      time: '6:30 PM ET',
-      venue: 'SoFi Stadium, Los Angeles',
-      sport: 'NFL',
-      mainEvent: 'NFL Championship Game',
-      description: 'The biggest game in American sports returns to LA',
-      featured: true,
-      image: 'https://images.unsplash.com/photo-1566349872260-a1d88307b698?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '10',
