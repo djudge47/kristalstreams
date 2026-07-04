@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import {
-  LayoutDashboard, Tv, Users, TicketCheck, BarChart3,
+  LayoutDashboard, Users, TicketCheck, BarChart3,
   Image, Film, Calendar, List, Building2, Handshake,
   Activity, LogOut, ChevronLeft, Menu
 } from 'lucide-react';
@@ -11,7 +11,6 @@ const ADMIN_EMAIL = 'djudge47@gmail.com';
 
 const navItems = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { path: '/admin/channels', label: 'Channels', icon: Tv },
   { path: '/admin/customers', label: 'Customers', icon: Users },
   { path: '/admin/tickets', label: 'Support Tickets', icon: TicketCheck },
   { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
