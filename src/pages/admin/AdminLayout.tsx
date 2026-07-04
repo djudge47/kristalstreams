@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import {
   LayoutDashboard, Users, TicketCheck, BarChart3,
-  Image, Film, Calendar, List, Building2, Handshake,
+  Image, Film, List, Building2, Handshake,
   Activity, LogOut, ChevronLeft, Menu
 } from 'lucide-react';
 
@@ -16,7 +16,6 @@ const navItems = [
   { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { path: '/admin/slider', label: 'Slider Manager', icon: Image },
   { path: '/admin/demo-reel', label: 'Demo Reel', icon: Film },
-  { path: '/admin/schedule', label: 'Schedule', icon: Calendar },
   { path: '/admin/programs', label: 'Programs', icon: List },
   { divider: true, label: 'CRM' },
   { path: '/admin/crm', label: 'CRM Dashboard', icon: Handshake, exact: true },
