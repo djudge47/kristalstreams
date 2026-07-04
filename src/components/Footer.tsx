@@ -211,14 +211,6 @@ const Footer: React.FC = memo(() => {
                 </a>
               </li>
               <li>
-                <a 
-                  href="/web-tv-player"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
-                  Web TV Player
-                </a>
-              </li>
-              <li>
                 <Link
                   to="/ppv"
                   className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
