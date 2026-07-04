@@ -21,63 +21,63 @@ const PPV: React.FC = () => {
   const ppvEvents: PPVEvent[] = [
     {
       id: '1',
-      title: 'Crown Jewel 2025',
-      date: 'October 11, 2025',
-      time: '8:00 AM ET',
-      venue: 'RAC Arena, Perth, Australia',
-      sport: 'WWE',
-      mainEvent: 'Crown Jewel Championship Matches',
-      description: 'First Crown Jewel outside Saudi Arabia featuring Cody Rhodes vs Seth Rollins and John Cena vs AJ Styles',
+      title: 'WNBA All-Star Game 2026',
+      date: 'July 25, 2026',
+      time: 'Time TBA',
+      venue: 'United Center, Chicago',
+      sport: 'WNBA',
+      mainEvent: 'WNBA All-Star Game',
+      description: 'The league\'s brightest stars meet in Chicago for the 2026 WNBA All-Star showcase',
       featured: true,
-      image: 'https://images.unsplash.com/photo-1657672825833-7b2ad6fae220?auto=format&fit=crop&w=1200&q=85'
+      image: '/ppv/wnba-all-star-2026.svg'
     },
     {
       id: '2',
-      title: 'UFC 321: Aspinall vs Gane',
-      date: 'October 25, 2025',
-      time: '3:00 PM ET',
-      venue: 'Etihad Arena, Abu Dhabi',
-      sport: 'UFC',
-      mainEvent: 'Tom Aspinall vs Ciryl Gane',
-      description: 'Heavyweight contenders clash in the Middle East',
+      title: '2026 MLB All-Star Game',
+      date: 'July 14, 2026',
+      time: '8:00 PM ET',
+      venue: 'Citizens Bank Park, Philadelphia',
+      sport: 'MLB',
+      mainEvent: 'American League vs National League',
+      description: 'Baseball\'s biggest stars take the field in Philadelphia for the Midsummer Classic',
       featured: true,
-      image: 'https://images.unsplash.com/photo-1611077479643-5b3c01381f9e?auto=format&fit=crop&w=1200&q=85'
+      image: 'https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '3',
-      title: 'UFC 322: Della Maddalena vs Makhachev',
-      date: 'November 15, 2025',
-      time: '10:00 PM ET',
-      venue: 'Madison Square Garden, New York',
-      sport: 'UFC',
-      mainEvent: 'Lightweight Championship',
-      description: 'Championship action at the world\'s most famous arena',
+      title: 'Mayer vs Cameron',
+      date: 'August 29, 2026',
+      time: 'Time TBA',
+      venue: 'Birmingham, England',
+      sport: 'Boxing',
+      mainEvent: 'Super Welterweight Title Unification',
+      description: 'Mikaela Mayer and Chantelle Cameron meet in a major world-title unification bout',
       featured: true,
-      image: 'https://images.unsplash.com/photo-1495555499155-29db2c1db3fe?auto=format&fit=crop&w=1200&q=85'
+      image: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '4',
-      title: 'Survivor Series: WarGames 2025',
-      date: 'November 29, 2025',
-      time: '8:00 PM ET',
-      venue: 'Petco Park, San Diego',
-      sport: 'WWE',
-      mainEvent: 'WarGames Matches',
-      description: 'The ultimate WWE battle featuring dual WarGames cage matches',
+      title: 'Leagues Cup 2026',
+      date: 'August 4 – September 6, 2026',
+      time: 'Schedule Varies',
+      venue: 'MLS & Liga MX Stadiums',
+      sport: 'MLS',
+      mainEvent: 'Leagues Cup Final',
+      description: 'Top MLS and Liga MX clubs compete across North America for the Leagues Cup title',
       featured: true,
-      image: 'https://images.unsplash.com/photo-1636391134068-083dd5e3209b?auto=format&fit=crop&w=1200&q=85'
+      image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '5',
-      title: 'UFC 323',
-      date: 'December 6, 2025',
-      time: '10:00 PM ET',
-      venue: 'T-Mobile Arena, Las Vegas',
-      sport: 'UFC',
-      mainEvent: 'Championship Bout TBA',
-      description: 'Final UFC PPV before new media deal takes effect in 2026',
+      title: '2026 NHL Heritage Classic',
+      date: 'October 25, 2026',
+      time: 'Time TBA',
+      venue: 'Princess Auto Stadium, Winnipeg',
+      sport: 'NHL',
+      mainEvent: 'Winnipeg Jets vs Montreal Canadiens',
+      description: 'Canadian rivals meet outdoors in one of hockey\'s signature showcase events',
       featured: true,
-      image: 'https://images.unsplash.com/photo-1545191050-96042d612b1f?auto=format&fit=crop&w=1200&q=85'
+      image: 'https://images.unsplash.com/photo-1580748141549-71748dbe0bdc?auto=format&fit=crop&w=1200&q=85'
     },
     {
       id: '6',
@@ -141,7 +141,7 @@ const PPV: React.FC = () => {
     }
   ];
 
-  const sports = ['all', 'UFC', 'WWE', 'NBA', 'NFL'];
+  const sports = ['all', 'UFC', 'WWE', 'NBA', 'NFL', 'Boxing', 'MLB', 'NHL', 'MLS'];
 
   const filteredEvents = selectedSport === 'all'
     ? ppvEvents
@@ -160,7 +160,7 @@ const PPV: React.FC = () => {
           </h1>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto mb-8">
             Watch every major Pay-Per-View event live in stunning HD and 4K quality.
-            From October 2025 through March 2026, never miss the biggest fights and shows.
+            Throughout 2026, never miss the biggest fights, games, and shows.
           </p>
         </div>
 
