@@ -129,15 +129,15 @@ const PPV: React.FC = () => {
     },
     {
       id: '10',
-      title: 'NBA Finals Game 7',
-      date: 'June 21, 2026',
-      time: '8:00 PM ET',
-      venue: 'TBA',
+      title: 'NBA 2026 Season',
+      date: '2026–27 Season',
+      time: 'Schedule TBA',
+      venue: 'NBA Arenas',
       sport: 'NBA',
-      mainEvent: 'Championship Clincher',
-      description: 'Winner-take-all Game 7 for the NBA Championship',
+      mainEvent: 'Regular Season & Playoffs',
+      description: 'Follow marquee NBA matchups throughout the 2026–27 season',
       featured: true,
-      image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=85'
+      image: '/ppv/nba-2026-season.svg'
     }
   ];
 
