@@ -1,18 +1,32 @@
-import React from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import Hero from '../components/Hero';
-import Features from '../components/Features';
-import PricingPlans from '../components/PricingPlans';
-import FAQ from '../components/FAQ';
-import TrendingSlider from '../components/TrendingSlider';
+import DemoReel from '../components/DemoReel';
+
+const TrendingSlider = lazy(() => import('../components/TrendingSlider'));
+const Features = lazy(() => import('../components/Features'));
+const PricingPlans = lazy(() => import('../components/PricingPlans'));
+const FAQ = lazy(() => import('../components/FAQ'));
 
 const Home: React.FC = () => {
+  const [showDeferred, setShowDeferred] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowDeferred(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <>
       <Hero />
-      <TrendingSlider />
-      <Features />
-      <PricingPlans />
-      <FAQ />
+      <DemoReel />
+      {showDeferred && (
+        <Suspense fallback={<div className="h-20" />}>
+          <TrendingSlider />
+          <Features />
+          <PricingPlans />
+          <FAQ />
+        </Suspense>
+      )}
     </>
   );
 };
