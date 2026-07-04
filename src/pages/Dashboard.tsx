@@ -21,6 +21,8 @@ import {
   Wifi,
 } from 'lucide-react';
 
+const ADMIN_EMAIL = 'djudge47@gmail.com';
+
 interface Profile {
   email: string;
   full_name: string | null;
@@ -28,7 +30,6 @@ interface Profile {
   subscription_status: string;
   connections_allowed: number;
   active_connections: number;
-  is_admin: boolean | null;
 }
 
 interface Ticket {
@@ -45,6 +46,7 @@ const Dashboard: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const unreadCount = useNotificationStore((state) => state.unreadCount);
 
   useEffect(() => {
@@ -63,13 +65,15 @@ const Dashboard: React.FC = () => {
           return;
         }
 
+        if (mounted) setIsAdmin(user.email === ADMIN_EMAIL);
+
         // Subscribe to ticket updates
         unsubscribe = subscribeToTickets(user.id);
         await getUnreadTicketCount(user.id).catch(() => {});
 
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('id, email, full_name, subscription_tier, subscription_status, connections_allowed, active_connections, is_admin')
+          .select('id, email, full_name, subscription_tier, subscription_status, connections_allowed, active_connections')
           .eq('id', user.id)
           .single();
 
@@ -253,7 +257,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Admin toolbar */}
-          {profile?.is_admin === true && (
+          {isAdmin && (
             <div className="flex flex-wrap items-center gap-2 bg-amber-600/10 border border-amber-600/30 rounded-xl px-4 py-3 mb-6">
               <Shield className="w-4 h-4 text-amber-400 shrink-0" />
               <span className="text-amber-400 text-sm font-medium mr-2">Admin</span>
