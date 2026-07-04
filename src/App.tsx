@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import InstallPrompt from './components/InstallPrompt';
 import Layout from './components/Layout';
 
@@ -197,6 +197,7 @@ function App() {
             <Route path="support/status-history" element={<S.StatusHistory />} />
             <Route path="support/article/:slug" element={<S.Article />} />
             <Route path="support/guide/:slug" element={<S.Guide />} />
+            <Route path="client/import" element={<Navigate to="/admin/channels" replace />} />
             <Route path="client" element={<C.Layout />}>
               <Route path="account" element={<C.Account />} />
               <Route path="subscription" element={<C.Subscription />} />
