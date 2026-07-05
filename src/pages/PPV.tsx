@@ -155,7 +155,7 @@ const PPV: React.FC = () => {
     }
   ];
 
-  const sports = ['all', 'UFC', 'WWE', 'NBA', 'NFL', 'Boxing', 'MLB', 'NHL', 'MLS'];
+  const sports = ['all', 'UFC', 'WWE', 'NBA', 'WNBA', 'NFL', 'Boxing', 'MLB', 'NHL', 'MLS'];
 
   const filteredEvents = selectedSport === 'all'
     ? ppvEvents
