@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Calendar, Clock, MapPin, Tv, Check, Star, Trophy, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import nflKickoffImage from '../assets/nflKickoffImage';
-import wnbaAllStarImage from '../assets/wnbaAllStarImage';
 
 interface PPVEvent {
   id: string;
@@ -55,7 +54,7 @@ const PPV: React.FC = () => {
       mainEvent: 'WNBA All-Star Game',
       description: 'The league\'s brightest stars meet in Chicago for the 2026 WNBA All-Star showcase',
       featured: true,
-      image: wnbaAllStarImage
+      image: '/ppv/wnba-all-star-2026.avif'
     },
     {
       id: '7',
