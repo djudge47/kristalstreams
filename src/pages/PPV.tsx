@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, Clock, MapPin, Tv, Check, Star, Trophy, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import nflKickoffImage from '../assets/nflKickoffImage';
+import ufc329Image from '../assets/ufc329Image';
 
 interface PPVEvent {
   id: string;
@@ -30,7 +31,7 @@ const PPV: React.FC = () => {
       mainEvent: 'Conor McGregor vs Max Holloway',
       description: 'Conor McGregor returns for a blockbuster rematch with former champion Max Holloway during International Fight Week',
       featured: true,
-      image: '/ppv/ufc-329-mcgregor-vs-holloway-2.avif'
+      image: ufc329Image
     },
     {
       id: '2',
