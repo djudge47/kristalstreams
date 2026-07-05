@@ -43,7 +43,7 @@ const PPV: React.FC = () => {
       mainEvent: 'American League vs National League',
       description: 'Baseball\'s biggest stars take the field in Philadelphia for the Midsummer Classic',
       featured: true,
-      image: 'https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&w=1200&q=85'
+      image: '/ppv/event-2.jpg'
     },
     {
       id: '1',
@@ -164,204 +164,87 @@ const PPV: React.FC = () => {
   return (
     <div className="min-h-screen bg-dark-300 py-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header Section */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-6">
             <Trophy className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
-            Upcoming PPV Events
-          </h1>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">Upcoming PPV Events</h1>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto mb-8">
-            Watch every major Pay-Per-View event live in stunning HD and 4K quality.
-            Throughout 2026, never miss the biggest fights, games, and shows.
+            Watch every major Pay-Per-View event live in stunning HD and 4K quality. Throughout 2026, never miss the biggest fights, games, and shows.
           </p>
         </div>
 
-        {/* Features Section */}
         <div className="grid md:grid-cols-4 gap-6 mb-16">
           <div className="bg-dark-100 rounded-xl p-6 border border-gray-800 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full mb-4">
-              <Tv className="w-6 h-6 text-primary" />
-            </div>
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full mb-4"><Tv className="w-6 h-6 text-primary" /></div>
             <h3 className="text-lg font-semibold text-white mb-2">4K Quality</h3>
             <p className="text-gray-400 text-sm">Crystal clear streaming in up to 4K resolution</p>
           </div>
           <div className="bg-dark-100 rounded-xl p-6 border border-gray-800 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full mb-4">
-              <Clock className="w-6 h-6 text-primary" />
-            </div>
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full mb-4"><Clock className="w-6 h-6 text-primary" /></div>
             <h3 className="text-lg font-semibold text-white mb-2">Live & On-Demand</h3>
             <p className="text-gray-400 text-sm">Watch live or replay anytime after the event</p>
           </div>
           <div className="bg-dark-100 rounded-xl p-6 border border-gray-800 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full mb-4">
-              <Shield className="w-6 h-6 text-primary" />
-            </div>
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full mb-4"><Shield className="w-6 h-6 text-primary" /></div>
             <h3 className="text-lg font-semibold text-white mb-2">No Extra Cost</h3>
             <p className="text-gray-400 text-sm">All PPV events included with your subscription</p>
           </div>
           <div className="bg-dark-100 rounded-xl p-6 border border-gray-800 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full mb-4">
-              <Star className="w-6 h-6 text-primary" />
-            </div>
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full mb-4"><Star className="w-6 h-6 text-primary" /></div>
             <h3 className="text-lg font-semibold text-white mb-2">All Devices</h3>
             <p className="text-gray-400 text-sm">Stream on any device, anywhere in the world</p>
           </div>
         </div>
 
-        {/* Filter Tabs */}
         <div className="flex flex-wrap justify-center gap-4 mb-12">
           {sports.map(sport => (
-            <button
-              key={sport}
-              onClick={() => setSelectedSport(sport)}
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
-                selectedSport === sport
-                  ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                  : 'bg-dark-100 text-gray-400 border border-gray-800 hover:border-primary hover:text-white'
-              }`}
-            >
+            <button key={sport} onClick={() => setSelectedSport(sport)} className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${selectedSport === sport ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-dark-100 text-gray-400 border border-gray-800 hover:border-primary hover:text-white'}`}>
               {sport === 'all' ? 'All Events' : sport}
             </button>
           ))}
         </div>
 
-        {/* Events Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {filteredEvents.map(event => (
-            <div
-              key={event.id}
-              className="bg-dark-100 rounded-xl overflow-hidden border border-gray-800 hover:border-primary transition-all duration-300 group"
-            >
-              {/* Event Image */}
+            <div key={event.id} className="bg-dark-100 rounded-xl overflow-hidden border border-gray-800 hover:border-primary transition-all duration-300 group">
               <div className="relative h-56 overflow-hidden">
-                <img
-                  src={event.image}
-                  alt={event.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
+                <img src={event.image} alt={event.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent pointer-events-none" />
-                {event.featured && (
-                  <div className="absolute top-4 right-4 bg-primary px-3 py-1 rounded-full flex items-center gap-2">
-                    <Star className="w-4 h-4 text-white" fill="white" />
-                    <span className="text-white text-sm font-semibold">Featured</span>
-                  </div>
-                )}
-                <div className="absolute top-4 left-4 bg-dark-300/90 px-3 py-1 rounded-full">
-                  <span className="text-white text-sm font-semibold">{event.sport}</span>
-                </div>
+                {event.featured && <div className="absolute top-4 right-4 bg-primary px-3 py-1 rounded-full flex items-center gap-2"><Star className="w-4 h-4 text-white" fill="white" /><span className="text-white text-sm font-semibold">Featured</span></div>}
+                <div className="absolute top-4 left-4 bg-dark-300/90 px-3 py-1 rounded-full"><span className="text-white text-sm font-semibold">{event.sport}</span></div>
               </div>
 
-              {/* Event Details */}
               <div className="p-6">
-                <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-primary transition-colors">
-                  {event.title}
-                </h3>
+                <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-primary transition-colors">{event.title}</h3>
                 <p className="text-gray-400 mb-4">{event.description}</p>
-
                 <div className="space-y-3 mb-6">
-                  <div className="flex items-start gap-3">
-                    <Trophy className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Main Event</p>
-                      <p className="text-white font-medium">{event.mainEvent}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Date & Time</p>
-                      <p className="text-white font-medium">{event.date}</p>
-                      <p className="text-gray-400 text-sm">{event.time}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Venue</p>
-                      <p className="text-white font-medium">{event.venue}</p>
-                    </div>
-                  </div>
+                  <div className="flex items-start gap-3"><Trophy className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" /><div><p className="text-sm text-gray-500">Main Event</p><p className="text-white font-medium">{event.mainEvent}</p></div></div>
+                  <div className="flex items-start gap-3"><Calendar className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" /><div><p className="text-sm text-gray-500">Date & Time</p><p className="text-white font-medium">{event.date}</p><p className="text-gray-400 text-sm">{event.time}</p></div></div>
+                  <div className="flex items-start gap-3"><MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" /><div><p className="text-sm text-gray-500">Venue</p><p className="text-white font-medium">{event.venue}</p></div></div>
                 </div>
-
-                <div className="flex items-center gap-2 text-primary">
-                  <Check className="w-5 h-5" />
-                  <span className="text-sm font-medium">Included with subscription</span>
-                </div>
+                <div className="flex items-center gap-2 text-primary"><Check className="w-5 h-5" /><span className="text-sm font-medium">Included with subscription</span></div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* CTA Section */}
         <div className="bg-gradient-to-r from-primary/10 to-red-900/10 rounded-2xl border border-primary/20 p-8 md:p-12 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Never Miss a Moment
-          </h2>
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Get instant access to all upcoming PPV events with any Kristal Streams subscription.
-            No additional fees, no blackouts, just pure entertainment.
-          </p>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Never Miss a Moment</h2>
+          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">Get instant access to all upcoming PPV events with any Kristal Streams subscription. No additional fees, no blackouts, just pure entertainment.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/pricing"
-              className="bg-primary hover:bg-red-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 inline-block"
-            >
-              View Pricing Plans
-            </Link>
-            <Link
-              to="/free-trial"
-              className="border-2 border-primary text-primary hover:bg-primary hover:text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 inline-block"
-            >
-              Start Free Trial
-            </Link>
+            <Link to="/pricing" className="bg-primary hover:bg-red-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 inline-block">View Pricing Plans</Link>
+            <Link to="/free-trial" className="border-2 border-primary text-primary hover:bg-primary hover:text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 inline-block">Start Free Trial</Link>
           </div>
         </div>
 
-        {/* FAQ Section */}
         <div className="mt-20 max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">
-            PPV Frequently Asked Questions
-          </h2>
+          <h2 className="text-3xl font-bold text-white text-center mb-12">PPV Frequently Asked Questions</h2>
           <div className="space-y-6">
-            <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-              <h3 className="text-xl font-semibold text-white mb-3">
-                Are PPV events included in my subscription?
-              </h3>
-              <p className="text-gray-400">
-                Yes! All PPV events listed are included with your Kristal Streams subscription at no additional cost.
-                This includes UFC, WWE, and all other major sporting events.
-              </p>
-            </div>
-            <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-              <h3 className="text-xl font-semibold text-white mb-3">
-                Can I watch PPV events after they air?
-              </h3>
-              <p className="text-gray-400">
-                Absolutely! All PPV events are available on-demand after they air, so you can watch them anytime
-                at your convenience. Replays are typically available within hours of the live event ending.
-              </p>
-            </div>
-            <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-              <h3 className="text-xl font-semibold text-white mb-3">
-                What quality can I stream PPV events in?
-              </h3>
-              <p className="text-gray-400">
-                All PPV events are available in HD quality, and select events are available in stunning 4K resolution.
-                The quality depends on your subscription plan and internet connection speed.
-              </p>
-            </div>
-            <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-              <h3 className="text-xl font-semibold text-white mb-3">
-                Can I watch on multiple devices?
-              </h3>
-              <p className="text-gray-400">
-                Yes! You can stream PPV events on all your devices including Smart TVs, smartphones, tablets,
-                computers, and streaming devices. The number of simultaneous streams depends on your subscription plan.
-              </p>
-            </div>
+            <div className="bg-dark-100 rounded-xl p-6 border border-gray-800"><h3 className="text-xl font-semibold text-white mb-3">Are PPV events included in my subscription?</h3><p className="text-gray-400">Yes! All PPV events listed are included with your Kristal Streams subscription at no additional cost. This includes UFC, WWE, and all other major sporting events.</p></div>
+            <div className="bg-dark-100 rounded-xl p-6 border border-gray-800"><h3 className="text-xl font-semibold text-white mb-3">Can I watch PPV events after they air?</h3><p className="text-gray-400">Absolutely! All PPV events are available on-demand after they air, so you can watch them anytime at your convenience. Replays are typically available within hours of the live event ending.</p></div>
+            <div className="bg-dark-100 rounded-xl p-6 border border-gray-800"><h3 className="text-xl font-semibold text-white mb-3">What quality can I stream PPV events in?</h3><p className="text-gray-400">All PPV events are available in HD quality, and select events are available in stunning 4K resolution. The quality depends on your subscription plan and internet connection speed.</p></div>
+            <div className="bg-dark-100 rounded-xl p-6 border border-gray-800"><h3 className="text-xl font-semibold text-white mb-3">Can I watch on multiple devices?</h3><p className="text-gray-400">Yes! You can stream PPV events on all your devices including Smart TVs, smartphones, tablets, computers, and streaming devices. The number of simultaneous streams depends on your subscription plan.</p></div>
           </div>
         </div>
       </div>
