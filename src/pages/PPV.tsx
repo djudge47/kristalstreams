@@ -43,7 +43,7 @@ const PPV: React.FC = () => {
       mainEvent: 'American League vs National League',
       description: 'Baseball\'s biggest stars take the field in Philadelphia for the Midsummer Classic',
       featured: true,
-      image: '/ppv/mlb-all-star-game-2026.jpg'
+      image: '/ppv/mlb-all-star-game-2026-v2.jpg'
     },
     {
       id: '1',
