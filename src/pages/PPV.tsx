@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, MapPin, Tv, Check, Star, Trophy, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import nflKickoffImage from '../assets/nflKickoffImage';
 
 interface PPVEvent {
   id: string;
@@ -125,7 +126,7 @@ const PPV: React.FC = () => {
       mainEvent: 'New England Patriots vs Seattle Seahawks',
       description: 'The 2026 NFL season opens with a prime-time Super Bowl LX rematch in Seattle',
       featured: true,
-      image: 'https://images.unsplash.com/photo-1566349872260-a1d88307b698?auto=format&fit=crop&w=1200&q=85'
+      image: nflKickoffImage
     },
     {
       id: '5',
