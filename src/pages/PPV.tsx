@@ -30,7 +30,7 @@ const PPV: React.FC = () => {
       mainEvent: 'Conor McGregor vs Max Holloway',
       description: 'Conor McGregor returns for a blockbuster rematch with former champion Max Holloway during International Fight Week',
       featured: true,
-      image: 'https://images.unsplash.com/photo-1611077479643-5b3c01381f9e?auto=format&fit=crop&w=1200&q=85'
+      image: '/ppv/ufc-329-mcgregor-vs-holloway-2.avif'
     },
     {
       id: '2',
