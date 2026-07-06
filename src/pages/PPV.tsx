@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import nflKickoffImage from '../assets/nflKickoffImage';
 import ufc329Image from '../assets/ufc329Image';
 import mlbAllStarImage from '../assets/mlbAllStarImage';
-import summerSlam2026Image from '../assets/summerSlam2026Image';
 
 interface PPVEvent {
   id: string;
@@ -66,7 +65,7 @@ const ppvEvents: PPVEvent[] = [
     mainEvent: 'Two-Night SummerSlam',
     description: 'WWE brings one of its biggest events of the year to Minneapolis for a massive two-night stadium show',
     featured: true,
-    image: summerSlam2026Image
+    image: '/ppv/wwe-summerslam-2026.svg'
   },
   {
     id: '4',
