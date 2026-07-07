@@ -77,7 +77,7 @@ const ppvEvents: PPVEvent[] = [
     mainEvent: 'Leagues Cup Final',
     description: 'Top MLS and Liga MX clubs compete across North America for the Leagues Cup title',
     featured: true,
-    image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=85'
+    image: '/ppv/leagues-cup-2026.jpg'
   },
   {
     id: '8',
