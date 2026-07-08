@@ -54,3 +54,21 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300;
   }
 }
+
+/* Generated PPV posters must display as complete 16:9 artwork. */
+div.relative.h-56.overflow-hidden:has(> img[src*="leagues-cup-2026"]) {
+  height: auto !important;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+div.relative.h-56.overflow-hidden:has(> img[src*="leagues-cup-2026"]) > img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  transform: none !important;
+}
+
+div.relative.h-56.overflow-hidden:has(> img[src*="leagues-cup-2026"]) > div {
+  display: none;
+}
