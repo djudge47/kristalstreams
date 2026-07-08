@@ -1,6 +1,10 @@
 {
   "routes": [
     {
+      "src": "/ppv/leagues-cup-2026.jpg",
+      "dest": "/ppv/leagues-cup-2026.svg"
+    },
+    {
       "handle": "filesystem"
     },
     {
