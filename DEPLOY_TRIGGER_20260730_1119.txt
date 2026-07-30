@@ -1,0 +1,2 @@
+Trigger production redeploy after Supabase production environment variables were updated.
+No application code changed.
