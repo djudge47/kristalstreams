@@ -5,6 +5,7 @@ import NewsletterSignup from './NewsletterSignup';
 
 const Footer: React.FC = memo(() => {
   const currentYear = new Date().getFullYear();
+  const supportEmail = 'info@kristalstream.com';
 
   const socialLinks = [
     { platform: 'facebook', url: 'https://www.facebook.com/kristalstreams' },
@@ -137,17 +138,20 @@ const Footer: React.FC = memo(() => {
             
             <h4 className="text-lg font-semibold mb-4 mt-6 text-white">Contact Support</h4>
             <ul className="space-y-3">
-              <li className="flex items-start">
-                <Mail size={18} className="text-primary mr-3 mt-1 flex-shrink-0" />
-                <div>
-                  <div className="text-white font-medium text-sm mb-1">Email Support</div>
-                  <a
-                    href="mailto:info@kristalstream.com"
-                    className="text-gray-400 text-sm hover:text-primary transition-colors duration-200"
-                  >
-                    info@kristalstream.com
-                  </a>
-                </div>
+              <li>
+                <a
+                  href={`mailto:${supportEmail}`}
+                  className="flex items-start group"
+                  aria-label={`Email Kristal Streams support at ${supportEmail}`}
+                >
+                  <Mail size={18} className="text-primary mr-3 mt-1 flex-shrink-0" />
+                  <div>
+                    <div className="text-white font-medium text-sm mb-1 group-hover:text-primary transition-colors duration-200">Email Support</div>
+                    <span className="text-gray-400 text-sm group-hover:text-primary transition-colors duration-200 underline-offset-4 group-hover:underline">
+                      {supportEmail}
+                    </span>
+                  </div>
+                </a>
               </li>
             </ul>
           </div>
