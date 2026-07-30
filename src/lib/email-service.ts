@@ -167,6 +167,44 @@ const sendEmailViaEdgeFunction = async (
   }
 };
 
+const buildAutoReplyMessage = (emailData: EmailData): string => {
+  const customerName = emailData.from_name || emailData.to_name || 'there';
+
+  return `Hi ${customerName},
+
+Thank you for contacting Kristal Streams. We received your message and our support team will review it as soon as possible.
+
+Message received:
+Subject: ${emailData.subject || 'Contact Form Submission'}
+
+We usually respond within 24 hours. If this is about billing, account access, or service trouble, please keep an eye on your email for our reply.
+
+Thank you,
+Kristal Streams Support
+${SUPPORT_EMAIL}`;
+};
+
+const sendAutomaticCustomerConfirmation = async (emailData: EmailData): Promise<void> => {
+  const customerEmail = emailData.from_email || emailData.reply_to || emailData.to_email;
+  const customerName = emailData.from_name || emailData.to_name || 'Customer';
+
+  if (!customerEmail) return;
+
+  const confirmationResult = await sendEmailViaEdgeFunction('support', customerEmail, {
+    user_name: customerName,
+    user_email: customerEmail,
+    subject: `We received your message: ${emailData.subject || 'Kristal Streams Support'}`,
+    message: buildAutoReplyMessage(emailData),
+    priority: 'normal',
+    category: 'Automatic Confirmation',
+    reply_to: SUPPORT_EMAIL,
+  });
+
+  if (!confirmationResult.success) {
+    console.error('Automatic customer confirmation failed:', confirmationResult.error);
+  }
+};
+
 export const sendContactEmail = async (emailData: EmailData): Promise<EmailResult> => {
   const data = {
     from_name: emailData.from_name || 'Website Contact',
@@ -180,6 +218,7 @@ export const sendContactEmail = async (emailData: EmailData): Promise<EmailResul
 
   if (emailResult.success) {
     await saveContactTicket(emailData);
+    await sendAutomaticCustomerConfirmation(emailData);
   }
 
   return emailResult;
