@@ -1,5 +1,5 @@
 const EMAIL_FUNCTION_URL =
-  'https://wftfxerblhlsxiijtfbo.supabase.co/functions/v1/send-email';
+  'https://wftfxerblhlsxiijtfbo.supabase.co/functions/v1/resend-email';
 
 const SUPPORT_EMAIL = 'support@kristalstream.com';
 
