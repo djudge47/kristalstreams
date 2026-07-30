@@ -122,6 +122,57 @@ const buildEmail = (type: EmailType, data: Record<string, string>) => {
   }
 };
 
+const getTicketPayload = (type: EmailType, data: Record<string, string>, resendEmailId?: string) => ({
+  source: type === "contact" ? "contact_form" : type,
+  customer_name: data.from_name || data.user_name || "Website Visitor",
+  customer_email: data.from_email || data.user_email || data.reply_to || "",
+  subject: data.subject || (type === "contact" ? "Contact Form Submission" : "Support Request"),
+  message: data.message || "",
+  status: "open",
+  priority: data.priority || "normal",
+  category: data.category || "Website Contact",
+  reply_to: data.reply_to || data.from_email || data.user_email || "",
+  resend_email_id: resendEmailId || null,
+  raw_payload: { type, data },
+});
+
+const saveSupportTicket = async (type: EmailType, data: Record<string, string>, resendEmailId?: string) => {
+  if (type !== "contact" && type !== "support") return { saved: false, skipped: true };
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.warn("Support ticket was not saved because Supabase service credentials are missing.");
+    return { saved: false, error: "Missing Supabase service credentials" };
+  }
+
+  try {
+    const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/support_tickets`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": serviceRoleKey,
+        "Authorization": `Bearer ${serviceRoleKey}`,
+        "Prefer": "return=representation",
+      },
+      body: JSON.stringify(getTicketPayload(type, data, resendEmailId)),
+    });
+
+    const result = await response.json().catch(async () => ({ error: await response.text() }));
+
+    if (!response.ok) {
+      console.warn("Support ticket save failed:", result);
+      return { saved: false, error: result };
+    }
+
+    return { saved: true, ticket: Array.isArray(result) ? result[0] : result };
+  } catch (error) {
+    console.warn("Support ticket save failed:", error);
+    return { saved: false, error: error instanceof Error ? error.message : "Unknown save error" };
+  }
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -174,7 +225,9 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Resend API error: ${resendMessage}`);
     }
 
-    return new Response(JSON.stringify({ success: true, data: resendResult }), {
+    const ticketResult = await saveSupportTicket(type, data, resendResult?.id);
+
+    return new Response(JSON.stringify({ success: true, data: resendResult, ticket: ticketResult }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
