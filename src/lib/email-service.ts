@@ -1,8 +1,6 @@
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://wftfxerblhlsxiijtfbo.supabase.co';
-const EMAIL_FUNCTION_URL = `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/resend-email`;
+import { supabase } from './supabase';
 
 const SUPPORT_EMAIL = 'support@kristalstream.com';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export interface EmailData {
   to_email: string;
@@ -39,22 +37,24 @@ export interface EmailResult {
   error?: string;
 }
 
-const getReadableEmailError = (status: number, result: unknown): string => {
-  if (result && typeof result === 'object' && 'error' in result) {
-    const error = String((result as { error?: unknown }).error || '').trim();
-    if (error) return error;
+const getReadableEmailError = (error: unknown, data?: unknown): string => {
+  if (data && typeof data === 'object' && 'error' in data) {
+    const message = String((data as { error?: unknown }).error || '').trim();
+    if (message) return message;
   }
 
-  if (status === 401 || status === 403) {
-    return 'Email function authorization failed. Check the Supabase anon key and function JWT settings.';
+  if (error && typeof error === 'object') {
+    const message = String((error as { message?: unknown }).message || '').trim();
+    if (message) {
+      if (/401|403|unauthorized|jwt|authorization/i.test(message)) {
+        return 'Email function authorization failed. The resend-email function still requires JWT verification or the deployed function is not using the latest settings.';
+      }
+      return message;
+    }
   }
 
-  if (status === 404) {
-    return 'Email function not found. Check that the Supabase Edge Function is named resend-email and deployed.';
-  }
-
-  if (status >= 500) {
-    return 'Email service is temporarily unavailable. Check the Supabase Edge Function logs.';
+  if (typeof error === 'string' && error.trim()) {
+    return error;
   }
 
   return 'Failed to send email. Check the Supabase Edge Function logs for details.';
@@ -66,32 +66,19 @@ const sendEmailViaEdgeFunction = async (
   data: Record<string, string>
 ): Promise<EmailResult> => {
   try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    if (SUPABASE_ANON_KEY) {
-      headers.apikey = SUPABASE_ANON_KEY;
-      headers.Authorization = `Bearer ${SUPABASE_ANON_KEY}`;
-    }
-
-    const response = await fetch(EMAIL_FUNCTION_URL, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ type, to, data }),
+    const { data: result, error } = await supabase.functions.invoke('resend-email', {
+      body: { type, to, data },
     });
 
-    const result = await response.json().catch(() => null);
-
-    if (!response.ok || !result?.success) {
-      const message = getReadableEmailError(response.status, result);
-      console.error('Email function error:', { status: response.status, result, message });
+    if (error || !result?.success) {
+      const message = getReadableEmailError(error, result);
+      console.error('Email function error:', { error, result, message });
       return { success: false, error: message };
     }
 
     return { success: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unable to reach the email service.';
+    const message = getReadableEmailError(error);
     console.error('Error invoking email function:', error);
     return { success: false, error: message };
   }
