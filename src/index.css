@@ -72,3 +72,84 @@ div.relative.h-56.overflow-hidden:has(> img[src*="leagues-cup-2026"]) > img {
 div.relative.h-56.overflow-hidden:has(> img[src*="leagues-cup-2026"]) > div {
   display: none;
 }
+
+/* Mobile visual polish: keep artwork visible and prevent media from crowding text. */
+@media (max-width: 639px) {
+  img.object-cover,
+  .hero-mobile-poster,
+  .hero-desktop-image {
+    object-position: center top;
+  }
+
+  .aspect-\[2\/3\] img.object-cover {
+    object-position: center top;
+  }
+
+  .w-1\/4.flex-shrink-0 {
+    width: 52% !important;
+  }
+
+  .h-48.object-cover,
+  img.h-48.object-cover,
+  img.h-96.object-cover {
+    height: auto !important;
+    aspect-ratio: 16 / 10;
+    object-position: center center;
+  }
+
+  div.relative.h-56.overflow-hidden {
+    height: auto !important;
+    aspect-ratio: 16 / 10;
+    background: #050505;
+  }
+
+  div.relative.h-56.overflow-hidden > img {
+    height: 100% !important;
+    width: 100% !important;
+    object-position: center center;
+  }
+
+  div.relative.h-56.overflow-hidden:has(> img[src$=".svg"]) > img,
+  div.relative.h-56.overflow-hidden:has(> img[src$=".avif"]) > img,
+  div.relative.h-56.overflow-hidden:has(> img[src*="leagues-cup-2026"]) > img {
+    object-fit: contain !important;
+    padding: 0.35rem;
+    transform: none !important;
+  }
+
+  .h-\[70vh\] {
+    height: 72svh !important;
+  }
+
+  .h-\[70vh\] img.object-cover {
+    object-position: center top;
+  }
+
+  .h-\[70vh\] h1 {
+    font-size: 2rem !important;
+    line-height: 2.25rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .h-\[70vh\] .flex.items-center.gap-4.text-white.mb-6 {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem !important;
+    margin-bottom: 1rem !important;
+    font-size: 0.875rem;
+  }
+
+  .h-\[70vh\] .flex.gap-4.mb-6 {
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+    margin-bottom: 0 !important;
+  }
+
+  .h-\[70vh\] button {
+    padding: 0.7rem 0.95rem !important;
+    font-size: 0.875rem;
+  }
+
+  .card-hover {
+    transform: none !important;
+  }
+}
