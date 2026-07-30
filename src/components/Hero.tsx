@@ -225,7 +225,7 @@ const Hero: React.FC = () => {
   } as React.CSSProperties;
 
   return (
-    <section className="relative w-full h-[85vh] flex items-center overflow-hidden mt-16">
+    <section className="relative mt-16 flex h-[82vh] w-full items-end overflow-hidden sm:h-[85vh] sm:items-center">
       <style>{`
         .hero-desktop-image {
           object-position: var(--hero-image-position-desktop, center center);
@@ -236,7 +236,7 @@ const Hero: React.FC = () => {
         }
       `}</style>
       <div className="absolute inset-0">
-        <div className="relative w-full h-full">
+        <div className="relative h-full w-full">
           <img
             src={currentContent.poster}
             alt={currentContent.title}
@@ -255,87 +255,126 @@ const Hero: React.FC = () => {
             }`}
             style={heroImageStyle}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-dark-300/55 via-dark-300/20 to-transparent sm:from-dark-300/70 sm:via-dark-300/40 lg:from-dark-300/95 lg:via-dark-300/80"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-dark-300/82 via-transparent to-dark-300/10 sm:from-dark-300 sm:via-transparent sm:to-dark-300/30"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/90 sm:bg-gradient-to-r sm:from-dark-300/70 sm:via-dark-300/40 sm:to-transparent lg:from-dark-300/95 lg:via-dark-300/80"></div>
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-dark-300 via-dark-300/45 to-transparent sm:h-full sm:bg-gradient-to-t sm:from-dark-300 sm:via-transparent sm:to-dark-300/30"></div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-          <div className="max-w-2xl space-y-8 lg:space-y-12">
+      <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-16">
+          <div className="hidden max-w-2xl space-y-8 sm:block lg:space-y-12">
             <div className="space-y-6">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight drop-shadow-[0_3px_12px_rgba(0,0,0,0.85)]">
+              <h1 className="text-4xl font-bold leading-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.85)] lg:text-5xl">
                 Premium Streaming Experience
-                <span className="block text-xl sm:text-2xl lg:text-3xl mt-4 text-primary">
+                <span className="mt-4 block text-2xl text-primary lg:text-3xl">
                   21,000+ Channels • Movies • Sports • Shows
                 </span>
               </h1>
               
-              <p className="text-lg text-gray-200 leading-relaxed mt-6 drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] sm:text-gray-300">
+              <p className="mt-6 text-lg leading-relaxed text-gray-300 drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
                 Experience crystal-clear HD and 4K streaming with our global content library. 
                 Watch anywhere, anytime, on any device.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 md:gap-8 text-sm sm:text-base text-gray-200 sm:text-gray-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+            <div className="grid grid-cols-2 gap-4 text-sm text-gray-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] md:gap-8 md:text-base">
               <div className="space-y-4">
                 <div className="flex items-center">
-                  <Star className="w-5 h-5 text-primary mr-4" />
+                  <Star className="mr-4 h-5 w-5 text-primary" />
                   <span>Live Sports Events</span>
                 </div>
                 <div className="flex items-center">
-                  <Star className="w-5 h-5 text-primary mr-4" />
+                  <Star className="mr-4 h-5 w-5 text-primary" />
                   <span>Premium Movie Channels</span>
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center">
-                  <Star className="w-5 h-5 text-primary mr-4" />
+                  <Star className="mr-4 h-5 w-5 text-primary" />
                   <span>International Content</span>
                 </div>
                 <div className="flex items-center">
-                  <Star className="w-5 h-5 text-primary mr-4" />
+                  <Star className="mr-4 h-5 w-5 text-primary" />
                   <span>24/7 Customer Support</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-2 sm:pt-6">
+            <div className="flex flex-wrap gap-4 pt-6">
               <button
                 onClick={handleStartWatching}
-                className="bg-primary hover:bg-red-700 text-white px-6 sm:px-10 py-4 sm:py-5 rounded-lg text-base sm:text-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center justify-center group"
+                className="group flex items-center justify-center rounded-lg bg-primary px-10 py-5 text-lg font-medium text-white transition-all duration-300 hover:scale-105 hover:bg-red-700"
               >
-                <Play size={22} className="mr-3 group-hover:scale-110 transition-transform duration-200" />
+                <Play size={22} className="mr-3 transition-transform duration-200 group-hover:scale-110" />
                 Start Free Trial
               </button>
               <button
                 onClick={handleLearnMore}
-                className="bg-gray-800/80 hover:bg-gray-700 text-white px-6 sm:px-10 py-4 sm:py-5 rounded-lg text-base sm:text-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center justify-center group backdrop-blur-sm"
+                className="group flex items-center justify-center rounded-lg bg-gray-800/80 px-10 py-5 text-lg font-medium text-white backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-gray-700"
               >
-                <Info size={22} className="mr-3 group-hover:rotate-12 transition-transform duration-200" />
+                <Info size={22} className="mr-3 transition-transform duration-200 group-hover:rotate-12" />
                 Learn More
               </button>
             </div>
           </div>
 
+          <div className="mb-12 space-y-4 pb-6 sm:hidden">
+            <div className="inline-flex items-center rounded-full border border-white/15 bg-black/35 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/85 shadow-lg shadow-black/30">
+              {currentContent.category === 'tv' ? 'Featured Series' : 'Featured Movie'}
+            </div>
+
+            <div className="max-w-[82%] space-y-2">
+              <h1 className="text-3xl font-bold leading-[0.95] text-white drop-shadow-[0_4px_14px_rgba(0,0,0,0.95)]">
+                {currentContent.title}
+              </h1>
+              <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-white/85 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                <span>{currentContent.releaseYear}</span>
+                <span className="h-1 w-1 rounded-full bg-primary"></span>
+                <span>{currentContent.quality}</span>
+                <span className="h-1 w-1 rounded-full bg-primary"></span>
+                <span>{currentContent.type === 'tv' ? 'TV Series' : 'Movie'}</span>
+              </div>
+            </div>
+
+            <p className="max-w-[88%] text-sm leading-relaxed text-white/80 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+              Premium channels, movies, sports, and shows — ready to stream on your favorite device.
+            </p>
+
+            <div className="flex max-w-[92%] gap-2 pt-1">
+              <button
+                onClick={handleStartWatching}
+                className="flex flex-1 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-black/30 transition active:scale-[0.98]"
+              >
+                <Play size={17} className="mr-2" />
+                Start Trial
+              </button>
+              <button
+                onClick={handleLearnMore}
+                className="flex items-center justify-center rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-black/20 transition active:scale-[0.98]"
+              >
+                <Info size={17} />
+              </button>
+            </div>
+          </div>
+
           <div className="hidden lg:block">
-            <div className="relative max-w-[350px] mx-auto">
-              <div className="absolute -inset-4 bg-gradient-to-r from-primary/30 to-primary/10 rounded-xl blur-xl"></div>
-              <div className="relative bg-dark-200/80 backdrop-blur-sm p-8 rounded-xl border border-gray-800/50 transform hover:scale-[1.02] transition-all duration-300">
-                <div className="aspect-[2/3] rounded-lg overflow-hidden mb-6">
+            <div className="relative mx-auto max-w-[350px]">
+              <div className="absolute -inset-4 rounded-xl bg-gradient-to-r from-primary/30 to-primary/10 blur-xl"></div>
+              <div className="relative rounded-xl border border-gray-800/50 bg-dark-200/80 p-8 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02]">
+                <div className="mb-6 aspect-[2/3] overflow-hidden rounded-lg">
                   <img
                     src={currentContent.poster}
                     alt={currentContent.title}
                     loading="lazy"
                     width="350"
                     height="525"
-                    className="w-full h-full object-cover transition-all duration-700 ease-in-out transform hover:scale-110"
+                    className="h-full w-full object-cover transition-all duration-700 ease-in-out hover:scale-110"
                   />
                 </div>
                 <div className="space-y-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                    <span className="text-primary font-semibold">
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-primary"></div>
+                    <span className="font-semibold text-primary">
                       {currentContent.category === 'new' ? 'NEW RELEASE' : 
                        currentContent.category === 'tv' ? 'TV SERIES' : 'FEATURED'}
                     </span>
@@ -357,15 +396,15 @@ const Hero: React.FC = () => {
         </div>
       </div>
 
-      <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20">
+      <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 space-x-2 sm:bottom-12 sm:space-x-3">
         {content.map((_, index) => (
           <button
             key={index}
             onClick={() => handleDotClick(index)}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+            className={`h-1.5 rounded-full transition-all duration-300 sm:h-2 ${
               currentContent.id === content[index].id
-                ? 'bg-primary w-8'
-                : 'bg-white/50 hover:bg-white/75'
+                ? 'w-7 bg-primary sm:w-8'
+                : 'w-1.5 bg-white/45 hover:bg-white/75 sm:w-2'
             }`}
             aria-label={`Go to slide ${index + 1}`}
             disabled={isTransitioning}
