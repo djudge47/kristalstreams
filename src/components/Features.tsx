@@ -27,13 +27,6 @@ import {
 
 const features = [
   {
-    icon: <Tv className="text-red-500 w-8 h-8" />,
-    title: 'Live TV Channels',
-    description: 'Access thousands of live TV channels from around the world in HD quality.',
-    color: 'border-red-500/30 hover:border-red-500',
-    bg: 'bg-red-500/10'
-  },
-  {
     icon: <Film className="text-purple-500 w-8 h-8" />,
     title: 'VOD Library',
     description: 'Extensive library of movies and TV shows available on-demand anytime.',
@@ -43,7 +36,7 @@ const features = [
   {
     icon: <Globe className="text-blue-500 w-8 h-8" />,
     title: 'Global Content',
-    description: 'International channels and content from every major region and language.',
+    description: 'International entertainment from major regions and languages.',
     color: 'border-blue-500/30 hover:border-blue-500',
     bg: 'bg-blue-500/10'
   },
@@ -79,7 +72,7 @@ const Features: React.FC = () => {
             Premium Features
           </h2>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-            Experience the best in streaming entertainment with our premium IPTV service.
+            Experience the best in streaming entertainment with our premium service.
           </p>
         </div>
 
