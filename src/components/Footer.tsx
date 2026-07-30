@@ -1,54 +1,19 @@
-import React, { useEffect, useState, memo } from 'react';
+import React, { memo } from 'react';
 import { Facebook, Twitter, Instagram, Youtube, Mail, Linkedin } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getFooterLinks, getFooterSocialLinks } from '../lib/api';
 import NewsletterSignup from './NewsletterSignup';
 
-interface FooterLink {
-  id: string;
-  title: string;
-  url: string;
-  category: string;
-}
-
-interface SocialLink {
-  id: string;
-  platform: string;
-  url: string;
-  icon: string;
-}
-
 const Footer: React.FC = memo(() => {
-  const [links, setLinks] = useState<FooterLink[]>([]);
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const currentYear = new Date().getFullYear();
 
-  useEffect(() => {
-    const fetchFooterContent = async () => {
-      try {
-        setError(null);
-        const [linksData, socialLinksData] = await Promise.all([
-          getFooterLinks(),
-          getFooterSocialLinks()
-        ]);
-        setLinks(linksData);
-        setSocialLinks(socialLinksData);
-      } catch (err) {
-        console.error('Error fetching footer content:', err);
-        setError('Failed to load footer content. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFooterContent();
-  }, []);
+  const socialLinks = [
+    { platform: 'facebook', url: 'https://www.facebook.com/kristalstreams' },
+    { platform: 'twitter', url: 'https://x.com/kristalstreams' },
+    { platform: 'instagram', url: 'https://www.instagram.com/kristalstreams' },
+    { platform: 'youtube', url: 'https://www.youtube.com/@kristalstreams' },
+  ];
 
   const getSocialIcon = (platform: string) => {
-    if (!platform) return null;
-    
     switch (platform.toLowerCase()) {
       case 'facebook':
         return <Facebook size={20} />;
@@ -60,54 +25,10 @@ const Footer: React.FC = memo(() => {
         return <Youtube size={20} />;
       case 'linkedin':
         return <Linkedin size={20} />;
-      case 'discord':
-        return <div className="w-5 h-5 flex items-center justify-center text-white font-bold text-sm">D</div>;
-      case 'tiktok':
-        return <div className="w-5 h-5 flex items-center justify-center text-white font-bold text-sm">T</div>;
       default:
         return null;
     }
   };
-
-  const quickLinks = links.filter(link => link.category === 'Quick Links');
-  const supportLinks = links.filter(link => link.category === 'Support');
-  const companyLinks = links.filter(link => link.category === 'Company');
-  const featureLinks = links.filter(link => link.category === 'Features');
-
-  if (loading) {
-    return (
-      <footer className="bg-dark-300 text-white pt-16 pb-8 px-4 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
-          <div className="animate-pulse">
-            <div className="grid md:grid-cols-4 gap-8 mb-12">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="space-y-4">
-                  <div className="h-6 bg-dark-200 rounded w-1/2"></div>
-                  <div className="space-y-2">
-                    {[1, 2, 3, 4].map((j) => (
-                      <div key={j} className="h-4 bg-dark-200 rounded w-3/4"></div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>
-    );
-  }
-
-  if (error) {
-    return (
-      <footer className="bg-dark-300 text-white pt-16 pb-8 px-4 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
-          <div className="text-center py-8">
-            <p className="text-gray-400">{error}</p>
-          </div>
-        </div>
-      </footer>
-    );
-  }
 
   return (
     <footer className="bg-dark-300 text-white pt-16 pb-8 px-4 sm:px-6 lg:px-8">
@@ -124,7 +45,7 @@ const Footer: React.FC = memo(() => {
             <div className="flex space-x-4">
               {socialLinks.map((social) => (
                 <a
-                  key={social.id}
+                  key={social.platform}
                   href={social.url}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -141,52 +62,34 @@ const Footer: React.FC = memo(() => {
             <h4 className="text-lg font-semibold mb-4 text-white">Client Portal</h4>
             <ul className="space-y-2">
               <li>
-                <a 
-                  href="/support"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/support" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   Contact Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a 
-                  href="/terms"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/terms" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   Terms and Conditions
-                </a>
+                </Link>
               </li>
               <li>
-                <a 
-                  href="/refund-policy"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/refund-policy" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   Refund Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a 
-                  href="/privacy"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/privacy" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a 
-                  href="/about"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/about" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   About Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a 
-                  href="/services"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/services" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   Our Services
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -195,28 +98,19 @@ const Footer: React.FC = memo(() => {
             <h4 className="text-lg font-semibold mb-4 text-white">Streaming Services</h4>
             <ul className="space-y-2">
               <li>
-                <Link
-                  to="/pricing"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/pricing" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   Pricing
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/ppv"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/ppv" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   PPV
                 </Link>
               </li>
               <li>
-                <a 
-                  href="/support"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/support" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   Support
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -225,28 +119,19 @@ const Footer: React.FC = memo(() => {
             <h4 className="text-lg font-semibold mb-4 text-white">Help & Resources</h4>
             <ul className="space-y-3">
               <li>
-                <a
-                  href="/news"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/news" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   News
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="/faq"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/support/faq" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   FAQ
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="/testimonials"
-                  className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm"
-                >
+                <Link to="/testimonials" className="text-gray-400 hover:text-primary transition-colors duration-200 text-sm">
                   Testimonials
-                </a>
+                </Link>
               </li>
             </ul>
             
@@ -257,10 +142,10 @@ const Footer: React.FC = memo(() => {
                 <div>
                   <div className="text-white font-medium text-sm mb-1">Email Support</div>
                   <a
-                    href="mailto:support@kristalstreams.com"
+                    href="mailto:info@kristalstream.com"
                     className="text-gray-400 text-sm hover:text-primary transition-colors duration-200"
                   >
-                    support@kristalstreams.com
+                    info@kristalstream.com
                   </a>
                 </div>
               </li>
@@ -268,7 +153,6 @@ const Footer: React.FC = memo(() => {
           </div>
         </div>
 
-        {/* Newsletter Signup Section */}
         <div className="border-t border-gray-800 pt-8 mb-8">
           <div className="max-w-md mx-auto">
             <NewsletterSignup 
@@ -286,28 +170,16 @@ const Footer: React.FC = memo(() => {
               &copy; {currentYear} Kristal Streams. All rights reserved.
             </p>
             <div className="flex space-x-6">
-              <a
-                href="/privacy"
-                className="text-gray-500 hover:text-primary text-sm transition-colors duration-200"
-              >
+              <Link to="/privacy" className="text-gray-500 hover:text-primary text-sm transition-colors duration-200">
                 Privacy Policy
-              </a>
-              <a
-                href="/terms"
-                className="text-gray-500 hover:text-primary text-sm transition-colors duration-200"
-              >
+              </Link>
+              <Link to="/terms" className="text-gray-500 hover:text-primary text-sm transition-colors duration-200">
                 Terms of Service
-              </a>
-              <a
-                href="/cookies"
-                className="text-gray-500 hover:text-primary text-sm transition-colors duration-200"
-              >
+              </Link>
+              <Link to="/cookies" className="text-gray-500 hover:text-primary text-sm transition-colors duration-200">
                 Cookie Policy
-              </a>
-              <a
-                href="/accessibility"
-                className="text-gray-500 hover:text-primary text-sm transition-colors duration-200"
-              >
+              </Link>
+              <a href="/accessibility" className="text-gray-500 hover:text-primary text-sm transition-colors duration-200">
                 Accessibility
               </a>
             </div>
