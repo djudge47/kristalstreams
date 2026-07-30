@@ -113,6 +113,36 @@ const getReadableEmailError = async (error: unknown, data?: unknown): Promise<st
   return 'Failed to send email. Check the Supabase Edge Function logs for details.';
 };
 
+const saveContactTicket = async (emailData: EmailData): Promise<void> => {
+  const customerEmail = emailData.from_email || emailData.reply_to || emailData.to_email;
+  const customerName = emailData.from_name || emailData.to_name || 'Website Visitor';
+
+  const { error } = await supabase.from('support_tickets').insert({
+    source: 'contact_form',
+    customer_name: customerName,
+    customer_email: customerEmail,
+    subject: emailData.subject || 'Contact Form Submission',
+    message: emailData.message || '',
+    status: 'open',
+    priority: 'normal',
+    category: 'Website Contact',
+    reply_to: emailData.reply_to || customerEmail,
+    raw_payload: {
+      to_email: emailData.to_email,
+      to_name: emailData.to_name,
+      from_name: emailData.from_name,
+      from_email: emailData.from_email,
+      subject: emailData.subject,
+      message: emailData.message,
+      reply_to: emailData.reply_to,
+    },
+  });
+
+  if (error) {
+    console.error('Support ticket save failed:', error);
+  }
+};
+
 const sendEmailViaEdgeFunction = async (
   type: 'contact' | 'support' | 'welcome' | 'newsletter',
   to: string,
@@ -146,7 +176,13 @@ export const sendContactEmail = async (emailData: EmailData): Promise<EmailResul
     reply_to: emailData.reply_to || emailData.from_email || emailData.to_email,
   };
 
-  return await sendEmailViaEdgeFunction('contact', SUPPORT_EMAIL, data);
+  const emailResult = await sendEmailViaEdgeFunction('contact', SUPPORT_EMAIL, data);
+
+  if (emailResult.success) {
+    await saveContactTicket(emailData);
+  }
+
+  return emailResult;
 };
 
 export const sendSupportEmail = async (supportData: SupportEmailData): Promise<EmailResult> => {
