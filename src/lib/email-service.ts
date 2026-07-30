@@ -2,6 +2,7 @@ const EMAIL_FUNCTION_URL =
   'https://wftfxerblhlsxiijtfbo.supabase.co/functions/v1/resend-email';
 
 const SUPPORT_EMAIL = 'support@kristalstream.com';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export interface EmailData {
   to_email: string;
@@ -39,11 +40,18 @@ const sendEmailViaEdgeFunction = async (
   data: Record<string, string>
 ): Promise<boolean> => {
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (SUPABASE_ANON_KEY) {
+      headers.apikey = SUPABASE_ANON_KEY;
+      headers.Authorization = `Bearer ${SUPABASE_ANON_KEY}`;
+    }
+
     const response = await fetch(EMAIL_FUNCTION_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ type, to, data }),
     });
 
