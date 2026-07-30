@@ -17,6 +17,7 @@ interface Content {
   rating: number;
   type: 'movie' | 'tv';
   imagePosition?: string;
+  mobileImagePosition?: string;
 }
 
 const content: Content[] = [
@@ -24,6 +25,7 @@ const content: Content[] = [
     id: 1,
     title: 'Sinners',
     image: 'https://image.tmdb.org/t/p/original/nAxGnGHOsfzufThz20zgmRwKur3.jpg',
+    mobileImagePosition: '56% center',
     poster: 'https://image.tmdb.org/t/p/w780/705nQHqe4JGdEisrQmVYmXyjs1U.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-dark-city-street-at-night-4007-large.mp4',
     viewers: 920000,
@@ -38,6 +40,7 @@ const content: Content[] = [
     id: 2,
     title: 'Avengers: Doomsday',
     image: 'https://image.tmdb.org/t/p/original/rGyYhezSXlgk3sqOgGSNooJSXLJ.jpg',
+    mobileImagePosition: '52% center',
     poster: 'https://image.tmdb.org/t/p/w780/s2Fkuq0tj7mjAHEdbfQkFkdbeRI.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-explosion-with-fire-2771-large.mp4',
     viewers: 1850000,
@@ -52,6 +55,7 @@ const content: Content[] = [
     id: 3,
     title: 'The Mandalorian & Grogu',
     image: 'https://image.tmdb.org/t/p/original/arjGfQaakBlmfWQGNdG2nFxrpMQ.jpg',
+    mobileImagePosition: '50% center',
     poster: 'https://image.tmdb.org/t/p/w780/7QujwMB124KqSPbWlLRHBO5wygE.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-red-desert-landscape-2361-large.mp4',
     viewers: 1100000,
@@ -66,6 +70,7 @@ const content: Content[] = [
     id: 4,
     title: 'Severance',
     image: 'https://image.tmdb.org/t/p/original/ixgFmf1X59PUZam2qbAfskx2gQr.jpg',
+    mobileImagePosition: '52% center',
     poster: 'https://image.tmdb.org/t/p/w780/Rb7sga832Cyqvafd7CqOzbwdK4.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-city-night-lights-in-the-background-9566-large.mp4',
     viewers: 780000,
@@ -80,6 +85,7 @@ const content: Content[] = [
     id: 5,
     title: 'Andor Season 2',
     image: 'https://image.tmdb.org/t/p/original/6YncDyLRRVHp98fvGYOXXv2hflu.jpg',
+    mobileImagePosition: '54% center',
     poster: 'https://image.tmdb.org/t/p/w780/ugkhd9olFiJwDgO3tK1ZrPxUdxQ.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-post-apocalyptic-city-streets-4004-large.mp4',
     viewers: 860000,
@@ -95,6 +101,7 @@ const content: Content[] = [
     title: 'Superman',
     image: 'https://image.tmdb.org/t/p/original/eU7IfdWq8KQy0oNd4kKXS0QUR08.jpg',
     imagePosition: 'center top',
+    mobileImagePosition: '50% top',
     poster: 'https://image.tmdb.org/t/p/w780/wPLysNDLffQLOVebZQCbXJEv6E6.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-2408-large.mp4',
     viewers: 1400000,
@@ -109,6 +116,7 @@ const content: Content[] = [
     id: 7,
     title: 'The White Lotus S3',
     image: 'https://image.tmdb.org/t/p/original/qVBIAcZkK5j6WRq7JehJcOMbdgb.jpg',
+    mobileImagePosition: '55% center',
     poster: 'https://image.tmdb.org/t/p/w780/3mpkSKUAkN1UGqrrigmxWbe9q9D.jpg',
     videoPreview: 'https://assets.mixkit.co/videos/preview/mixkit-medieval-castle-on-a-hill-4544-large.mp4',
     viewers: 690000,
@@ -128,6 +136,7 @@ const Hero: React.FC = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [user, setUser] = useState(null);
   const [showFeatures, setShowFeatures] = useState(false);
+
   useEffect(() => {
     let mounted = true;
     let subscription: any;
@@ -210,27 +219,43 @@ const Hero: React.FC = () => {
     }
   };
 
+  const heroImageStyle = {
+    '--hero-image-position-mobile': currentContent.mobileImagePosition ?? 'center center',
+    '--hero-image-position-desktop': currentContent.imagePosition ?? currentContent.mobileImagePosition ?? 'center center',
+  } as React.CSSProperties;
+
   return (
     <section className="relative w-full h-[85vh] flex items-center overflow-hidden mt-16">
+      <style>{`
+        .hero-mobile-image {
+          object-position: var(--hero-image-position-mobile, center center);
+        }
+
+        @media (min-width: 640px) {
+          .hero-mobile-image {
+            object-position: var(--hero-image-position-desktop, center center);
+          }
+        }
+      `}</style>
       <div className="absolute inset-0">
         <div className="relative w-full h-full">
           <img
             src={currentContent.image}
             alt={currentContent.title}
             loading="eager"
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+            className={`hero-mobile-image absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
               isTransitioning ? 'opacity-0' : 'opacity-100'
             }`}
-            style={currentContent.imagePosition ? { objectPosition: currentContent.imagePosition } : undefined}
+            style={heroImageStyle}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-dark-300/95 via-dark-300/80 to-transparent"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-dark-300 via-transparent to-dark-300/30"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-dark-300/25 via-dark-300/10 to-transparent sm:from-dark-300/70 sm:via-dark-300/40 lg:from-dark-300/95 lg:via-dark-300/80"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-dark-300/90 via-dark-300/10 to-dark-300/15 sm:from-dark-300 sm:via-transparent sm:to-dark-300/30"></div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-          <div className="max-w-2xl space-y-8 lg:space-y-12">
+          <div className="max-w-2xl space-y-8 lg:space-y-12 rounded-2xl bg-dark-300/45 p-4 shadow-2xl shadow-black/20 backdrop-blur-[2px] sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
             <div className="space-y-6">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
                 Premium Streaming Experience
