@@ -89,14 +89,14 @@ const EmailForm: React.FC<EmailFormProps> = ({
         reply_to: formData.email
       };
 
-      const success = await sendContactEmail(emailData);
+      const result = await sendContactEmail(emailData);
 
-      if (success) {
+      if (result.success) {
         setStatus('success');
         setFormData({ name: '', email: '', subject: '', message: '' });
         onSuccess?.();
       } else {
-        throw new Error('Failed to send email. Please try again later.');
+        throw new Error(result.error || 'Failed to send email. Please try again later.');
       }
 
     } catch (error) {
