@@ -167,41 +167,87 @@ const sendEmailViaEdgeFunction = async (
   }
 };
 
-const buildAutoReplyMessage = (emailData: EmailData): string => {
-  const customerName = emailData.from_name || emailData.to_name || 'there';
-
-  return `Hi ${customerName},
-
-Thank you for contacting Kristal Streams. We received your message and our support team will review it as soon as possible.
-
-Message received:
-Subject: ${emailData.subject || 'Contact Form Submission'}
-
-We usually respond within 24 hours. If this is about billing, account access, or service trouble, please keep an eye on your email for our reply.
-
-Thank you,
-Kristal Streams Support
-${SUPPORT_EMAIL}`;
+type AutoReply = {
+  category: string;
+  priority: 'normal' | 'high';
+  subject: string;
+  message: string;
 };
 
-const sendAutomaticCustomerConfirmation = async (emailData: EmailData): Promise<void> => {
+const includesAny = (text: string, terms: string[]) => terms.some(term => text.includes(term));
+
+const buildMessageAwareAutoReply = (emailData: EmailData): AutoReply => {
+  const customerName = emailData.from_name || emailData.to_name || 'there';
+  const subject = emailData.subject || 'Kristal Streams Support';
+  const message = emailData.message || '';
+  const combined = `${subject} ${message}`.toLowerCase();
+  const greeting = `Hi ${customerName},`;
+  const closing = `\n\nThank you,\nKristal Streams Support\n${SUPPORT_EMAIL}`;
+
+  if (includesAny(combined, ['bill', 'billing', 'charge', 'charged', 'payment', 'invoice', 'refund', 'cancel', 'cancellation', 'subscription', 'plan'])) {
+    return {
+      category: 'Billing',
+      priority: 'high',
+      subject: `Re: ${subject}`,
+      message: `${greeting}\n\nThank you for contacting Kristal Streams. I read your message and it looks like your request is related to billing, payment, refund, cancellation, or your subscription.\n\nFor your protection, we do not include private billing details in an automated email. Your request has been placed in our billing queue, and our team will review your account details and follow up with the next step.\n\nIf you were charged unexpectedly, need to update payment information, or want to change/cancel a plan, we will help you get that handled as quickly as possible. Please do not send card numbers or passwords by email.${closing}`,
+    };
+  }
+
+  if (includesAny(combined, ['login', 'log in', 'sign in', 'signin', 'password', 'reset', 'account', 'access', 'locked', 'can\'t get in', 'cannot get in'])) {
+    return {
+      category: 'Account Access',
+      priority: 'high',
+      subject: `Re: ${subject}`,
+      message: `${greeting}\n\nThank you for contacting Kristal Streams. I read your message and it looks like you are having trouble signing in or accessing your account.\n\nPlease try these first:\n1. Make sure you are using the same email address you registered with.\n2. Use the password reset option on the login page.\n3. Clear your browser cache or try a private/incognito browser window.\n4. If you are using a saved password, type it manually once to rule out an old saved password.\n\nIf those steps do not fix it, your message is already in our support inbox and we will review it directly. Please do not send your password by email.${closing}`,
+    };
+  }
+
+  if (includesAny(combined, ['buffer', 'buffering', 'stream', 'streaming', 'freeze', 'freezing', 'lag', 'loading', 'playback', 'video', 'tv', 'firestick', 'fire stick', 'roku', 'device', 'app', 'crash'])) {
+    return {
+      category: 'Streaming Help',
+      priority: 'normal',
+      subject: `Re: ${subject}`,
+      message: `${greeting}\n\nThank you for contacting Kristal Streams. I read your message and it looks like you are having a streaming, playback, app, or device issue.\n\nPlease try these quick steps:\n1. Restart the device you are watching on.\n2. Restart your router or internet modem.\n3. Close and reopen the Kristal Streams app or browser tab.\n4. If possible, test another device on the same internet connection.\n5. Make sure your internet connection is stable before trying again.\n\nYour message has also been saved in our support inbox, so our team can follow up if the issue continues.${closing}`,
+    };
+  }
+
+  if (includesAny(combined, ['price', 'pricing', 'package', 'packages', 'channel', 'channels', 'trial', 'free trial', 'service', 'services', 'available'])) {
+    return {
+      category: 'Sales / Plan Question',
+      priority: 'normal',
+      subject: `Re: ${subject}`,
+      message: `${greeting}\n\nThank you for contacting Kristal Streams. I read your message and it looks like you have a question about our plans, pricing, trial, channels, or service options.\n\nYour message has been received and our team will follow up with the best information for your request. If you are asking about a specific plan or package, we will help point you to the right option.${closing}`,
+    };
+  }
+
+  return {
+    category: 'General Support',
+    priority: 'normal',
+    subject: `Re: ${subject}`,
+    message: `${greeting}\n\nThank you for contacting Kristal Streams. I read your message and it has been sent to our support inbox.\n\nA team member will review your request and follow up with the best next step. We usually respond within 24 hours.\n\nOriginal subject: ${subject}${closing}`,
+  };
+};
+
+const sendAutomaticCustomerResponse = async (emailData: EmailData): Promise<void> => {
   const customerEmail = emailData.from_email || emailData.reply_to || emailData.to_email;
   const customerName = emailData.from_name || emailData.to_name || 'Customer';
 
   if (!customerEmail) return;
 
-  const confirmationResult = await sendEmailViaEdgeFunction('support', customerEmail, {
+  const autoReply = buildMessageAwareAutoReply(emailData);
+
+  const responseResult = await sendEmailViaEdgeFunction('support', customerEmail, {
     user_name: customerName,
     user_email: customerEmail,
-    subject: `We received your message: ${emailData.subject || 'Kristal Streams Support'}`,
-    message: buildAutoReplyMessage(emailData),
-    priority: 'normal',
-    category: 'Automatic Confirmation',
+    subject: autoReply.subject,
+    message: autoReply.message,
+    priority: autoReply.priority,
+    category: `Automatic ${autoReply.category} Response`,
     reply_to: SUPPORT_EMAIL,
   });
 
-  if (!confirmationResult.success) {
-    console.error('Automatic customer confirmation failed:', confirmationResult.error);
+  if (!responseResult.success) {
+    console.error('Automatic message-aware customer response failed:', responseResult.error);
   }
 };
 
@@ -218,7 +264,7 @@ export const sendContactEmail = async (emailData: EmailData): Promise<EmailResul
 
   if (emailResult.success) {
     await saveContactTicket(emailData);
-    await sendAutomaticCustomerConfirmation(emailData);
+    await sendAutomaticCustomerResponse(emailData);
   }
 
   return emailResult;
