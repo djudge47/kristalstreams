@@ -1,5 +1,5 @@
-const EMAIL_FUNCTION_URL =
-  'https://wftfxerblhlsxiijtfbo.supabase.co/functions/v1/resend-email';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://wftfxerblhlsxiijtfbo.supabase.co';
+const EMAIL_FUNCTION_URL = `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/resend-email`;
 
 const SUPPORT_EMAIL = 'support@kristalstream.com';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -34,11 +34,37 @@ export interface NewsletterEmailData {
   name?: string;
 }
 
+export interface EmailResult {
+  success: boolean;
+  error?: string;
+}
+
+const getReadableEmailError = (status: number, result: unknown): string => {
+  if (result && typeof result === 'object' && 'error' in result) {
+    const error = String((result as { error?: unknown }).error || '').trim();
+    if (error) return error;
+  }
+
+  if (status === 401 || status === 403) {
+    return 'Email function authorization failed. Check the Supabase anon key and function JWT settings.';
+  }
+
+  if (status === 404) {
+    return 'Email function not found. Check that the Supabase Edge Function is named resend-email and deployed.';
+  }
+
+  if (status >= 500) {
+    return 'Email service is temporarily unavailable. Check the Supabase Edge Function logs.';
+  }
+
+  return 'Failed to send email. Check the Supabase Edge Function logs for details.';
+};
+
 const sendEmailViaEdgeFunction = async (
   type: 'contact' | 'support' | 'welcome' | 'newsletter',
   to: string,
   data: Record<string, string>
-): Promise<boolean> => {
+): Promise<EmailResult> => {
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -58,18 +84,20 @@ const sendEmailViaEdgeFunction = async (
     const result = await response.json().catch(() => null);
 
     if (!response.ok || !result?.success) {
-      console.error('Email function error:', result || response.statusText);
-      return false;
+      const message = getReadableEmailError(response.status, result);
+      console.error('Email function error:', { status: response.status, result, message });
+      return { success: false, error: message };
     }
 
-    return true;
+    return { success: true };
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to reach the email service.';
     console.error('Error invoking email function:', error);
-    return false;
+    return { success: false, error: message };
   }
 };
 
-export const sendContactEmail = async (emailData: EmailData): Promise<boolean> => {
+export const sendContactEmail = async (emailData: EmailData): Promise<EmailResult> => {
   const data = {
     from_name: emailData.from_name || 'Website Contact',
     from_email: emailData.from_email || emailData.to_email,
@@ -81,7 +109,7 @@ export const sendContactEmail = async (emailData: EmailData): Promise<boolean> =
   return await sendEmailViaEdgeFunction('contact', SUPPORT_EMAIL, data);
 };
 
-export const sendSupportEmail = async (supportData: SupportEmailData): Promise<boolean> => {
+export const sendSupportEmail = async (supportData: SupportEmailData): Promise<EmailResult> => {
   const data = {
     user_name: supportData.user_name,
     user_email: supportData.user_email,
@@ -95,7 +123,7 @@ export const sendSupportEmail = async (supportData: SupportEmailData): Promise<b
   return await sendEmailViaEdgeFunction('support', SUPPORT_EMAIL, data);
 };
 
-export const sendWelcomeEmail = async (welcomeData: WelcomeEmailData): Promise<boolean> => {
+export const sendWelcomeEmail = async (welcomeData: WelcomeEmailData): Promise<EmailResult> => {
   const data = {
     user_name: welcomeData.user_name,
     subscription_plan: welcomeData.subscription_plan || 'Premium',
@@ -106,7 +134,7 @@ export const sendWelcomeEmail = async (welcomeData: WelcomeEmailData): Promise<b
   return await sendEmailViaEdgeFunction('welcome', welcomeData.user_email, data);
 };
 
-export const sendNewsletterConfirmation = async (newsletterData: NewsletterEmailData): Promise<boolean> => {
+export const sendNewsletterConfirmation = async (newsletterData: NewsletterEmailData): Promise<EmailResult> => {
   const data = {
     user_name: newsletterData.name || 'Subscriber',
     website_url: window.location.origin,
