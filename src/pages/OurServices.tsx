@@ -1,13 +1,7 @@
 import React from 'react';
-import { Clock, Film, Globe, Shield, Smartphone, Trophy, Tv, Wifi } from 'lucide-react';
+import { Clock, Film, Globe, Shield, Smartphone, Trophy, Wifi } from 'lucide-react';
 
 const services = [
-  {
-    icon: Tv,
-    title: 'Live TV Channels',
-    description: 'Access 21,000+ live TV channels from around the world in HD and 4K where available.',
-    features: ['21,000+ Live Channels', 'HD & 4K Quality', 'Multi-Language Support', 'EPG Guide Included'],
-  },
   {
     icon: Film,
     title: 'Movies & TV Shows',
@@ -17,8 +11,8 @@ const services = [
   {
     icon: Trophy,
     title: 'Sports Coverage',
-    description: 'Watch live sports, PPV events, replays, and highlights from leagues around the world.',
-    features: ['Live Sports Events', 'PPV Access', 'Game Replays', 'Sports Highlights'],
+    description: 'Enjoy sports coverage, PPV events, replays, and highlights from leagues around the world.',
+    features: ['Sports Events', 'PPV Access', 'Game Replays', 'Sports Highlights'],
   },
   {
     icon: Globe,
@@ -30,17 +24,17 @@ const services = [
     icon: Smartphone,
     title: 'Multi-Device Streaming',
     description: 'Use Kristal Streams on supported Smart TVs, mobile devices, computers, and streaming hardware.',
-    features: ['Smart TV Support', 'Mobile Devices', 'Web Player', 'Set-Top Box Support'],
+    features: ['Smart TV Support', 'Mobile Devices', 'Supported Apps', 'Set-Top Box Support'],
   },
   {
     icon: Wifi,
     title: 'Reliable Streaming',
-    description: 'Streaming infrastructure designed for smooth playback and fast channel switching.',
+    description: 'Streaming infrastructure designed for smooth playback and fast content switching.',
     features: ['High Availability', 'Anti-Buffering Technology', 'Fast Server Network', 'Adaptive Quality'],
   },
   {
     icon: Clock,
-    title: 'Catch-Up TV',
+    title: 'Catch-Up Content',
     description: 'Catch up on supported programs you may have missed and resume viewing when convenient.',
     features: ['Catch-Up Content', 'Pause & Resume', 'Time-Shift Support', 'Easy Navigation'],
   },
