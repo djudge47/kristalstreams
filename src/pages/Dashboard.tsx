@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'djudge47@gmail.com';
+// Dashboard intentionally excludes the Watch Live TV action.
 
 interface Profile {
   email: string;
