@@ -37,18 +37,71 @@ export interface EmailResult {
   error?: string;
 }
 
-const getReadableEmailError = (error: unknown, data?: unknown): string => {
-  if (data && typeof data === 'object' && 'error' in data) {
-    const message = String((data as { error?: unknown }).error || '').trim();
-    if (message) return message;
+const extractErrorFromObject = (value: unknown): string => {
+  if (!value || typeof value !== 'object') return '';
+
+  const candidate = value as {
+    error?: unknown;
+    message?: unknown;
+    msg?: unknown;
+    details?: unknown;
+    description?: unknown;
+  };
+
+  const possibleMessages = [
+    candidate.error,
+    candidate.message,
+    candidate.msg,
+    candidate.details,
+    candidate.description,
+  ];
+
+  for (const item of possibleMessages) {
+    if (typeof item === 'string' && item.trim()) return item.trim();
   }
 
+  return '';
+};
+
+const getResponseBodyMessage = async (response: Response): Promise<string> => {
+  try {
+    const clone = response.clone();
+    const text = await clone.text();
+    if (!text.trim()) return '';
+
+    try {
+      const parsed = JSON.parse(text);
+      return extractErrorFromObject(parsed) || text;
+    } catch {
+      return text;
+    }
+  } catch {
+    return '';
+  }
+};
+
+const getReadableEmailError = async (error: unknown, data?: unknown): Promise<string> => {
+  const dataMessage = extractErrorFromObject(data);
+  if (dataMessage) return dataMessage;
+
   if (error && typeof error === 'object') {
-    const message = String((error as { message?: unknown }).message || '').trim();
+    const functionError = error as { message?: unknown; context?: unknown };
+
+    if (functionError.context instanceof Response) {
+      const bodyMessage = await getResponseBodyMessage(functionError.context);
+      if (bodyMessage) return bodyMessage;
+    }
+
+    const message = typeof functionError.message === 'string' ? functionError.message.trim() : '';
     if (message) {
       if (/401|403|unauthorized|jwt|authorization/i.test(message)) {
         return 'Email function authorization failed. The resend-email function still requires JWT verification or the deployed function is not using the latest settings.';
       }
+
+      if (/non-2xx/i.test(message)) {
+        return 'The resend-email function is running, but it returned an error. Open Supabase Edge Function logs for resend-email to see the exact backend error.';
+      }
+
       return message;
     }
   }
@@ -71,14 +124,14 @@ const sendEmailViaEdgeFunction = async (
     });
 
     if (error || !result?.success) {
-      const message = getReadableEmailError(error, result);
+      const message = await getReadableEmailError(error, result);
       console.error('Email function error:', { error, result, message });
       return { success: false, error: message };
     }
 
     return { success: true };
   } catch (error) {
-    const message = getReadableEmailError(error);
+    const message = await getReadableEmailError(error);
     console.error('Error invoking email function:', error);
     return { success: false, error: message };
   }
