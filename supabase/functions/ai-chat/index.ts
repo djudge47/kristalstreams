@@ -26,7 +26,7 @@ const plans = {
 const systemPrompt = `You are the customer support assistant for Kristal Streams.
 
 Use this current information:
-- The service advertises 21,000+ live channels plus movies, series, sports, PPV, and international content.
+- The service advertises movies, series, sports, PPV, international content, and broad entertainment access.
 - All paid plans include the same broad content lineup. Prices change by duration and connection count.
 - Bronze: 1 month. 1 connection $20, 2 $35, 3 $50, 4 $65, 5 $80.
 - Silver: 3 months. 1 connection $45, 2 $75, 3 $110, 4 $140, 5 $175.
@@ -46,7 +46,7 @@ Use this current information:
 
 For buffering, recommend checking speed, restarting the router and device, closing bandwidth-heavy apps, and testing a lower quality.
 For HD recommend at least 5 Mbps; for 4K recommend at least 25 Mbps.
-Be concise, accurate, and helpful. Never invent channels, account details, or billing status. For account-specific issues, direct the customer to the support ticket page.`;
+Be concise, accurate, and helpful. Never invent content, account details, or billing status. For account-specific issues, direct the customer to the support ticket page.`;
 
 function getConnectionCount(text: string): number | null {
   const matches = [
@@ -82,7 +82,7 @@ function getPricingResponse(message: string): string | null {
     return `${plan.name} is a ${plan.months}-month plan. Prices are: 1 connection $${plan.prices[0]}, 2 $${plan.prices[1]}, 3 $${plan.prices[2]}, 4 $${plan.prices[3]}, and 5 $${plan.prices[4]}.`;
   }
 
-  return `Kristal Streams plans:\n\n• Bronze — 1 month, starting at $20\n• Silver — 3 months, starting at $45\n• Gold — 6 months, starting at $60\n• Platinum — 12 months, starting at $95\n\nEach plan offers 1 to 5 connection options and the same broad 21,000+ channel lineup. View every option at /pricing.`;
+  return `Kristal Streams plans:\n\n• Bronze — 1 month, starting at $20\n• Silver — 3 months, starting at $45\n• Gold — 6 months, starting at $60\n• Platinum — 12 months, starting at $95\n\nEach plan offers 1 to 5 connection options and the same broad entertainment lineup. View every option at /pricing.`;
 }
 
 function fallbackResponse(message: string): string {
@@ -102,15 +102,15 @@ function fallbackResponse(message: string): string {
     return `Setup guides are available for Smart TVs, mobile devices, computers, Roku, Fire TV, and other supported devices at /support/devices.`;
   }
 
-  if (/(channel|epg|guide|watch)/.test(text)) {
-    return `Kristal Streams advertises 21,000+ live channels across sports, movies, news, entertainment, and international categories. Availability can vary. See /pricing or contact support for a specific channel question.`;
+  if (/(content|movie|series|sport|ppv|watch)/.test(text)) {
+    return `Kristal Streams offers movies, series, sports, PPV, international content, and broad entertainment access. Availability can vary. See /pricing or contact support for a specific content question.`;
   }
 
   if (/(trial|test service)/.test(text)) {
     return `A 36-hour free trial is available at /free-trial so you can test playback and device compatibility.`;
   }
 
-  return `I can help with plans, setup, buffering, login, channel questions, and the free trial. Visit /support for guides or /client/support to create a ticket.`;
+  return `I can help with plans, setup, buffering, login, content questions, and the free trial. Visit /support for guides or /client/support to create a ticket.`;
 }
 
 Deno.serve(async (req: Request) => {
