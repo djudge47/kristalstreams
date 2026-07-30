@@ -38,7 +38,6 @@ const pages = {
   ContentDetail: lazyRetry(() => import('./pages/ContentDetail')),
   AboutUs: lazyRetry(() => import('./pages/AboutUs')),
   OurServices: lazyRetry(() => import('./pages/OurServices')),
-  Reselling: lazyRetry(() => import('./pages/Reselling')),
   DownloadApp: lazyRetry(() => import('./pages/DownloadApp')),
   News: lazyRetry(() => import('./pages/News')),
   BasicPlan: lazyRetry(() => import('./pages/pricing/BasicPlan')),
@@ -159,7 +158,6 @@ function App() {
             <Route path="content/:type/:id" element={<P.ContentDetail />} />
             <Route path="about" element={<P.AboutUs />} />
             <Route path="services" element={<P.OurServices />} />
-            <Route path="reselling" element={<P.Reselling />} />
             <Route path="download-app" element={<P.DownloadApp />} />
             <Route path="news" element={<P.News />} />
             <Route path="support/ai-chat" element={<S.AIChat />} />
