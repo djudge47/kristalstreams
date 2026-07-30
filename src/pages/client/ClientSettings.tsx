@@ -10,13 +10,15 @@ interface UserSettings {
   autoplay_enabled: boolean;
 }
 
+const defaultSettings: UserSettings = {
+  notifications_enabled: true,
+  default_quality: '1080p',
+  language: 'en',
+  autoplay_enabled: true
+};
+
 const ClientSettings: React.FC = () => {
-  const [settings, setSettings] = useState<UserSettings>({
-    notifications_enabled: true,
-    default_quality: '1080p',
-    language: 'en',
-    autoplay_enabled: true
-  });
+  const [settings, setSettings] = useState<UserSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,27 +27,33 @@ const ClientSettings: React.FC = () => {
   useEffect(() => {
     const getSettings = async () => {
       try {
+        const savedLocalSettings = localStorage.getItem('client_settings');
+        if (savedLocalSettings) {
+          setSettings({ ...defaultSettings, ...JSON.parse(savedLocalSettings) });
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) throw new Error('No user found');
+        if (!user) return;
 
         const { data, error } = await supabase
           .from('profiles')
           .select('notifications_enabled')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
-        
-        if (data) {
+        if (error) {
+          console.warn('Settings profile field is not available yet:', error.message);
+          return;
+        }
+
+        if (typeof data?.notifications_enabled === 'boolean') {
           setSettings(prev => ({
             ...prev,
             notifications_enabled: data.notifications_enabled
           }));
         }
       } catch (err) {
-        console.error('Error loading settings:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load settings');
+        console.warn('Settings loaded with defaults:', err);
       } finally {
         setLoading(false);
       }
@@ -60,51 +68,27 @@ const ClientSettings: React.FC = () => {
     setSuccess(null);
 
     try {
+      localStorage.setItem('client_settings', JSON.stringify(settings));
+
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user found');
 
-      if (settings.notifications_enabled) {
-        // Request notification permission
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          // Register service worker for push notifications
-          const registration = await navigator.serviceWorker.register('/sw.js');
-          const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: 'YOUR_VAPID_PUBLIC_KEY'
-          });
+      if (user) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            notifications_enabled: settings.notifications_enabled
+          })
+          .eq('id', user.id);
 
-          // Send subscription to backend
-          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notifications`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              deviceToken: JSON.stringify(subscription)
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to register for notifications');
-          }
+        if (error) {
+          console.warn('Could not sync settings to profile:', error.message);
         }
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          notifications_enabled: settings.notifications_enabled
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-      
       setSuccess('Settings saved successfully');
     } catch (err) {
       console.error('Error saving settings:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save settings');
+      setError('Settings were not saved. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -155,7 +139,6 @@ const ClientSettings: React.FC = () => {
           </div>
         </div>
 
-        {/* Playback Settings */}
         <div className="bg-dark-100 rounded-xl p-8 border border-gray-800">
           <div className="flex items-center mb-6">
             <Video className="text-primary w-6 h-6 mr-3" />
@@ -197,7 +180,6 @@ const ClientSettings: React.FC = () => {
           </div>
         </div>
 
-        {/* Language Settings */}
         <div className="bg-dark-100 rounded-xl p-8 border border-gray-800">
           <div className="flex items-center mb-6">
             <Globe className="text-primary w-6 h-6 mr-3" />
