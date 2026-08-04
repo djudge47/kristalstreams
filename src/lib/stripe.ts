@@ -10,14 +10,21 @@ if (!STRIPE_KEY || typeof STRIPE_KEY !== 'string') {
 
 const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null;
 
-export async function createCheckoutSession(plan: string, price: number, interval: string) {
+export async function createCheckoutSession(plan: string, price: number, interval: string, connections?: number) {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new Error('Please log in before checkout so your subscription can be added to your Kristal Streams dashboard.');
+    }
+
     const response = await fetch('/api/checkout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ plan, price, interval }),
+      body: JSON.stringify({ plan, price, interval, connections }),
     });
 
     if (!response.ok) {
@@ -62,3 +69,5 @@ export async function restoreSessionAfterStripe(): Promise<boolean> {
     return false;
   }
 }
+
+void stripePromise;
