@@ -7,6 +7,7 @@ interface LocationState {
   plan: string;
   interval: string;
   price: number;
+  connections?: number;
 }
 
 const formatPlanName = (plan: string) => {
@@ -16,7 +17,7 @@ const formatPlanName = (plan: string) => {
 
 const formatInterval = (interval: string) => {
   if (!interval) return 'Subscription';
-  return interval.charAt(0).toUpperCase() + interval.slice(1);
+  return interval.charAt(0).toUpperCase() + interval.slice(1).replace(/-/g, ' ');
 };
 
 const CheckoutPage: React.FC = () => {
@@ -29,6 +30,7 @@ const CheckoutPage: React.FC = () => {
   const planName = formatPlanName(state?.plan);
   const billingLabel = formatInterval(state?.interval);
   const price = Number(state?.price || 0).toFixed(2);
+  const connections = Math.max(1, Math.min(5, Number(state?.connections || 1)));
 
   useEffect(() => {
     if (!state?.plan || !state?.interval || !state?.price) {
@@ -43,7 +45,7 @@ const CheckoutPage: React.FC = () => {
     setError(null);
 
     try {
-      await createCheckoutSession(state.plan, state.price, state.interval);
+      await createCheckoutSession(state.plan, state.price, state.interval, connections);
     } catch (err) {
       console.error('Checkout error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to start checkout. Please try again.';
@@ -138,6 +140,10 @@ const CheckoutPage: React.FC = () => {
               <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] p-4">
                 <span className="text-gray-400">Billing</span>
                 <span className="font-medium">{billingLabel}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] p-4">
+                <span className="text-gray-400">Connections</span>
+                <span className="font-medium">{connections}</span>
               </div>
               <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] p-4">
                 <span className="text-gray-400">Plan price</span>
