@@ -16,15 +16,30 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
   return Notification.permission;
 };
 
+const getVapidPublicKey = () => String(import.meta.env.VITE_VAPID_PUBLIC_KEY || '').trim();
+
 export const subscribeUserToPush = async (): Promise<PushSubscription | null> => {
   try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return null;
+    }
+
+    const vapidPublicKey = getVapidPublicKey();
+
+    // Browser notifications can still work without a VAPID key. A VAPID key is only
+    // required for true server-sent push notifications.
+    if (!vapidPublicKey) {
+      console.warn('VITE_VAPID_PUBLIC_KEY is missing. Browser notifications are enabled, but server push is not configured.');
+      return null;
+    }
+
     const registration = await navigator.serviceWorker.ready;
+    const existingSubscription = await registration.pushManager.getSubscription();
+    if (existingSubscription) return existingSubscription;
 
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(
-        import.meta.env.VITE_VAPID_PUBLIC_KEY || ''
-      )
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
     });
 
     return subscription;
@@ -38,32 +53,40 @@ export const sendNotification = async (title: string, options?: NotificationOpti
   const permission = await requestNotificationPermission();
 
   if (permission === 'granted') {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      const registration = await navigator.serviceWorker.ready;
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
 
-      await registration.showNotification(title, {
-        icon: '/android/icon-192.png',
-        badge: '/android/icon-96.png',
-        vibrate: [200, 100, 200],
-        ...options
-      });
-    } else {
-      new Notification(title, options);
+        await registration.showNotification(title, {
+          icon: '/android/icon-192.png',
+          badge: '/android/icon-96.png',
+          vibrate: [200, 100, 200],
+          ...options
+        });
+        return;
+      } catch (error) {
+        console.warn('Service worker notification failed; falling back to browser notification:', error);
+      }
     }
+
+    new Notification(title, options);
   }
 };
 
 export const unsubscribeFromPush = async (): Promise<boolean> => {
   try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return true;
+    }
+
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
 
     if (subscription) {
       await subscription.unsubscribe();
-      return true;
     }
 
-    return false;
+    return true;
   } catch (error) {
     console.error('Failed to unsubscribe from push notifications:', error);
     return false;
@@ -71,9 +94,7 @@ export const unsubscribeFromPush = async (): Promise<boolean> => {
 };
 
 export const checkNotificationSupport = (): boolean => {
-  return 'Notification' in window &&
-         'serviceWorker' in navigator &&
-         'PushManager' in window;
+  return 'Notification' in window;
 };
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -94,16 +115,10 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 export const testNotification = async () => {
   await sendNotification('Welcome to Kristal Streams!', {
-    body: 'You can now receive updates about new channels, live events, and more.',
+    body: 'Notifications are now enabled for your account updates and reminders.',
     icon: '/android/icon-192.png',
     badge: '/android/icon-96.png',
     tag: 'welcome',
-    requireInteraction: false,
-    actions: [
-      {
-        action: 'explore',
-        title: 'Browse Channels'
-      }
-    ]
+    requireInteraction: false
   });
 };
