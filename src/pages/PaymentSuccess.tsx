@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Loader, AlertCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -20,19 +19,10 @@ const PaymentSuccess: React.FC = () => {
       }
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          setStatus('error');
-          setMessage('Please log in to activate this purchase on your dashboard.');
-          return;
-        }
-
         const response = await fetch('/api/confirm-checkout', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({ sessionId }),
         });
