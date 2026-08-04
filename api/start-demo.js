@@ -62,9 +62,11 @@ export default async function handler(req, res) {
         email_confirm: true,
         user_metadata: {
           full_name: fullName,
-          subscription_tier: 'bronze',
+          subscription_tier: 'demo',
           subscription_status: 'active',
           demo_access: true,
+          demo_label: '36-hour demo',
+          bronze_equivalent_access: true,
           demo_expires_at: demoExpiresAt,
         },
       });
@@ -78,9 +80,11 @@ export default async function handler(req, res) {
         user_metadata: {
           ...(user.user_metadata || {}),
           full_name: fullName || user.user_metadata?.full_name || null,
-          subscription_tier: 'bronze',
+          subscription_tier: 'demo',
           subscription_status: 'active',
           demo_access: true,
+          demo_label: '36-hour demo',
+          bronze_equivalent_access: true,
           demo_expires_at: demoExpiresAt,
         },
       });
@@ -95,7 +99,7 @@ export default async function handler(req, res) {
         id: user.id,
         email,
         full_name: fullName,
-        subscription_tier: 'bronze',
+        subscription_tier: 'demo',
         subscription_status: 'active',
         connections_allowed: 1,
         active_connections: 0,
@@ -110,9 +114,11 @@ export default async function handler(req, res) {
       email,
       expires_at: demoExpiresAt,
       subscription: {
-        tier: 'bronze',
+        tier: 'demo',
+        label: '36-hour demo',
         status: 'active',
         connections_allowed: 1,
+        bronze_equivalent_access: true,
       },
     });
   } catch (error) {
