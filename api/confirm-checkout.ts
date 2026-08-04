@@ -69,8 +69,6 @@ export default async function handler(req: any, res: any) {
 
     const tier = normalizeTier(metadata.plan || 'bronze');
     const connectionsAllowed = Math.max(1, Math.min(5, Number(metadata.connections || 1)));
-    const durationDays = Math.max(1, Number(metadata.duration_days || 30));
-    const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
 
     const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
     const { error: updateError } = await adminClient
@@ -82,10 +80,6 @@ export default async function handler(req: any, res: any) {
         subscription_status: 'active',
         connections_allowed: connectionsAllowed,
         active_connections: 0,
-        subscription_expires_at: expiresAt,
-        stripe_checkout_session_id: checkoutSession.id,
-        stripe_payment_intent_id: typeof checkoutSession.payment_intent === 'string' ? checkoutSession.payment_intent : null,
-        updated_at: new Date().toISOString(),
       }, { onConflict: 'id' });
 
     if (updateError) {
@@ -99,7 +93,6 @@ export default async function handler(req: any, res: any) {
         tier,
         status: 'active',
         connections_allowed: connectionsAllowed,
-        expires_at: expiresAt,
       },
     });
   } catch (error) {
