@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Info, Star } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 
 interface Content {
   id: number;
@@ -134,49 +133,7 @@ const Hero: React.FC = () => {
   const [currentContent, setCurrentContent] = useState<Content>(content[0]);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [user, setUser] = useState(null);
   const [showFeatures, setShowFeatures] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    let subscription: any;
-
-    const checkUser = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (mounted) {
-          setUser(session?.user || null);
-        }
-      } catch (error) {
-        console.error('Auth check error:', error);
-      }
-    };
-
-    const timeoutId = setTimeout(checkUser, 500);
-
-    const setupSubscription = async () => {
-      try {
-        const { data } = supabase.auth.onAuthStateChange((_, session) => {
-          if (mounted) {
-            setUser(session?.user || null);
-          }
-        });
-        subscription = data.subscription;
-      } catch (error) {
-        console.error('Auth subscription error:', error);
-      }
-    };
-
-    setupSubscription();
-
-    return () => {
-      mounted = false;
-      clearTimeout(timeoutId);
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
-  }, []);
 
   useEffect(() => {
     const interval = setInterval(handleNext, 8000);
@@ -204,11 +161,7 @@ const Hero: React.FC = () => {
   };
 
   const handleStartWatching = () => {
-    if (!user) {
-      navigate('/login');
-    } else {
-      navigate('/dashboard');
-    }
+    navigate('/free-trial');
   };
 
   const handleLearnMore = () => {
@@ -343,73 +296,36 @@ const Hero: React.FC = () => {
             <div className="flex max-w-[92%] gap-2 pt-1">
               <button
                 onClick={handleStartWatching}
-                className="flex flex-1 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-black/30 transition active:scale-[0.98]"
+                className="flex flex-1 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-black/30 transition hover:bg-red-700"
               >
-                <Play size={17} className="mr-2" />
+                <Play size={16} className="mr-2" />
                 Start Trial
               </button>
               <button
                 onClick={handleLearnMore}
-                className="flex items-center justify-center rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-black/20 transition active:scale-[0.98]"
+                className="flex flex-1 items-center justify-center rounded-xl bg-white/12 px-4 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/18"
               >
-                <Info size={17} />
+                <Info size={16} className="mr-2" />
+                Details
               </button>
             </div>
           </div>
 
-          <div className="hidden lg:block">
-            <div className="relative mx-auto max-w-[350px]">
-              <div className="absolute -inset-4 rounded-xl bg-gradient-to-r from-primary/30 to-primary/10 blur-xl"></div>
-              <div className="relative rounded-xl border border-gray-800/50 bg-dark-200/80 p-8 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02]">
-                <div className="mb-6 aspect-[2/3] overflow-hidden rounded-lg">
-                  <img
-                    src={currentContent.poster}
-                    alt={currentContent.title}
-                    loading="lazy"
-                    width="350"
-                    height="525"
-                    className="h-full w-full object-cover transition-all duration-700 ease-in-out hover:scale-110"
-                  />
-                </div>
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 animate-pulse rounded-full bg-primary"></div>
-                    <span className="font-semibold text-primary">
-                      {currentContent.category === 'new' ? 'NEW RELEASE' : 
-                       currentContent.category === 'tv' ? 'TV SERIES' : 'FEATURED'}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-2xl font-semibold text-white">{currentContent.title}</h3>
-                    <div className="flex items-center gap-3 text-sm text-gray-400">
-                      <span>{(currentContent.viewers / 1000).toFixed(0)}k watching</span>
-                      <span>•</span>
-                      <span>{currentContent.quality}</span>
-                      <span>•</span>
-                      <span>{currentContent.releaseYear}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div className="hidden lg:block"></div>
         </div>
-      </div>
 
-      <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 space-x-2 sm:bottom-12 sm:space-x-3">
-        {content.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => handleDotClick(index)}
-            className={`h-1.5 rounded-full transition-all duration-300 sm:h-2 ${
-              currentContent.id === content[index].id
-                ? 'w-7 bg-primary sm:w-8'
-                : 'w-1.5 bg-white/45 hover:bg-white/75 sm:w-2'
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-            disabled={isTransitioning}
-          />
-        ))}
+        <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-8">
+          {content.map((item, index) => (
+            <button
+              key={item.id}
+              onClick={() => handleDotClick(index)}
+              className={`h-1.5 rounded-full transition-all duration-300 sm:h-2 ${
+                item.id === currentContent.id ? 'w-7 bg-primary sm:w-8' : 'w-1.5 bg-white/50 hover:bg-white/80 sm:w-2'
+              }`}
+              aria-label={`Show ${item.title}`}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
