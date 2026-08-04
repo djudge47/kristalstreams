@@ -1,454 +1,325 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 import {
   Activity,
   AlertTriangle,
-  Ban,
-  BellRing,
-  CheckCircle2,
-  Clock3,
-  CreditCard,
-  Gauge,
-  Headphones,
+  CheckCircle,
+  Clock,
+  KeyRound,
   Mail,
   Monitor,
-  RefreshCcw,
+  RefreshCw,
   Search,
   ShieldCheck,
-  Smartphone,
+  Signal,
   TimerReset,
-  TrendingUp,
-  UserCheck,
   Users,
   Wifi,
-  XCircle,
+  WifiOff,
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 
-type CustomerProfile = {
+type IptvCustomer = {
   id: string;
-  email: string | null;
-  full_name: string | null;
-  subscription_tier: string | null;
-  subscription_status: string | null;
-  connections_allowed: number | null;
-  active_connections: number | null;
-  subscription_expires_at: string | null;
+  external_id: number;
+  username: string;
+  iptv_password: string | null;
+  owner: string | null;
+  account_status: string;
+  online: boolean;
+  trial: boolean;
+  active_connections: number;
+  connections_allowed: number;
+  expiration_at: string | null;
+  last_connection_at: string | null;
+  last_connection_label: string | null;
+  last_channel: string | null;
   updated_at: string | null;
 };
 
-type Ticket = {
-  id: string;
-  customer_email?: string | null;
-  status?: string | null;
-  priority?: string | null;
-  created_at?: string | null;
-};
-
-type FilterKey = 'all' | 'active' | 'demo' | 'paid' | 'expiring' | 'expired' | 'inactive' | 'overlimit';
-
-const paidTiers = ['bronze', 'silver', 'gold', 'platinum'];
-const tierOrder = ['demo', 'bronze', 'silver', 'gold', 'platinum'];
-
-const formatDate = (value?: string | null) => {
+const formatDateTime = (value?: string | null) => {
   if (!value) return 'Not set';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Not set';
-  return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 };
 
-const timeRemaining = (value?: string | null) => {
-  if (!value) return { label: 'No expiry', hours: null, expired: false };
+const getTimeRemaining = (value?: string | null) => {
+  if (!value) return 'No expiration';
   const expires = new Date(value).getTime();
-  if (Number.isNaN(expires)) return { label: 'No expiry', hours: null, expired: false };
+  if (Number.isNaN(expires)) return 'No expiration';
+
   const diff = expires - Date.now();
-  if (diff <= 0) return { label: 'Expired', hours: 0, expired: true };
-  const hours = Math.ceil(diff / 3_600_000);
+  if (diff <= 0) return 'Expired';
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(hours / 24);
-  return {
-    label: days > 0 ? `${days}d ${hours % 24}h` : `${hours}h`,
-    hours,
-    expired: false,
-  };
+  if (days >= 1) return `${days}d ${hours % 24}h left`;
+  return `${hours}h left`;
 };
 
-const tierLabel = (tier?: string | null) => {
-  if (!tier) return 'No package';
-  if (tier === 'demo') return '36-Hour Demo';
-  return tier.charAt(0).toUpperCase() + tier.slice(1);
+const getHealth = (customer: IptvCustomer) => {
+  const expires = customer.expiration_at ? new Date(customer.expiration_at).getTime() : null;
+  const expired = Boolean(expires && expires < Date.now());
+  const expiringSoon = Boolean(expires && expires > Date.now() && expires - Date.now() <= 72 * 60 * 60 * 1000);
+  const overLimit = customer.active_connections > customer.connections_allowed;
+
+  if (expired || customer.account_status === 'expired') return { label: 'Expired', className: 'bg-red-500/10 text-red-300 border-red-500/30' };
+  if (overLimit) return { label: 'Over Limit', className: 'bg-orange-500/10 text-orange-300 border-orange-500/30' };
+  if (expiringSoon) return { label: 'Renewal Due', className: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30' };
+  if (customer.online) return { label: 'Online', className: 'bg-green-500/10 text-green-300 border-green-500/30' };
+  if (customer.account_status === 'active') return { label: 'Active', className: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' };
+  return { label: 'Inactive', className: 'bg-gray-500/10 text-gray-300 border-gray-500/30' };
 };
 
-const tierBadge = (tier?: string | null) => {
-  switch (tier) {
-    case 'demo': return 'border-violet-500/30 bg-violet-500/10 text-violet-300';
-    case 'bronze': return 'border-orange-500/30 bg-orange-500/10 text-orange-300';
-    case 'silver': return 'border-slate-300/30 bg-slate-300/10 text-slate-200';
-    case 'gold': return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
-    case 'platinum': return 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300';
-    default: return 'border-gray-600 bg-gray-700/40 text-gray-300';
-  }
-};
+const getAction = (customer: IptvCustomer) => {
+  const expires = customer.expiration_at ? new Date(customer.expiration_at).getTime() : null;
+  const expired = Boolean(expires && expires < Date.now());
+  const expiringSoon = Boolean(expires && expires > Date.now() && expires - Date.now() <= 72 * 60 * 60 * 1000);
 
-const statusBadge = (status?: string | null, expired?: boolean) => {
-  if (expired) return 'border-red-500/30 bg-red-500/10 text-red-300';
-  if (status === 'active') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
-  if (status === 'past_due') return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
-  return 'border-gray-600 bg-gray-700/40 text-gray-300';
+  if (expired || customer.account_status === 'expired') return 'Reactivate or remove access';
+  if (customer.trial) return 'Convert trial to paid';
+  if (customer.active_connections > customer.connections_allowed) return 'Review device limit';
+  if (expiringSoon) return 'Send renewal reminder';
+  if (customer.online) return 'Monitor live session';
+  return 'Maintain account';
 };
 
 const CRMDashboard: React.FC = () => {
-  const [customers, setCustomers] = useState<CustomerProfile[]>([]);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [customers, setCustomers] = useState<IptvCustomer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<FilterKey>('all');
+  const [filter, setFilter] = useState<'all' | 'online' | 'active' | 'expired' | 'expiring' | 'over-limit'>('all');
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchCRM = async (manual = false) => {
-    manual ? setRefreshing(true) : setLoading(true);
+  const fetchCustomers = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const [profilesResult, ticketsResult] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, email, full_name, subscription_tier, subscription_status, connections_allowed, active_connections, subscription_expires_at, updated_at')
-          .order('updated_at', { ascending: false }),
-        supabase
-          .from('support_tickets')
-          .select('id, customer_email, status, priority, created_at')
-          .order('created_at', { ascending: false })
-          .limit(100),
-      ]);
+      const { data, error: queryError } = await supabase
+        .from('iptv_customers')
+        .select('*')
+        .order('expiration_at', { ascending: true });
 
-      if (profilesResult.error) throw profilesResult.error;
-      if (ticketsResult.error) console.warn('Support ticket metrics unavailable:', ticketsResult.error.message);
-
-      setCustomers(profilesResult.data || []);
-      setTickets(ticketsResult.data || []);
-    } catch (error) {
-      console.error('IPTV CRM load error:', error);
+      if (queryError) throw queryError;
+      setCustomers(data || []);
+    } catch (err) {
+      console.error('IPTV CRM load error:', err);
+      setError(err instanceof Error ? err.message : 'Unable to load IPTV customers.');
       setCustomers([]);
-      setTickets([]);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchCRM();
+    fetchCustomers();
   }, []);
 
+  const now = Date.now();
+
   const stats = useMemo(() => {
-    const now = Date.now();
-    const active = customers.filter(c => c.subscription_status === 'active' && (!c.subscription_expires_at || new Date(c.subscription_expires_at).getTime() > now));
-    const demo = customers.filter(c => c.subscription_tier === 'demo');
-    const paid = customers.filter(c => paidTiers.includes(c.subscription_tier || ''));
-    const expiring24 = customers.filter(c => {
-      if (!c.subscription_expires_at) return false;
-      const expiry = new Date(c.subscription_expires_at).getTime();
-      return expiry > now && expiry - now <= 24 * 60 * 60 * 1000;
+    const online = customers.filter((customer) => customer.online);
+    const active = customers.filter((customer) => customer.account_status === 'active');
+    const expired = customers.filter((customer) => {
+      const expires = customer.expiration_at ? new Date(customer.expiration_at).getTime() : null;
+      return customer.account_status === 'expired' || Boolean(expires && expires < now);
     });
-    const expiring72 = customers.filter(c => {
-      if (!c.subscription_expires_at) return false;
-      const expiry = new Date(c.subscription_expires_at).getTime();
-      return expiry > now && expiry - now <= 72 * 60 * 60 * 1000;
+    const expiring = customers.filter((customer) => {
+      const expires = customer.expiration_at ? new Date(customer.expiration_at).getTime() : null;
+      return Boolean(expires && expires > now && expires - now <= 72 * 60 * 60 * 1000);
     });
-    const expired = customers.filter(c => c.subscription_expires_at && new Date(c.subscription_expires_at).getTime() <= now);
-    const inactive = customers.filter(c => c.subscription_status !== 'active');
-    const overLimit = customers.filter(c => (c.active_connections || 0) > (c.connections_allowed || 0));
-    const totalAllowed = customers.reduce((sum, c) => sum + (c.connections_allowed || 0), 0);
-    const totalActive = customers.reduce((sum, c) => sum + (c.active_connections || 0), 0);
-    const openTickets = tickets.filter(t => !['closed', 'resolved'].includes((t.status || 'open').toLowerCase()));
-    const urgentTickets = tickets.filter(t => (t.priority || '').toLowerCase() === 'high' && !['closed', 'resolved'].includes((t.status || 'open').toLowerCase()));
+    const overLimit = customers.filter((customer) => customer.active_connections > customer.connections_allowed);
 
     return {
       total: customers.length,
+      online: online.length,
       active: active.length,
-      demo: demo.length,
-      paid: paid.length,
-      expiring24: expiring24.length,
-      expiring72: expiring72.length,
       expired: expired.length,
-      inactive: inactive.length,
+      expiring: expiring.length,
       overLimit: overLimit.length,
-      totalAllowed,
-      totalActive,
-      openTickets: openTickets.length,
-      urgentTickets: urgentTickets.length,
-      utilization: totalAllowed ? Math.round((totalActive / totalAllowed) * 100) : 0,
-      demoConversionBase: demo.length,
+      liveConnections: customers.reduce((sum, customer) => sum + Number(customer.active_connections || 0), 0),
+      allowedConnections: customers.reduce((sum, customer) => sum + Number(customer.connections_allowed || 0), 0),
     };
-  }, [customers, tickets]);
-
-  const tierCounts = useMemo(() => tierOrder.map(tier => ({
-    tier,
-    label: tierLabel(tier),
-    count: customers.filter(c => c.subscription_tier === tier).length,
-  })), [customers]);
+  }, [customers, now]);
 
   const filteredCustomers = useMemo(() => {
-    const now = Date.now();
-    return customers.filter(customer => {
-      const searchable = `${customer.full_name || ''} ${customer.email || ''} ${customer.subscription_tier || ''} ${customer.subscription_status || ''}`.toLowerCase();
-      if (!searchable.includes(search.toLowerCase())) return false;
+    return customers.filter((customer) => {
+      const expires = customer.expiration_at ? new Date(customer.expiration_at).getTime() : null;
+      const expired = customer.account_status === 'expired' || Boolean(expires && expires < now);
+      const expiring = Boolean(expires && expires > now && expires - now <= 72 * 60 * 60 * 1000);
+      const overLimit = customer.active_connections > customer.connections_allowed;
+      const haystack = `${customer.external_id} ${customer.username} ${customer.iptv_password || ''} ${customer.owner || ''} ${customer.account_status} ${customer.last_channel || ''}`.toLowerCase();
 
-      const expiry = customer.subscription_expires_at ? new Date(customer.subscription_expires_at).getTime() : null;
-      const expired = Boolean(expiry && expiry <= now);
-      const expiring = Boolean(expiry && expiry > now && expiry - now <= 72 * 60 * 60 * 1000);
-      const overLimit = (customer.active_connections || 0) > (customer.connections_allowed || 0);
-
-      switch (filter) {
-        case 'active': return customer.subscription_status === 'active' && !expired;
-        case 'demo': return customer.subscription_tier === 'demo';
-        case 'paid': return paidTiers.includes(customer.subscription_tier || '');
-        case 'expiring': return expiring;
-        case 'expired': return expired;
-        case 'inactive': return customer.subscription_status !== 'active';
-        case 'overlimit': return overLimit;
-        default: return true;
-      }
+      if (!haystack.includes(search.toLowerCase())) return false;
+      if (filter === 'online') return customer.online;
+      if (filter === 'active') return customer.account_status === 'active' && !expired;
+      if (filter === 'expired') return expired;
+      if (filter === 'expiring') return expiring;
+      if (filter === 'over-limit') return overLimit;
+      return true;
     });
-  }, [customers, search, filter]);
+  }, [customers, filter, now, search]);
 
-  const operationalCards = [
-    { label: 'Active Lines', value: stats.active, helper: 'Currently entitled', icon: UserCheck, tone: 'text-emerald-300', filter: 'active' as FilterKey },
-    { label: '36-Hour Trials', value: stats.demo, helper: 'Conversion queue', icon: Clock3, tone: 'text-violet-300', filter: 'demo' as FilterKey },
-    { label: 'Paid Customers', value: stats.paid, helper: 'Bronze–Platinum', icon: CreditCard, tone: 'text-amber-300', filter: 'paid' as FilterKey },
-    { label: 'Renewals ≤72h', value: stats.expiring72, helper: `${stats.expiring24} within 24h`, icon: TimerReset, tone: 'text-orange-300', filter: 'expiring' as FilterKey },
-    { label: 'Expired Accounts', value: stats.expired, helper: 'Reactivation queue', icon: XCircle, tone: 'text-red-300', filter: 'expired' as FilterKey },
-    { label: 'Connection Load', value: `${stats.totalActive}/${stats.totalAllowed}`, helper: `${stats.utilization}% utilization`, icon: Gauge, tone: 'text-cyan-300', filter: 'all' as FilterKey },
-    { label: 'Open Tickets', value: stats.openTickets, helper: `${stats.urgentTickets} high priority`, icon: Headphones, tone: 'text-blue-300', path: '/admin/tickets' },
-    { label: 'Over Limit', value: stats.overLimit, helper: 'Review immediately', icon: AlertTriangle, tone: 'text-red-400', filter: 'overlimit' as FilterKey },
+  const statCards = [
+    { label: 'Total IPTV Accounts', value: stats.total, icon: Users, tone: 'text-blue-300', filter: 'all' as const },
+    { label: 'Online Now', value: stats.online, icon: Wifi, tone: 'text-green-300', filter: 'online' as const },
+    { label: 'Active Accounts', value: stats.active, icon: CheckCircle, tone: 'text-cyan-300', filter: 'active' as const },
+    { label: 'Expired Accounts', value: stats.expired, icon: AlertTriangle, tone: 'text-red-300', filter: 'expired' as const },
+    { label: 'Expiring 72h', value: stats.expiring, icon: TimerReset, tone: 'text-yellow-300', filter: 'expiring' as const },
+    { label: 'Live / Allowed Connections', value: `${stats.liveConnections}/${stats.allowedConnections}`, icon: Monitor, tone: 'text-purple-300', filter: 'all' as const },
   ];
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary">Kristal Streams IPTV Operations</p>
-          <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">Subscriber Operations Center</h1>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Kristal Streams IPTV CRM</p>
+          <h1 className="mt-2 text-3xl font-bold text-white">IPTV Subscriber Operations Center</h1>
           <p className="mt-2 max-w-3xl text-gray-400">
-            Manage trials, paid subscribers, package access, concurrent connections, renewals, expirations, and support workload from one IPTV-focused dashboard.
+            Track panel customers, usernames, connection limits, online sessions, expirations, account health, and renewal follow-ups.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => fetchCRM(true)}
-            disabled={refreshing}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:border-gray-600 disabled:opacity-60"
-          >
-            <RefreshCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh Data
-          </button>
-          <Link to="/admin/customers" className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15">Customer Directory</Link>
-          <Link to="/admin/tickets" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Support Queue</Link>
+        <button
+          type="button"
+          onClick={fetchCustomers}
+          className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh Data
+        </button>
+      </div>
+
+      <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-5">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="mt-1 h-5 w-5 text-cyan-300" />
+          <div>
+            <h2 className="font-semibold text-white">IPTV Standards View</h2>
+            <p className="mt-1 text-sm text-cyan-100/80">
+              This CRM is focused on IPTV service operations: account status, online state, active connections, allowed connections, expiration, and last watched channel/session.
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {operationalCards.map(card => {
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {statCards.map((card) => {
           const Icon = card.icon;
-          const cardBody = (
-            <div className="h-full rounded-2xl border border-gray-700 bg-gradient-to-br from-gray-800 to-gray-900 p-5 text-left transition hover:-translate-y-0.5 hover:border-gray-600">
-              <div className="flex items-start justify-between">
-                <div className="rounded-xl bg-white/5 p-3"><Icon className={`h-6 w-6 ${card.tone}`} /></div>
-                <TrendingUp className="h-4 w-4 text-gray-600" />
+          return (
+            <button key={card.label} type="button" onClick={() => setFilter(card.filter)} className="text-left">
+              <div className="rounded-xl border border-gray-700 bg-gray-800 p-5 transition hover:border-gray-600">
+                <Icon className={`h-7 w-7 ${card.tone}`} />
+                <p className="mt-4 text-3xl font-bold text-white">{card.value}</p>
+                <p className="mt-1 text-sm text-gray-400">{card.label}</p>
               </div>
-              <p className="mt-5 text-3xl font-bold text-white">{card.value}</p>
-              <p className="mt-1 font-medium text-gray-200">{card.label}</p>
-              <p className="mt-1 text-xs text-gray-500">{card.helper}</p>
-            </div>
+            </button>
           );
-
-          if ('path' in card && card.path) return <Link key={card.label} to={card.path}>{cardBody}</Link>;
-          return <button key={card.label} type="button" onClick={() => setFilter(card.filter)}>{cardBody}</button>;
         })}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-white">Package Distribution</h2>
-              <p className="mt-1 text-sm text-gray-400">Trials and active subscription mix</p>
-            </div>
-            <Wifi className="h-6 w-6 text-primary" />
-          </div>
-          <div className="space-y-4">
-            {tierCounts.map(item => {
-              const percentage = stats.total ? Math.round((item.count / stats.total) * 100) : 0;
-              return (
-                <div key={item.tier}>
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs ${tierBadge(item.tier)}`}>{item.label}</span>
-                    <span className="text-gray-300">{item.count} <span className="text-gray-500">({percentage}%)</span></span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-gray-700">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${percentage}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-white">Operations Health</h2>
-              <p className="mt-1 text-sm text-gray-400">Items requiring staff attention</p>
-            </div>
-            <ShieldCheck className="h-6 w-6 text-emerald-300" />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <button onClick={() => setFilter('expiring')} className="rounded-xl border border-orange-500/20 bg-orange-500/10 p-4 text-left">
-              <BellRing className="h-5 w-5 text-orange-300" />
-              <p className="mt-3 text-2xl font-bold text-white">{stats.expiring72}</p>
-              <p className="text-sm text-orange-100/80">Renewal reminders due</p>
-            </button>
-            <button onClick={() => setFilter('expired')} className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-left">
-              <Ban className="h-5 w-5 text-red-300" />
-              <p className="mt-3 text-2xl font-bold text-white">{stats.expired}</p>
-              <p className="text-sm text-red-100/80">Expired / reactivate</p>
-            </button>
-            <button onClick={() => setFilter('overlimit')} className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-left">
-              <Monitor className="h-5 w-5 text-cyan-300" />
-              <p className="mt-3 text-2xl font-bold text-white">{stats.overLimit}</p>
-              <p className="text-sm text-cyan-100/80">Connection limit alerts</p>
-            </button>
-            <Link to="/admin/tickets" className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-left">
-              <Activity className="h-5 w-5 text-blue-300" />
-              <p className="mt-3 text-2xl font-bold text-white">{stats.openTickets}</p>
-              <p className="text-sm text-blue-100/80">Open support cases</p>
-            </Link>
-          </div>
-        </section>
-      </div>
-
-      <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="rounded-xl border border-gray-700 bg-gray-800 p-6">
+        <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-white">Subscriber Management</h2>
-            <p className="mt-1 text-sm text-gray-400">Account health, package status, connection usage, and renewal priority</p>
+            <p className="mt-1 text-sm text-gray-400">Imported IPTV panel accounts from your customer list.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {(['all', 'active', 'demo', 'paid', 'expiring', 'expired', 'inactive', 'overlimit'] as FilterKey[]).map(item => (
+            {(['all', 'online', 'active', 'expired', 'expiring', 'over-limit'] as const).map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => setFilter(item)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${filter === item ? 'bg-primary text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${filter === item ? 'bg-primary text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
               >
-                {item === 'overlimit' ? 'Over Limit' : item}
+                {item.replace('-', ' ')}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="relative mt-5">
+        <div className="relative mb-5">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             value={search}
-            onChange={event => setSearch(event.target.value)}
-            placeholder="Search customer, email, package, or account status..."
-            className="w-full rounded-xl border border-gray-700 bg-gray-900 py-3 pl-10 pr-4 text-sm text-white outline-none focus:border-primary"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by ID, username, password, owner, status, or channel..."
+            className="w-full rounded-lg border border-gray-700 bg-gray-900 py-2 pl-10 pr-4 text-sm text-white outline-none focus:border-primary"
           />
         </div>
 
+        {error && (
+          <div className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+            {error}
+          </div>
+        )}
+
         {loading ? (
-          <div className="py-16 text-center text-gray-400">Loading IPTV subscriber data...</div>
+          <div className="py-12 text-center text-gray-400">Loading IPTV customers...</div>
         ) : filteredCustomers.length === 0 ? (
-          <div className="mt-5 rounded-xl border border-gray-700 bg-gray-900 p-10 text-center text-gray-400">No subscribers match this view.</div>
+          <div className="rounded-lg border border-gray-700 bg-gray-900 p-8 text-center text-gray-400">No matching IPTV customers found.</div>
         ) : (
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[980px] text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1080px] text-sm">
               <thead>
-                <tr className="border-b border-gray-700 text-xs uppercase tracking-wide text-gray-500">
-                  <th className="px-4 py-3 text-left">Subscriber</th>
-                  <th className="px-4 py-3 text-left">Package</th>
-                  <th className="px-4 py-3 text-left">Account</th>
+                <tr className="border-b border-gray-700 text-gray-400">
+                  <th className="px-4 py-3 text-left">ID</th>
+                  <th className="px-4 py-3 text-left">Username</th>
+                  <th className="px-4 py-3 text-left">Password</th>
+                  <th className="px-4 py-3 text-left">Owner</th>
+                  <th className="px-4 py-3 text-left">Health</th>
+                  <th className="px-4 py-3 text-left">Online</th>
                   <th className="px-4 py-3 text-left">Connections</th>
                   <th className="px-4 py-3 text-left">Expiration</th>
-                  <th className="px-4 py-3 text-left">Health</th>
-                  <th className="px-4 py-3 text-left">Next Action</th>
+                  <th className="px-4 py-3 text-left">Last Connection</th>
+                  <th className="px-4 py-3 text-left">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.map(customer => {
-                  const remaining = timeRemaining(customer.subscription_expires_at);
-                  const active = customer.subscription_status === 'active' && !remaining.expired;
-                  const overLimit = (customer.active_connections || 0) > (customer.connections_allowed || 0);
-                  const utilization = customer.connections_allowed
-                    ? Math.min(100, Math.round(((customer.active_connections || 0) / customer.connections_allowed) * 100))
-                    : 0;
-                  const expiringSoon = remaining.hours !== null && remaining.hours > 0 && remaining.hours <= 72;
-
-                  let healthLabel = 'Healthy';
-                  let healthClass = 'text-emerald-300';
-                  let HealthIcon = CheckCircle2;
-                  let nextAction = 'Monitor account';
-
-                  if (overLimit) {
-                    healthLabel = 'Over connection limit';
-                    healthClass = 'text-red-300';
-                    HealthIcon = AlertTriangle;
-                    nextAction = 'Review active devices';
-                  } else if (remaining.expired) {
-                    healthLabel = 'Expired';
-                    healthClass = 'text-red-300';
-                    HealthIcon = XCircle;
-                    nextAction = 'Send reactivation offer';
-                  } else if (expiringSoon) {
-                    healthLabel = 'Renewal due';
-                    healthClass = 'text-orange-300';
-                    HealthIcon = TimerReset;
-                    nextAction = customer.subscription_tier === 'demo' ? 'Convert trial to paid' : 'Send renewal reminder';
-                  } else if (!active) {
-                    healthLabel = 'Inactive';
-                    healthClass = 'text-gray-300';
-                    HealthIcon = Ban;
-                    nextAction = 'Contact customer';
-                  } else if (customer.subscription_tier === 'demo') {
-                    healthLabel = 'Trial active';
-                    healthClass = 'text-violet-300';
-                    HealthIcon = Clock3;
-                    nextAction = 'Convert before expiry';
-                  } else if (utilization >= 80) {
-                    healthLabel = 'High usage';
-                    healthClass = 'text-cyan-300';
-                    HealthIcon = Gauge;
-                    nextAction = 'Offer more connections';
-                  }
-
+                {filteredCustomers.map((customer) => {
+                  const health = getHealth(customer);
                   return (
-                    <tr key={customer.id} className="border-b border-gray-700/60 align-top hover:bg-gray-700/20">
-                      <td className="px-4 py-4">
-                        <div className="font-medium text-white">{customer.full_name || 'Name not set'}</div>
-                        <div className="mt-1 flex items-center gap-1 text-xs text-gray-400"><Mail className="h-3 w-3" />{customer.email || 'No email'}</div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${tierBadge(customer.subscription_tier)}`}>{tierLabel(customer.subscription_tier)}</span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize ${statusBadge(customer.subscription_status, remaining.expired)}`}>
-                          {remaining.expired ? 'expired' : customer.subscription_status || 'inactive'}
+                    <tr key={customer.id} className="border-b border-gray-700/60 hover:bg-gray-700/25">
+                      <td className="px-4 py-3 text-gray-300">{customer.external_id}</td>
+                      <td className="px-4 py-3 text-white">{customer.username}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1 rounded bg-gray-900 px-2 py-1 font-mono text-xs text-gray-300">
+                          <KeyRound className="h-3 w-3" />
+                          {customer.iptv_password || '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2 text-gray-200"><Smartphone className="h-4 w-4 text-cyan-300" />{customer.active_connections || 0} / {customer.connections_allowed || 0}</div>
-                        <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-gray-700">
-                          <div className={`h-full rounded-full ${overLimit ? 'bg-red-500' : 'bg-cyan-500'}`} style={{ width: `${utilization}%` }} />
-                        </div>
+                      <td className="px-4 py-3 text-gray-300">{customer.owner || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${health.className}`}>
+                          {health.label}
+                        </span>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="text-gray-200">{formatDate(customer.subscription_expires_at)}</div>
-                        <div className={`mt-1 text-xs ${remaining.expired ? 'text-red-300' : expiringSoon ? 'text-orange-300' : 'text-gray-500'}`}>{remaining.label}</div>
+                      <td className="px-4 py-3">
+                        {customer.online ? (
+                          <span className="inline-flex items-center gap-1 text-green-300"><Wifi className="h-4 w-4" /> Online</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-gray-400"><WifiOff className="h-4 w-4" /> Offline</span>
+                        )}
                       </td>
-                      <td className="px-4 py-4">
-                        <div className={`flex items-center gap-2 font-medium ${healthClass}`}><HealthIcon className="h-4 w-4" />{healthLabel}</div>
+                      <td className="px-4 py-3 text-gray-300">
+                        <span className="rounded bg-gray-700 px-2 py-1 text-white">{customer.active_connections}</span>
+                        <span className="mx-1 text-gray-500">/</span>
+                        <span className="rounded bg-gray-700 px-2 py-1 text-white">{customer.connections_allowed}</span>
                       </td>
-                      <td className="px-4 py-4 text-gray-300">{nextAction}</td>
+                      <td className="px-4 py-3">
+                        <div className="text-gray-300">{formatDateTime(customer.expiration_at)}</div>
+                        <div className="text-xs text-gray-500">{getTimeRemaining(customer.expiration_at)}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 text-gray-300"><Signal className="h-3 w-3" />{customer.last_channel || customer.last_connection_label || 'Never'}</div>
+                        {customer.last_channel && <div className="mt-1 text-xs text-gray-500">{customer.last_connection_label}</div>}
+                        {!customer.last_channel && customer.last_connection_at && <div className="mt-1 text-xs text-gray-500">{formatDateTime(customer.last_connection_at)}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-300">{getAction(customer)}</td>
                     </tr>
                   );
                 })}
@@ -456,23 +327,23 @@ const CRMDashboard: React.FC = () => {
             </table>
           </div>
         )}
-      </section>
+      </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-5">
-          <Clock3 className="h-5 w-5 text-violet-300" />
-          <h3 className="mt-3 font-semibold text-white">Trial Workflow</h3>
-          <p className="mt-2 text-sm text-violet-100/75">Contact trial users before their 36-hour access expires and convert them to a paid package.</p>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="rounded-xl border border-gray-700 bg-gray-800 p-5">
+          <Clock className="mb-3 h-6 w-6 text-yellow-300" />
+          <h3 className="font-semibold text-white">Renewal Workflow</h3>
+          <p className="mt-2 text-sm text-gray-400">Use the expiring and expired filters to contact customers before access ends.</p>
         </div>
-        <div className="rounded-xl border border-orange-500/20 bg-orange-500/10 p-5">
-          <TimerReset className="h-5 w-5 text-orange-300" />
-          <h3 className="mt-3 font-semibold text-white">Renewal Workflow</h3>
-          <p className="mt-2 text-sm text-orange-100/75">Prioritize accounts expiring within 72 hours, then reactivate expired subscribers.</p>
+        <div className="rounded-xl border border-gray-700 bg-gray-800 p-5">
+          <Monitor className="mb-3 h-6 w-6 text-cyan-300" />
+          <h3 className="font-semibold text-white">Connection Management</h3>
+          <p className="mt-2 text-sm text-gray-400">Review accounts using multiple connections and upsell additional device slots when needed.</p>
         </div>
-        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-5">
-          <Monitor className="h-5 w-5 text-cyan-300" />
-          <h3 className="mt-3 font-semibold text-white">Connection Workflow</h3>
-          <p className="mt-2 text-sm text-cyan-100/75">Track concurrent device usage, flag over-limit accounts, and identify connection upsell opportunities.</p>
+        <div className="rounded-xl border border-gray-700 bg-gray-800 p-5">
+          <Mail className="mb-3 h-6 w-6 text-green-300" />
+          <h3 className="font-semibold text-white">Customer Follow-Up</h3>
+          <p className="mt-2 text-sm text-gray-400">Use the action column to prioritize renewal, reactivation, and device-limit support.</p>
         </div>
       </div>
     </div>
