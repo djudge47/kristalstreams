@@ -25,6 +25,7 @@ const pages = {
   Register: lazyRetry(() => import('./pages/Register')),
   ResetPassword: lazyRetry(() => import('./pages/ResetPassword')),
   Dashboard: lazyRetry(() => import('./pages/Dashboard')),
+  PaymentSuccess: lazyRetry(() => import('./pages/PaymentSuccess')),
   LandingPage: lazyRetry(() => import('./pages/LandingPage')),
   StandaloneLanding: lazyRetry(() => import('./pages/StandaloneLanding')),
   Privacy: lazyRetry(() => import('./pages/Privacy')),
@@ -140,6 +141,7 @@ function App() {
             <Route path="pricing/gold" element={<P.GoldPlan />} />
             <Route path="pricing/platinum" element={<P.PlatinumPlan />} />
             <Route path="checkout" element={<P.CheckoutPage />} />
+            <Route path="payment-success" element={<P.PaymentSuccess />} />
             <Route path="support" element={<P.Support />} />
             <Route path="knowledge-base" element={<P.KnowledgeBase />} />
             <Route path="free-trial" element={<P.FreeTrial />} />
