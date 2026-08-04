@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createCheckoutSession } from '../../lib/stripe';
-import { Loader } from 'lucide-react';
+import { ArrowLeft, CheckCircle, CreditCard, Loader, Lock, ShieldCheck, Sparkles } from 'lucide-react';
 
 interface LocationState {
   plan: string;
@@ -9,12 +9,26 @@ interface LocationState {
   price: number;
 }
 
+const formatPlanName = (plan: string) => {
+  if (!plan) return 'Streaming Plan';
+  return plan.charAt(0).toUpperCase() + plan.slice(1).replace(/-/g, ' ');
+};
+
+const formatInterval = (interval: string) => {
+  if (!interval) return 'Subscription';
+  return interval.charAt(0).toUpperCase() + interval.slice(1);
+};
+
 const CheckoutPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const state = location.state as LocationState;
+
+  const planName = formatPlanName(state?.plan);
+  const billingLabel = formatInterval(state?.interval);
+  const price = Number(state?.price || 0).toFixed(2);
 
   useEffect(() => {
     if (!state?.plan || !state?.interval || !state?.price) {
@@ -25,8 +39,9 @@ const CheckoutPage: React.FC = () => {
     const initCheckout = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
+        await new Promise(resolve => setTimeout(resolve, 900));
         await createCheckoutSession(state.plan, state.price, state.interval);
       } catch (err) {
         console.error('Checkout error:', err);
@@ -44,39 +59,125 @@ const CheckoutPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen py-12 bg-dark-300">
-      <div className="container mx-auto px-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-dark-100 rounded-xl p-8 border border-gray-800 text-center">
-            {loading ? (
-              <div className="space-y-4">
-                <Loader className="w-12 h-12 text-primary animate-spin mx-auto" />
-                <h2 className="text-2xl font-semibold text-white">
-                  Preparing Your Checkout...
-                </h2>
-                <p className="text-gray-400">
-                  Please wait while we redirect you to our secure payment page.
-                </p>
+    <div className="relative min-h-screen overflow-hidden bg-dark-300 py-16 text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.08),transparent_28%)]" />
+      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary/10 to-transparent" />
+      <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
+        <button
+          onClick={() => navigate('/pricing')}
+          className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300 transition hover:border-primary/60 hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to plans
+        </button>
+
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
+          <section className="rounded-3xl border border-white/10 bg-dark-100/80 p-6 shadow-2xl shadow-black/40 backdrop-blur md:p-10">
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+              <Sparkles className="h-4 w-4" />
+              Secure Kristal Streams checkout
+            </div>
+
+            <h1 className="mb-4 text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+              Finalizing your streaming access
+            </h1>
+            <p className="mb-8 max-w-2xl text-base leading-relaxed text-gray-300 sm:text-lg">
+              We are preparing your secure Stripe payment page. Your selected plan is ready, and you will be redirected to complete payment safely.
+            </p>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <Lock className="mb-3 h-6 w-6 text-primary" />
+                <h3 className="font-semibold">Secure payment</h3>
+                <p className="mt-1 text-sm text-gray-400">Protected Stripe checkout</p>
               </div>
-            ) : error ? (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-semibold text-white">
-                  Checkout Error
-                </h2>
-                <p className="text-red-500">{error}</p>
-                <button
-                  onClick={() => navigate('/pricing')}
-                  className="bg-primary hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
-                >
-                  Back to Plans
-                </button>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <CreditCard className="mb-3 h-6 w-6 text-primary" />
+                <h3 className="font-semibold">Fast setup</h3>
+                <p className="mt-1 text-sm text-gray-400">Complete payment online</p>
               </div>
-            ) : null}
-          </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <ShieldCheck className="mb-3 h-6 w-6 text-primary" />
+                <h3 className="font-semibold">Account ready</h3>
+                <p className="mt-1 text-sm text-gray-400">Plan details confirmed</p>
+              </div>
+            </div>
+
+            <div className="mt-10 rounded-2xl border border-primary/20 bg-primary/10 p-5">
+              {loading ? (
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-primary/20">
+                    <Loader className="h-7 w-7 animate-spin text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold">Preparing secure checkout...</h2>
+                    <p className="mt-1 text-sm text-gray-300">Please wait. You will be redirected automatically.</p>
+                  </div>
+                </div>
+              ) : error ? (
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold">Checkout needs attention</h2>
+                  <p className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</p>
+                  <button
+                    onClick={() => navigate('/pricing')}
+                    className="rounded-lg bg-primary px-6 py-3 font-medium text-white transition hover:bg-red-700"
+                  >
+                    Back to Plans
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          <aside className="rounded-3xl border border-white/10 bg-gradient-to-b from-dark-100 to-dark-200 p-6 shadow-2xl shadow-black/40 md:p-8">
+            <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-6">
+              <div>
+                <p className="text-sm uppercase tracking-[0.2em] text-gray-500">Order summary</p>
+                <h2 className="mt-2 text-2xl font-bold">{planName}</h2>
+              </div>
+              <div className="rounded-2xl bg-primary/15 p-3">
+                <CreditCard className="h-7 w-7 text-primary" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] p-4">
+                <span className="text-gray-400">Billing</span>
+                <span className="font-medium">{billingLabel}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] p-4">
+                <span className="text-gray-400">Plan price</span>
+                <span className="text-xl font-bold">${price}</span>
+              </div>
+              <div className="flex items-center justify-between border-t border-white/10 pt-5">
+                <span className="text-lg font-semibold">Total due today</span>
+                <span className="text-3xl font-bold text-primary">${price}</span>
+              </div>
+            </div>
+
+            <div className="mt-8 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-5 text-sm text-gray-300">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 flex-shrink-0 text-primary" />
+                <span>HD and 4K streaming access</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 flex-shrink-0 text-primary" />
+                <span>Movies, shows, sports, and live channels</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 flex-shrink-0 text-primary" />
+                <span>Support across compatible devices</span>
+              </div>
+            </div>
+
+            <p className="mt-6 text-center text-xs leading-relaxed text-gray-500">
+              Payment details are handled securely by Stripe. Kristal Streams does not store your full card information.
+            </p>
+          </aside>
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default CheckoutPage;
