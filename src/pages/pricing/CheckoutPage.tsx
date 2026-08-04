@@ -33,26 +33,24 @@ const CheckoutPage: React.FC = () => {
   useEffect(() => {
     if (!state?.plan || !state?.interval || !state?.price) {
       navigate('/pricing');
-      return;
     }
-
-    const initCheckout = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        await new Promise(resolve => setTimeout(resolve, 900));
-        await createCheckoutSession(state.plan, state.price, state.interval);
-      } catch (err) {
-        console.error('Checkout error:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to start checkout. Please try again.';
-        setError(errorMessage);
-        setLoading(false);
-      }
-    };
-
-    initCheckout();
   }, [state, navigate]);
+
+  const handleSecurePayment = async () => {
+    if (!state?.plan || !state?.interval || !state?.price || loading) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      await createCheckoutSession(state.plan, state.price, state.interval);
+    } catch (err) {
+      console.error('Checkout error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to start checkout. Please try again.';
+      setError(errorMessage);
+      setLoading(false);
+    }
+  };
 
   if (!state) {
     return null;
@@ -60,7 +58,7 @@ const CheckoutPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-dark-300 py-16 text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.08),transparent_28%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.24),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.08),transparent_28%)]" />
       <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary/10 to-transparent" />
       <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
         <button
@@ -75,14 +73,14 @@ const CheckoutPage: React.FC = () => {
           <section className="rounded-3xl border border-white/10 bg-dark-100/80 p-6 shadow-2xl shadow-black/40 backdrop-blur md:p-10">
             <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
               <Sparkles className="h-4 w-4" />
-              Secure Kristal Streams checkout
+              Kristal Streams secure checkout
             </div>
 
             <h1 className="mb-4 text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
-              Finalizing your streaming access
+              Review your order
             </h1>
             <p className="mb-8 max-w-2xl text-base leading-relaxed text-gray-300 sm:text-lg">
-              We are preparing your secure Stripe payment page. Your selected plan is ready, and you will be redirected to complete payment safely.
+              Confirm your plan below, then continue to Stripe’s secure payment page to complete your purchase.
             </p>
 
             <div className="grid gap-4 sm:grid-cols-3">
@@ -104,28 +102,24 @@ const CheckoutPage: React.FC = () => {
             </div>
 
             <div className="mt-10 rounded-2xl border border-primary/20 bg-primary/10 p-5">
-              {loading ? (
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-primary/20">
-                    <Loader className="h-7 w-7 animate-spin text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold">Preparing secure checkout...</h2>
-                    <p className="mt-1 text-sm text-gray-300">Please wait. You will be redirected automatically.</p>
-                  </div>
-                </div>
-              ) : error ? (
-                <div className="space-y-4">
-                  <h2 className="text-xl font-semibold">Checkout needs attention</h2>
-                  <p className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</p>
-                  <button
-                    onClick={() => navigate('/pricing')}
-                    className="rounded-lg bg-primary px-6 py-3 font-medium text-white transition hover:bg-red-700"
-                  >
-                    Back to Plans
-                  </button>
+              {error ? (
+                <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+                  {error}
                 </div>
               ) : null}
+
+              <button
+                onClick={handleSecurePayment}
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-6 py-4 text-base font-semibold text-white shadow-xl shadow-primary/20 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70 sm:text-lg"
+              >
+                {loading ? <Loader className="h-5 w-5 animate-spin" /> : <Lock className="h-5 w-5" />}
+                {loading ? 'Opening secure payment...' : 'Continue to Secure Payment'}
+              </button>
+
+              <p className="mt-4 text-center text-sm text-gray-300">
+                You will review and enter payment details on Stripe’s secure hosted checkout page.
+              </p>
             </div>
           </section>
 
