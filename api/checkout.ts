@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
 
 const allowedPrices = new Set([
   20, 35, 50, 65, 80,
@@ -27,12 +28,29 @@ const normalizePlanName = (plan: string) => {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 };
 
+const getBearerToken = (req: any) => {
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  if (!authHeader || typeof authHeader !== 'string') return null;
+  const [scheme, token] = authHeader.split(' ');
+  return scheme?.toLowerCase() === 'bearer' && token ? token : null;
+};
+
+const getPlanDurationDays = (plan: string, interval: string) => {
+  const source = `${plan} ${interval}`.toLowerCase();
+  if (source.includes('platinum') || source.includes('ultimate') || source.includes('12')) return 365;
+  if (source.includes('gold') || source.includes('premium') || source.includes('6')) return 180;
+  if (source.includes('silver') || source.includes('standard') || source.includes('3')) return 90;
+  return 30;
+};
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!secretKey) {
     return res.status(500).json({
@@ -40,9 +58,16 @@ export default async function handler(req: any, res: any) {
     });
   }
 
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return res.status(500).json({
+      error: 'Supabase is not configured on the server. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel.',
+    });
+  }
+
   try {
-    const { plan, price, interval } = req.body || {};
+    const { plan, price, interval, connections } = req.body || {};
     const numericPrice = Number(price);
+    const numericConnections = Math.max(1, Math.min(5, Number(connections || 1)));
 
     if (!plan || !interval || !Number.isFinite(numericPrice)) {
       return res.status(400).json({ error: 'Missing checkout details.' });
@@ -52,33 +77,51 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Invalid plan price.' });
     }
 
+    const accessToken = getBearerToken(req);
+    if (!accessToken) {
+      return res.status(401).json({ error: 'Please log in before checkout so the purchase can be connected to your dashboard.' });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
+
+    if (userError || !user) {
+      return res.status(401).json({ error: 'Your login session expired. Please log in again before checkout.' });
+    }
+
     const stripe = new Stripe(secretKey);
     const origin = getOrigin(req);
     const planName = normalizePlanName(plan);
     const intervalLabel = normalizePlanName(interval);
+    const durationDays = getPlanDurationDays(String(plan), String(interval));
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
+      customer_email: user.email || undefined,
       line_items: [
         {
           price_data: {
             currency: 'usd',
             product_data: {
               name: `Kristal Streams ${planName} Plan`,
-              description: `${intervalLabel} streaming access`,
+              description: `${intervalLabel} streaming access • ${numericConnections} connection${numericConnections > 1 ? 's' : ''}`,
             },
             unit_amount: Math.round(numericPrice * 100),
           },
           quantity: 1,
         },
       ],
-      success_url: `${origin}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/pricing?payment=cancelled`,
       metadata: {
+        user_id: user.id,
+        customer_email: user.email || '',
         plan: String(plan),
         interval: String(interval),
         price: String(numericPrice),
+        connections: String(numericConnections),
+        duration_days: String(durationDays),
       },
     });
 
