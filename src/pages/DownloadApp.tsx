@@ -7,7 +7,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const androidApk = {
-  name: 'Kristal Stream Android APK',
+  name: 'Kristal Stream APK',
   downloadUrl: '/downloads/KristalStream.apk',
   fileName: 'KristalStream.apk',
   version: '1.0.0',
@@ -21,7 +21,7 @@ const supportedDevices = [
   'Amazon Fire TV / Firestick',
   'NVIDIA Shield',
   'Chromecast with Google TV',
-  'Web browser / PWA install',
+  'Web browser option',
 ];
 
 const DownloadApp: React.FC = () => {
@@ -74,10 +74,10 @@ const DownloadApp: React.FC = () => {
           <div className="mb-12 text-center">
             <div className="mb-6 flex items-center justify-center">
               <Download className="mr-4 h-12 w-12 text-primary" />
-              <h1 className="text-4xl font-bold text-white md:text-5xl">Get the Kristal Streams App</h1>
+              <h1 className="text-4xl font-bold text-white md:text-5xl">Download Kristal Stream APK</h1>
             </div>
             <p className="mx-auto max-w-3xl text-xl text-gray-400">
-              Download the Android APK for phones, tablets, Android TV boxes, and Firestick devices. You can also install the web app from your browser.
+              Download the Kristal Stream APK for Android phones, tablets, Android TV boxes, and Firestick devices.
             </p>
           </div>
 
@@ -88,13 +88,13 @@ const DownloadApp: React.FC = () => {
                   <Smartphone className="h-8 w-8 text-green-500" />
                 </div>
                 <div>
-                  <p className="mb-2 text-sm font-semibold uppercase tracking-[0.22em] text-green-300">Official Android Download</p>
+                  <p className="mb-2 text-sm font-semibold uppercase tracking-[0.22em] text-green-300">Android APK Download</p>
                   <h2 className="text-2xl font-bold text-white">{androidApk.name}</h2>
                   <p className="mt-2 text-gray-400">
-                    Version {androidApk.version} · {androidApk.size} · {androidApk.requirements}
+                    File: {androidApk.fileName} · Version {androidApk.version} · {androidApk.size} · {androidApk.requirements}
                   </p>
                   <p className="mt-3 text-sm text-gray-500">
-                    File path: <span className="font-mono text-gray-300">{androidApk.downloadUrl}</span>
+                    Download path: <span className="font-mono text-gray-300">{androidApk.downloadUrl}</span>
                   </p>
                 </div>
               </div>
@@ -105,7 +105,7 @@ const DownloadApp: React.FC = () => {
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-8 py-4 font-semibold text-white transition-colors hover:bg-green-600"
               >
                 <Download className="h-5 w-5" />
-                Download APK
+                Download Kristal Stream APK
               </a>
             </div>
           </div>
@@ -116,7 +116,7 @@ const DownloadApp: React.FC = () => {
               <div>
                 <h3 className="font-semibold text-white">Android / Firestick install note</h3>
                 <p className="mt-1 text-sm text-yellow-100/80">
-                  Android and Firestick may ask you to allow installs from your browser or Downloader app. After downloading, open the APK file and approve the install prompt.
+                  Android and Firestick may ask you to allow installs from your browser or Downloader app. After downloading, open {androidApk.fileName} and approve the install prompt.
                 </p>
               </div>
             </div>
@@ -128,8 +128,8 @@ const DownloadApp: React.FC = () => {
               <h3 className="text-xl font-semibold text-white">TV Boxes & Firestick</h3>
               <ol className="mt-4 space-y-3 text-sm text-gray-300">
                 <li>1. Open Downloader or your device browser.</li>
-                <li>2. Go to the Kristal Streams download page.</li>
-                <li>3. Download and open the APK file.</li>
+                <li>2. Go to the Kristal Stream APK download page.</li>
+                <li>3. Download and open {androidApk.fileName}.</li>
                 <li>4. Allow install from unknown apps when prompted.</li>
               </ol>
             </div>
@@ -138,18 +138,18 @@ const DownloadApp: React.FC = () => {
               <Smartphone className="mb-4 h-8 w-8 text-primary" />
               <h3 className="text-xl font-semibold text-white">Android Phones</h3>
               <ol className="mt-4 space-y-3 text-sm text-gray-300">
-                <li>1. Tap Download APK.</li>
-                <li>2. Open the downloaded file.</li>
+                <li>1. Tap Download Kristal Stream APK.</li>
+                <li>2. Open {androidApk.fileName}.</li>
                 <li>3. Approve the install permission.</li>
-                <li>4. Open Kristal Stream from your apps.</li>
+                <li>4. Open the installed app from your app list.</li>
               </ol>
             </div>
 
             <div className="rounded-xl border border-gray-800 bg-dark-100 p-6">
               <Monitor className="mb-4 h-8 w-8 text-primary" />
-              <h3 className="text-xl font-semibold text-white">Web App Option</h3>
+              <h3 className="text-xl font-semibold text-white">Browser Option</h3>
               <p className="mt-4 text-sm text-gray-300">
-                The browser version still works without installing the APK. On supported browsers, you can install Kristal Streams as a web app.
+                The browser version still works without installing the APK. Customers can sign in from the website when they do not want to install the Android file.
               </p>
               {isInstalled ? (
                 <div className="mt-4 flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-green-300">
@@ -193,8 +193,8 @@ const DownloadApp: React.FC = () => {
               <div className="space-y-3 text-gray-300">
                 <p><strong>Internet:</strong> 5 Mbps for HD, 25 Mbps for 4K.</p>
                 <p><strong>Android:</strong> Android 7.0 or newer.</p>
-                <p><strong>Account:</strong> Active Kristal Streams subscription or demo access.</p>
-                <p><strong>Storage:</strong> Enough free space to install the APK.</p>
+                <p><strong>Account:</strong> Active subscription, IPTV account, or demo access.</p>
+                <p><strong>Storage:</strong> Enough free space to install {androidApk.fileName}.</p>
               </div>
             </div>
 
@@ -218,9 +218,9 @@ const DownloadApp: React.FC = () => {
 
           <div className="mt-12 rounded-xl border border-gray-800 bg-dark-100 p-8 text-center">
             <Monitor className="mx-auto mb-4 h-12 w-12 text-primary" />
-            <h3 className="mb-4 text-2xl font-semibold text-white">No download required?</h3>
+            <h3 className="mb-4 text-2xl font-semibold text-white">No APK download required?</h3>
             <p className="mx-auto mb-6 max-w-2xl text-gray-300">
-              You can also stream directly in your web browser. Sign in and start watching without installing the APK.
+              Customers can also stream directly in the browser by signing in on the Kristal Streams website.
             </p>
             <button
               type="button"
