@@ -1,451 +1,56 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, CheckCircle2, CreditCard, Edit3, ExternalLink, Eye, EyeOff, Monitor, Plus, RefreshCw, Search, Trash2, Users, Wifi, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  KeyRound,
-  Mail,
-  Monitor,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  Signal,
-  TimerReset,
-  Users,
-  Wifi,
-  WifiOff,
-} from 'lucide-react';
 
 type IptvCustomer = {
-  id: string;
-  external_id: number;
-  username: string;
-  iptv_password: string | null;
-  owner: string | null;
-  account_status: string;
-  online: boolean;
-  trial: boolean;
-  active_connections: number;
-  connections_allowed: number;
-  expiration_at: string | null;
-  last_connection_at: string | null;
-  last_connection_label: string | null;
-  last_channel: string | null;
-  updated_at: string | null;
+  id: string; external_id: number; customer_name: string | null; username: string; iptv_password: string | null;
+  owner: string | null; email: string | null; phone: string | null; package_name: string | null; monthly_price: number | null;
+  payment_status: string | null; last_payment_at: string | null; renewal_at: string | null; expiration_at: string | null;
+  account_status: string; online: boolean; trial: boolean; active_connections: number; connections_allowed: number;
+  device_name: string | null; device_type: string | null; device_notes: string | null; notes: string | null; xui_line_url: string | null;
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return 'Not set';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString([], {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+type CustomerForm = {
+  external_id: string; customer_name: string; username: string; iptv_password: string; owner: string; email: string; phone: string;
+  package_name: string; monthly_price: string; payment_status: string; last_payment_at: string; renewal_at: string; expiration_at: string;
+  account_status: string; online: boolean; trial: boolean; active_connections: string; connections_allowed: string; device_name: string;
+  device_type: string; device_notes: string; notes: string; xui_line_url: string;
 };
 
-const getTimeRemaining = (value?: string | null) => {
-  if (!value) return 'No expiration';
-  const expires = new Date(value).getTime();
-  if (Number.isNaN(expires)) return 'No expiration';
-
-  const diff = expires - Date.now();
-  if (diff <= 0) return 'Expired';
-
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const days = Math.floor(hours / 24);
-  if (days >= 1) return `${days}d ${hours % 24}h left`;
-  return `${hours}h left`;
-};
-
-const getHealth = (customer: IptvCustomer) => {
-  const expires = customer.expiration_at ? new Date(customer.expiration_at).getTime() : null;
-  const expired = Boolean(expires && expires < Date.now());
-  const expiringSoon = Boolean(expires && expires > Date.now() && expires - Date.now() <= 72 * 60 * 60 * 1000);
-  const overLimit = customer.active_connections > customer.connections_allowed;
-
-  if (expired || customer.account_status === 'expired') return { label: 'Expired', className: 'bg-red-500/10 text-red-300 border-red-500/30' };
-  if (overLimit) return { label: 'Over Limit', className: 'bg-orange-500/10 text-orange-300 border-orange-500/30' };
-  if (expiringSoon) return { label: 'Renewal Due', className: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30' };
-  if (customer.online) return { label: 'Online', className: 'bg-green-500/10 text-green-300 border-green-500/30' };
-  if (customer.account_status === 'active') return { label: 'Active', className: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' };
-  return { label: 'Inactive', className: 'bg-gray-500/10 text-gray-300 border-gray-500/30' };
-};
-
-const getAction = (customer: IptvCustomer) => {
-  const expires = customer.expiration_at ? new Date(customer.expiration_at).getTime() : null;
-  const expired = Boolean(expires && expires < Date.now());
-  const expiringSoon = Boolean(expires && expires > Date.now() && expires - Date.now() <= 72 * 60 * 60 * 1000);
-
-  if (expired || customer.account_status === 'expired') return 'Reactivate or remove access';
-  if (customer.trial) return 'Convert trial to paid';
-  if (customer.active_connections > customer.connections_allowed) return 'Review device limit';
-  if (expiringSoon) return 'Send renewal reminder';
-  if (customer.online) return 'Monitor live session';
-  return 'Maintain account';
-};
+const emptyForm: CustomerForm = { external_id:'', customer_name:'', username:'', iptv_password:'', owner:'', email:'', phone:'', package_name:'', monthly_price:'', payment_status:'unpaid', last_payment_at:'', renewal_at:'', expiration_at:'', account_status:'active', online:false, trial:false, active_connections:'0', connections_allowed:'1', device_name:'', device_type:'', device_notes:'', notes:'', xui_line_url:'' };
+const toInputDate = (value?: string | null) => { if (!value) return ''; const d = new Date(value); if (Number.isNaN(d.getTime())) return ''; return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); };
+const formatDate = (value?: string | null) => value ? new Date(value).toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' }) : 'Not set';
+const money = (value?: number | null) => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(value||0));
 
 const CRMDashboard: React.FC = () => {
-  const [customers, setCustomers] = useState<IptvCustomer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'online' | 'active' | 'expired' | 'expiring' | 'over-limit'>('all');
-  const [error, setError] = useState<string | null>(null);
+  const [customers,setCustomers] = useState<IptvCustomer[]>([]); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false);
+  const [search,setSearch]=useState(''); const [filter,setFilter]=useState<'all'|'active'|'renewal'|'unpaid'|'expired'>('all');
+  const [editing,setEditing]=useState<IptvCustomer|null>(null); const [form,setForm]=useState<CustomerForm>(emptyForm); const [showForm,setShowForm]=useState(false);
+  const [visiblePasswords,setVisiblePasswords]=useState<Record<string,boolean>>({}); const [message,setMessage]=useState<string|null>(null); const [error,setError]=useState<string|null>(null);
 
-  const fetchCustomers = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: queryError } = await supabase
-        .from('iptv_customers')
-        .select('*')
-        .order('expiration_at', { ascending: true });
+  const fetchCustomers = async () => { setLoading(true); setError(null); const {data,error:e}=await supabase.from('iptv_customers').select('*').order('renewal_at',{ascending:true,nullsFirst:false}); if(e){setError(e.message);setCustomers([]);}else setCustomers((data||[]) as IptvCustomer[]); setLoading(false); };
+  useEffect(()=>{fetchCustomers();},[]);
 
-      if (queryError) throw queryError;
-      setCustomers(data || []);
-    } catch (err) {
-      console.error('IPTV CRM load error:', err);
-      setError(err instanceof Error ? err.message : 'Unable to load IPTV customers.');
-      setCustomers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const stats=useMemo(()=>{const now=Date.now(), week=now+7*86400000; return { total:customers.length, active:customers.filter(c=>c.account_status==='active').length, online:customers.filter(c=>c.online).length, renewals:customers.filter(c=>{const d=c.renewal_at?new Date(c.renewal_at).getTime():0;return d>now&&d<=week;}).length, unpaid:customers.filter(c=>c.payment_status!=='paid').length, revenue:customers.filter(c=>c.payment_status==='paid').reduce((s,c)=>s+Number(c.monthly_price||0),0)};},[customers]);
+  const filtered=useMemo(()=>{const now=Date.now(), week=now+7*86400000, needle=search.trim().toLowerCase(); return customers.filter(c=>{const h=[c.customer_name,c.username,c.external_id,c.email,c.phone,c.package_name,c.device_name].join(' ').toLowerCase(); if(needle&&!h.includes(needle))return false; if(filter==='active')return c.account_status==='active'; if(filter==='unpaid')return c.payment_status!=='paid'; if(filter==='expired'){const d=c.expiration_at?new Date(c.expiration_at).getTime():0;return c.account_status==='expired'||(d>0&&d<now);} if(filter==='renewal'){const d=c.renewal_at?new Date(c.renewal_at).getTime():0;return d>now&&d<=week;} return true;});},[customers,filter,search]);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
+  const openCreate=()=>{setEditing(null);setForm(emptyForm);setShowForm(true);setError(null);setMessage(null);};
+  const openEdit=(c:IptvCustomer)=>{setEditing(c);setForm({external_id:String(c.external_id||''),customer_name:c.customer_name||'',username:c.username||'',iptv_password:c.iptv_password||'',owner:c.owner||'',email:c.email||'',phone:c.phone||'',package_name:c.package_name||'',monthly_price:String(c.monthly_price||''),payment_status:c.payment_status||'unpaid',last_payment_at:toInputDate(c.last_payment_at),renewal_at:toInputDate(c.renewal_at),expiration_at:toInputDate(c.expiration_at),account_status:c.account_status||'active',online:Boolean(c.online),trial:Boolean(c.trial),active_connections:String(c.active_connections||0),connections_allowed:String(c.connections_allowed||1),device_name:c.device_name||'',device_type:c.device_type||'',device_notes:c.device_notes||'',notes:c.notes||'',xui_line_url:c.xui_line_url||''});setShowForm(true);setError(null);setMessage(null);};
+  const closeForm=()=>{setShowForm(false);setEditing(null);setForm(emptyForm);};
 
-  const now = Date.now();
+  const saveCustomer=async(e:React.FormEvent)=>{e.preventDefault();setError(null);if(!form.external_id.trim()||!form.username.trim()){setError('Panel ID and IPTV username are required.');return;}setSaving(true);const payload={external_id:Number(form.external_id),customer_name:form.customer_name.trim()||null,username:form.username.trim(),iptv_password:form.iptv_password.trim()||null,owner:form.owner.trim()||null,email:form.email.trim()||null,phone:form.phone.trim()||null,package_name:form.package_name.trim()||null,monthly_price:Number(form.monthly_price||0),payment_status:form.payment_status,last_payment_at:form.last_payment_at?new Date(form.last_payment_at).toISOString():null,renewal_at:form.renewal_at?new Date(form.renewal_at).toISOString():null,expiration_at:form.expiration_at?new Date(form.expiration_at).toISOString():null,account_status:form.account_status,online:form.online,trial:form.trial,active_connections:Number(form.active_connections||0),connections_allowed:Number(form.connections_allowed||1),device_name:form.device_name.trim()||null,device_type:form.device_type.trim()||null,device_notes:form.device_notes.trim()||null,notes:form.notes.trim()||null,xui_line_url:form.xui_line_url.trim()||null,updated_at:new Date().toISOString()};const result=editing?await supabase.from('iptv_customers').update(payload).eq('id',editing.id):await supabase.from('iptv_customers').insert(payload);if(result.error)setError(result.error.message);else{setMessage(editing?'Customer account updated.':'Customer account added.');closeForm();await fetchCustomers();}setSaving(false);};
+  const remove=async(c:IptvCustomer)=>{if(!window.confirm(`Delete ${c.customer_name||c.username}? This cannot be undone.`))return;const {error:e}=await supabase.from('iptv_customers').delete().eq('id',c.id);if(e)setError(e.message);else{setMessage('Customer removed.');await fetchCustomers();}};
+  const markPaid=async(c:IptvCustomer)=>{const renewal=new Date();renewal.setMonth(renewal.getMonth()+1);const {error:e}=await supabase.from('iptv_customers').update({payment_status:'paid',last_payment_at:new Date().toISOString(),renewal_at:renewal.toISOString(),account_status:'active',updated_at:new Date().toISOString()}).eq('id',c.id);if(e)setError(e.message);else{setMessage(`${c.customer_name||c.username} marked paid and renewed for one month.`);await fetchCustomers();}};
+  const field=(key:keyof CustomerForm,label:string,type='text',required=false)=><label className="block"><span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</span><input type={type} required={required} value={String(form[key])} onChange={e=>setForm(c=>({...c,[key]:e.target.value}))} className="w-full rounded-xl border border-gray-700 bg-gray-950 px-3 py-2.5 text-sm text-white outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15"/></label>;
 
-  const stats = useMemo(() => {
-    const online = customers.filter((customer) => customer.online);
-    const active = customers.filter((customer) => customer.account_status === 'active');
-    const expired = customers.filter((customer) => {
-      const expires = customer.expiration_at ? new Date(customer.expiration_at).getTime() : null;
-      return customer.account_status === 'expired' || Boolean(expires && expires < now);
-    });
-    const expiring = customers.filter((customer) => {
-      const expires = customer.expiration_at ? new Date(customer.expiration_at).getTime() : null;
-      return Boolean(expires && expires > now && expires - now <= 72 * 60 * 60 * 1000);
-    });
-    const overLimit = customers.filter((customer) => customer.active_connections > customer.connections_allowed);
-
-    return {
-      total: customers.length,
-      online: online.length,
-      active: active.length,
-      expired: expired.length,
-      expiring: expiring.length,
-      overLimit: overLimit.length,
-      liveConnections: customers.reduce((sum, customer) => sum + Number(customer.active_connections || 0), 0),
-      allowedConnections: customers.reduce((sum, customer) => sum + Number(customer.connections_allowed || 0), 0),
-    };
-  }, [customers, now]);
-
-  const filteredCustomers = useMemo(() => {
-    return customers.filter((customer) => {
-      const expires = customer.expiration_at ? new Date(customer.expiration_at).getTime() : null;
-      const expired = customer.account_status === 'expired' || Boolean(expires && expires < now);
-      const expiring = Boolean(expires && expires > now && expires - now <= 72 * 60 * 60 * 1000);
-      const overLimit = customer.active_connections > customer.connections_allowed;
-      const haystack = `${customer.external_id} ${customer.username} ${customer.iptv_password || ''} ${customer.owner || ''} ${customer.account_status} ${customer.last_channel || ''}`.toLowerCase();
-
-      if (!haystack.includes(search.toLowerCase())) return false;
-      if (filter === 'online') return customer.online;
-      if (filter === 'active') return customer.account_status === 'active' && !expired;
-      if (filter === 'expired') return expired;
-      if (filter === 'expiring') return expiring;
-      if (filter === 'over-limit') return overLimit;
-      return true;
-    });
-  }, [customers, filter, now, search]);
-
-  const statCards = [
-    { label: 'Total IPTV Accounts', value: stats.total, icon: Users, tone: 'text-blue-300', filter: 'all' as const },
-    { label: 'Online Now', value: stats.online, icon: Wifi, tone: 'text-green-300', filter: 'online' as const },
-    { label: 'Active Accounts', value: stats.active, icon: CheckCircle, tone: 'text-cyan-300', filter: 'active' as const },
-    { label: 'Expired Accounts', value: stats.expired, icon: AlertTriangle, tone: 'text-red-300', filter: 'expired' as const },
-    { label: 'Expiring 72h', value: stats.expiring, icon: TimerReset, tone: 'text-yellow-300', filter: 'expiring' as const },
-    { label: 'Live / Allowed Connections', value: `${stats.liveConnections}/${stats.allowedConnections}`, icon: Monitor, tone: 'text-purple-300', filter: 'all' as const },
-  ];
-
-  return (
-    <div className="min-w-0 space-y-5 sm:space-y-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary sm:text-sm sm:tracking-[0.24em]">Kristal Streams IPTV CRM</p>
-          <h1 className="mt-2 text-2xl font-bold leading-tight text-white sm:text-3xl">IPTV Subscriber Operations Center</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-400 sm:text-base">
-            Track panel customers, usernames, connection limits, online sessions, expirations, account health, and renewal follow-ups.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={fetchCustomers}
-          className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-950/20 transition hover:bg-red-700 sm:w-auto"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh Data
-        </button>
-      </div>
-
-      <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-blue-500/5 p-4 shadow-lg shadow-black/10 sm:p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 ring-1 ring-cyan-400/20">
-            <ShieldCheck className="h-5 w-5 text-cyan-300" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-white">IPTV Standards View</h2>
-            <p className="mt-1 text-sm text-cyan-100/80">
-              This CRM is focused on IPTV service operations: account status, online state, active connections, allowed connections, expiration, and last watched channel/session.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
-        {statCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <button key={card.label} type="button" onClick={() => setFilter(card.filter)} className="h-full text-left">
-              <div className="h-full rounded-2xl border border-gray-700/90 bg-gradient-to-br from-gray-800 to-gray-800/70 p-4 shadow-lg shadow-black/10 transition hover:border-gray-600 sm:p-5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-900/80 ring-1 ring-white/5 sm:h-10 sm:w-10">
-                  <Icon className={`h-5 w-5 ${card.tone} sm:h-6 sm:w-6`} />
-                </div>
-                <p className="mt-3 text-2xl font-bold tracking-tight text-white sm:mt-4 sm:text-3xl">{card.value}</p>
-                <p className="mt-1 text-[11px] font-medium leading-4 text-gray-400 sm:text-sm">{card.label}</p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="min-w-0 rounded-2xl border border-gray-700 bg-gray-800/90 p-3 shadow-xl shadow-black/10 sm:p-6">
-        <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-white">Subscriber Management</h2>
-            <p className="mt-1 text-sm text-gray-400">Imported IPTV panel accounts from your customer list.</p>
-          </div>
-          <div className="flex max-w-full gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
-            {(['all', 'online', 'active', 'expired', 'expiring', 'over-limit'] as const).map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setFilter(item)}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition ${filter === item ? 'bg-primary text-white shadow-md shadow-red-950/20' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-              >
-                {item.replace('-', ' ')}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative mb-5">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search accounts, IDs, owners or channels..."
-            className="w-full rounded-xl border border-gray-700 bg-gray-900 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary/30"
-          />
-        </div>
-
-        {error && (
-          <div className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="py-12 text-center text-gray-400">Loading IPTV customers...</div>
-        ) : filteredCustomers.length === 0 ? (
-          <div className="rounded-lg border border-gray-700 bg-gray-900 p-8 text-center text-gray-400">No matching IPTV customers found.</div>
-        ) : (
-          <>
-            <div className="space-y-3 lg:hidden">
-              {filteredCustomers.map((customer) => {
-                const health = getHealth(customer);
-                return (
-                  <article key={`mobile-${customer.id}`} className="overflow-hidden rounded-2xl border border-gray-700/90 bg-gray-900/80 shadow-lg shadow-black/15">
-                    <div className="flex items-start justify-between gap-3 border-b border-gray-800 bg-gradient-to-r from-gray-800/90 to-gray-900/70 p-4">
-                      <div className="min-w-0">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <h3 className="truncate text-base font-semibold text-white">{customer.username}</h3>
-                          {customer.trial && (
-                            <span className="shrink-0 rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-300 ring-1 ring-purple-500/20">Trial</span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">Customer ID {customer.external_id}</p>
-                      </div>
-                      <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${health.className}`}>
-                        {health.label}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 p-4">
-                      <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Status</p>
-                        <div className="mt-1.5">
-                          {customer.online ? (
-                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-300"><Wifi className="h-4 w-4" /> Online</span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-400"><WifiOff className="h-4 w-4" /> Offline</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Connections</p>
-                        <p className="mt-1 text-lg font-bold text-white">
-                          {customer.active_connections}<span className="mx-1 text-sm font-normal text-gray-600">/</span>{customer.connections_allowed}
-                        </p>
-                      </div>
-
-                      <div className="col-span-2 rounded-xl border border-gray-800 bg-gray-950/60 p-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Expiration</p>
-                            <p className="mt-1 text-sm font-medium text-gray-200">{formatDateTime(customer.expiration_at)}</p>
-                          </div>
-                          <span className="shrink-0 rounded-lg bg-gray-800 px-2 py-1 text-xs font-semibold text-gray-300">{getTimeRemaining(customer.expiration_at)}</span>
-                        </div>
-                      </div>
-
-                      <div className="col-span-2 rounded-xl border border-gray-800 bg-gray-950/60 p-3">
-                        <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2">
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Password</p>
-                            <span className="mt-1 inline-flex max-w-full items-center gap-1.5 font-mono text-xs text-gray-300">
-                              <KeyRound className="h-3.5 w-3.5 shrink-0 text-gray-500" />
-                              <span className="break-all">{customer.iptv_password || '—'}</span>
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Owner</p>
-                            <p className="mt-1 break-words text-xs text-gray-300">{customer.owner || '—'}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="col-span-2 rounded-xl border border-gray-800 bg-gray-950/60 p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Last Activity</p>
-                        <div className="mt-1.5 flex min-w-0 items-start gap-1.5 text-sm text-gray-300">
-                          <Signal className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-400" />
-                          <span className="min-w-0 break-words">{customer.last_channel || customer.last_connection_label || 'Never connected'}</span>
-                        </div>
-                        {customer.last_channel && customer.last_connection_label && (
-                          <p className="mt-1 pl-5 text-xs text-gray-500">{customer.last_connection_label}</p>
-                        )}
-                        {!customer.last_channel && customer.last_connection_at && (
-                          <p className="mt-1 pl-5 text-xs text-gray-500">{formatDateTime(customer.last_connection_at)}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-2 border-t border-gray-800 bg-gray-950/40 px-4 py-3">
-                      <Activity className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Recommended Action</p>
-                        <p className="mt-0.5 text-sm font-medium text-gray-200">{getAction(customer)}</p>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-
-            <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full min-w-[1080px] text-sm">
-              <thead>
-                <tr className="border-b border-gray-700 text-gray-400">
-                  <th className="px-4 py-3 text-left">ID</th>
-                  <th className="px-4 py-3 text-left">Username</th>
-                  <th className="px-4 py-3 text-left">Password</th>
-                  <th className="px-4 py-3 text-left">Owner</th>
-                  <th className="px-4 py-3 text-left">Health</th>
-                  <th className="px-4 py-3 text-left">Online</th>
-                  <th className="px-4 py-3 text-left">Connections</th>
-                  <th className="px-4 py-3 text-left">Expiration</th>
-                  <th className="px-4 py-3 text-left">Last Connection</th>
-                  <th className="px-4 py-3 text-left">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCustomers.map((customer) => {
-                  const health = getHealth(customer);
-                  return (
-                    <tr key={customer.id} className="border-b border-gray-700/60 hover:bg-gray-700/25">
-                      <td className="px-4 py-3 text-gray-300">{customer.external_id}</td>
-                      <td className="px-4 py-3 text-white">{customer.username}</td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 rounded bg-gray-900 px-2 py-1 font-mono text-xs text-gray-300">
-                          <KeyRound className="h-3 w-3" />
-                          {customer.iptv_password || '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-300">{customer.owner || '—'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${health.className}`}>
-                          {health.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {customer.online ? (
-                          <span className="inline-flex items-center gap-1 text-green-300"><Wifi className="h-4 w-4" /> Online</span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-gray-400"><WifiOff className="h-4 w-4" /> Offline</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-300">
-                        <span className="rounded bg-gray-700 px-2 py-1 text-white">{customer.active_connections}</span>
-                        <span className="mx-1 text-gray-500">/</span>
-                        <span className="rounded bg-gray-700 px-2 py-1 text-white">{customer.connections_allowed}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-gray-300">{formatDateTime(customer.expiration_at)}</div>
-                        <div className="text-xs text-gray-500">{getTimeRemaining(customer.expiration_at)}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 text-gray-300"><Signal className="h-3 w-3" />{customer.last_channel || customer.last_connection_label || 'Never'}</div>
-                        {customer.last_channel && <div className="mt-1 text-xs text-gray-500">{customer.last_connection_label}</div>}
-                        {!customer.last_channel && customer.last_connection_at && <div className="mt-1 text-xs text-gray-500">{formatDateTime(customer.last_connection_at)}</div>}
-                      </td>
-                      <td className="px-4 py-3 text-gray-300">{getAction(customer)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="rounded-xl border border-gray-700 bg-gray-800 p-5">
-          <Clock className="mb-3 h-6 w-6 text-yellow-300" />
-          <h3 className="font-semibold text-white">Renewal Workflow</h3>
-          <p className="mt-2 text-sm text-gray-400">Use the expiring and expired filters to contact customers before access ends.</p>
-        </div>
-        <div className="rounded-xl border border-gray-700 bg-gray-800 p-5">
-          <Monitor className="mb-3 h-6 w-6 text-cyan-300" />
-          <h3 className="font-semibold text-white">Connection Management</h3>
-          <p className="mt-2 text-sm text-gray-400">Review accounts using multiple connections and upsell additional device slots when needed.</p>
-        </div>
-        <div className="rounded-xl border border-gray-700 bg-gray-800 p-5">
-          <Mail className="mb-3 h-6 w-6 text-green-300" />
-          <h3 className="font-semibold text-white">Customer Follow-Up</h3>
-          <p className="mt-2 text-sm text-gray-400">Use the action column to prioritize renewal, reactivation, and device-limit support.</p>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="min-w-0 space-y-6">
+    <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.24em] text-red-400">Kristal Streams CRM</p><h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">IPTV Customer Management</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-gray-400">Manage customer accounts, panel credentials, packages, payments, renewals, devices and internal notes from one secure workspace.</p></div><div className="flex gap-2"><button onClick={fetchCustomers} className="inline-flex flex-1 items-center justify-center rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm font-semibold text-gray-200 sm:flex-none"><RefreshCw className="mr-2 h-4 w-4"/>Refresh</button><button onClick={openCreate} className="inline-flex flex-1 items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white sm:flex-none"><Plus className="mr-2 h-4 w-4"/>Add Customer</button></div></header>
+    {message&&<div className="rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300">{message}</div>}{error&&<div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
+    <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">{[['Customers',stats.total,Users],['Active',stats.active,CheckCircle2],['Online',stats.online,Wifi],['Due in 7 Days',stats.renewals,AlertTriangle],['Unpaid',stats.unpaid,CreditCard],['Paid Revenue',money(stats.revenue),CreditCard]].map(([label,value,Icon])=>{const I=Icon as React.ElementType;return <div key={String(label)} className="rounded-2xl border border-gray-700 bg-gray-800/90 p-4"><I className="h-5 w-5 text-red-400"/><p className="mt-3 text-xl font-bold text-white sm:text-2xl">{value}</p><p className="mt-1 text-xs text-gray-400">{label}</p></div>;})}</section>
+    <section className="rounded-2xl border border-gray-700 bg-gray-800/90 p-3 sm:p-5"><div className="flex flex-col gap-3 lg:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search customer, username, phone, package or device..." className="w-full rounded-xl border border-gray-700 bg-gray-950 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-red-500"/></div><div className="flex gap-2 overflow-x-auto">{(['all','active','renewal','unpaid','expired'] as const).map(i=><button key={i} onClick={()=>setFilter(i)} className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize ${filter===i?'bg-red-600 text-white':'bg-gray-700 text-gray-300'}`}>{i}</button>)}</div></div>
+      {loading?<div className="py-14 text-center text-gray-400">Loading customer accounts...</div>:filtered.length===0?<div className="mt-5 py-14 text-center text-gray-400">No customers match this view.</div>:<div className="mt-5 grid gap-4 xl:grid-cols-2">{filtered.map(c=><article key={c.id} className="overflow-hidden rounded-2xl border border-gray-700 bg-gray-900/80"><div className="flex items-start justify-between gap-3 border-b border-gray-800 bg-gray-800/70 p-4"><div className="min-w-0"><h2 className="truncate font-semibold text-white">{c.customer_name||c.username}</h2><p className="mt-1 text-xs text-gray-500">Panel ID {c.external_id} · {c.username}</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${c.account_status==='active'?'bg-green-500/10 text-green-300':'bg-red-500/10 text-red-300'}`}>{c.account_status}</span></div><div className="grid grid-cols-2 gap-3 p-4 text-sm"><div><p className="text-xs text-gray-500">Package</p><p className="mt-1 text-gray-200">{c.package_name||'Not assigned'}</p></div><div><p className="text-xs text-gray-500">Monthly Price</p><p className="mt-1 text-gray-200">{money(c.monthly_price)}</p></div><div><p className="text-xs text-gray-500">Payment</p><p className={`mt-1 font-semibold ${c.payment_status==='paid'?'text-green-300':'text-yellow-300'}`}>{c.payment_status||'unpaid'}</p></div><div><p className="text-xs text-gray-500">Renewal</p><p className="mt-1 text-gray-200">{formatDate(c.renewal_at)}</p></div><div><p className="text-xs text-gray-500">Connections</p><p className="mt-1 text-gray-200">{c.active_connections}/{c.connections_allowed}</p></div><div><p className="text-xs text-gray-500">Device</p><p className="mt-1 truncate text-gray-200">{c.device_name||c.device_type||'Not recorded'}</p></div></div><div className="border-t border-gray-800 px-4 py-3"><p className="text-xs text-gray-500">IPTV password</p><div className="mt-1 flex items-center gap-2"><code className="min-w-0 flex-1 truncate rounded-lg bg-gray-950 px-2.5 py-1.5 text-xs text-gray-300">{visiblePasswords[c.id]?c.iptv_password||'Not set':'••••••••••'}</code><button onClick={()=>setVisiblePasswords(v=>({...v,[c.id]:!v[c.id]}))} className="rounded-lg p-2 text-gray-400">{visiblePasswords[c.id]?<EyeOff className="h-4 w-4"/>:<Eye className="h-4 w-4"/>}</button></div></div><div className="grid grid-cols-2 gap-2 border-t border-gray-800 p-3 sm:grid-cols-4"><button onClick={()=>openEdit(c)} className="inline-flex items-center justify-center rounded-lg bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-200"><Edit3 className="mr-1.5 h-3.5 w-3.5"/>Edit</button><button onClick={()=>markPaid(c)} className="inline-flex items-center justify-center rounded-lg bg-green-500/10 px-3 py-2 text-xs font-semibold text-green-300"><CreditCard className="mr-1.5 h-3.5 w-3.5"/>Paid</button><button disabled={!c.xui_line_url} onClick={()=>c.xui_line_url&&window.open(c.xui_line_url,'_blank','noopener,noreferrer')} className="inline-flex items-center justify-center rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 disabled:opacity-40"><ExternalLink className="mr-1.5 h-3.5 w-3.5"/>XUI</button><button onClick={()=>remove(c)} className="inline-flex items-center justify-center rounded-lg bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300"><Trash2 className="mr-1.5 h-3.5 w-3.5"/>Delete</button></div></article>)}</div>}
+    </section>
+    {showForm&&<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4"><div className="max-h-[94vh] w-full overflow-y-auto rounded-t-3xl border border-gray-700 bg-gray-900 sm:max-w-4xl sm:rounded-3xl"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-800 bg-gray-900/95 px-4 py-4 sm:px-6"><div><p className="text-xs font-semibold uppercase tracking-widest text-red-400">Customer Record</p><h2 className="mt-1 text-xl font-bold text-white">{editing?'Edit IPTV Customer':'Add IPTV Customer'}</h2></div><button onClick={closeForm} className="rounded-xl bg-gray-800 p-2 text-gray-400"><X className="h-5 w-5"/></button></div><form onSubmit={saveCustomer} className="space-y-6 p-4 sm:p-6"><div><h3 className="mb-3 text-sm font-semibold text-white">Customer and panel account</h3><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{field('external_id','Panel ID','number',true)}{field('customer_name','Customer name')}{field('username','IPTV username','text',true)}{field('iptv_password','IPTV password','password')}{field('owner','Panel owner')}{field('email','Email','email')}{field('phone','Phone','tel')}{field('package_name','Package')}{field('monthly_price','Monthly price','number')}</div></div><div><h3 className="mb-3 text-sm font-semibold text-white">Billing and renewal</h3><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><label><span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">Payment status</span><select value={form.payment_status} onChange={e=>setForm(c=>({...c,payment_status:e.target.value}))} className="w-full rounded-xl border border-gray-700 bg-gray-950 px-3 py-2.5 text-sm text-white"><option value="unpaid">Unpaid</option><option value="paid">Paid</option><option value="past_due">Past due</option><option value="refunded">Refunded</option></select></label>{field('last_payment_at','Last payment','datetime-local')}{field('renewal_at','Renewal date','datetime-local')}{field('expiration_at','Panel expiration','datetime-local')}<label><span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">Account status</span><select value={form.account_status} onChange={e=>setForm(c=>({...c,account_status:e.target.value}))} className="w-full rounded-xl border border-gray-700 bg-gray-950 px-3 py-2.5 text-sm text-white"><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option><option value="suspended">Suspended</option></select></label>{field('xui_line_url','Direct XUI line URL','url')}</div></div><div><h3 className="mb-3 text-sm font-semibold text-white">Connections and device</h3><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{field('active_connections','Active connections','number')}{field('connections_allowed','Connections allowed','number')}{field('device_name','Device name')}{field('device_type','Device type')}<label className="flex items-center gap-3 rounded-xl border border-gray-700 bg-gray-950 px-3 py-3 text-sm text-gray-200"><input type="checkbox" checked={form.online} onChange={e=>setForm(c=>({...c,online:e.target.checked}))}/>Online now</label><label className="flex items-center gap-3 rounded-xl border border-gray-700 bg-gray-950 px-3 py-3 text-sm text-gray-200"><input type="checkbox" checked={form.trial} onChange={e=>setForm(c=>({...c,trial:e.target.checked}))}/>Trial account</label></div><div className="mt-4 grid gap-4 sm:grid-cols-2"><label><span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">Device notes</span><textarea value={form.device_notes} onChange={e=>setForm(c=>({...c,device_notes:e.target.value}))} rows={3} className="w-full rounded-xl border border-gray-700 bg-gray-950 px-3 py-2.5 text-sm text-white"/></label><label><span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">Internal notes</span><textarea value={form.notes} onChange={e=>setForm(c=>({...c,notes:e.target.value}))} rows={3} className="w-full rounded-xl border border-gray-700 bg-gray-950 px-3 py-2.5 text-sm text-white"/></label></div></div><div className="flex flex-col-reverse gap-2 border-t border-gray-800 pt-5 sm:flex-row sm:justify-end"><button type="button" onClick={closeForm} className="rounded-xl border border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-300">Cancel</button><button disabled={saving} type="submit" className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{saving?'Saving...':editing?'Save Changes':'Add Customer'}</button></div></form></div></div>}
+  </div>;
 };
-
 export default CRMDashboard;
