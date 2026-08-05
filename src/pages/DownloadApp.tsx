@@ -1,155 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { Download, Smartphone, Monitor, Tv, Apple, Chrome, Wifi, Zap, Lock, Bell, HardDrive, CheckCircle } from 'lucide-react';
-
-import {
-  SiAndroid,
-  SiApple,
-  SiLg,
-  SiRoku,
-  SiNvidia,
-  SiAppletv,
-  SiSamsung,
-  SiGooglecast
-} from 'react-icons/si';
-
-import {
-  FaWindows,
-  FaAmazon
-} from 'react-icons/fa6';
+import { AlertTriangle, CheckCircle, Download, ExternalLink, Monitor, ShieldCheck, Smartphone, Tv } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-interface AppDownload {
-  id: string;
-  name: string;
-  platform: string;
-  icon: React.ReactNode;
-  description: string;
-  downloadUrl: string;
-  version: string;
-  size: string;
-  requirements: string;
-  features: string[];
-}
+const androidApk = {
+  name: 'Kristal Stream Android APK',
+  downloadUrl: '/downloads/KristalStream.apk',
+  fileName: 'KristalStream.apk',
+  version: '1.0.0',
+  size: '8.2 MB',
+  requirements: 'Android 7.0+',
+};
 
-const appDownloads: AppDownload[] = [
-  {
-    id: 'android',
-    name: 'Kristal Streams for Android',
-    platform: 'Android',
-    icon: <Smartphone className="w-8 h-8 text-green-500" />,
-    description: 'Stream on your Android phone or tablet with our optimized mobile app.',
-    downloadUrl: '/downloads/KristalStreams.apk',
-    version: '1.0.0',
-    size: '8.2 MB',
-    requirements: 'Android 7.0+',
-    features: [
-      'HD & 4K streaming',
-      'Offline downloads',
-      'Chromecast support',
-      'Picture-in-picture mode',
-      'Parental controls'
-    ]
-  },
-  {
-    id: 'ios',
-    name: 'Kristal Streams for iOS',
-    platform: 'iOS',
-    icon: <Apple className="w-8 h-8 text-gray-300" />,
-    description: 'Experience seamless streaming on your iPhone or iPad.',
-    downloadUrl: '#',
-    version: '2.1.0',
-    size: '52 MB',
-    requirements: 'iOS 13.0+',
-    features: [
-      'HD & 4K streaming',
-      'AirPlay support',
-      'Background audio',
-      'Touch ID/Face ID',
-      'Family sharing'
-    ]
-  },
-  {
-    id: 'windows',
-    name: 'Kristal Streams for Windows',
-    platform: 'Windows',
-    icon: <Monitor className="w-8 h-8 text-blue-500" />,
-    description: 'Desktop app for Windows with enhanced performance and features.',
-    downloadUrl: '#',
-    version: '1.8.5',
-    size: '120 MB',
-    requirements: 'Windows 10+',
-    features: [
-      '4K streaming',
-      'Multiple windows',
-      'Keyboard shortcuts',
-      'System notifications',
-      'Hardware acceleration'
-    ]
-  },
-  {
-    id: 'macos',
-    name: 'Kristal Streams for macOS',
-    platform: 'macOS',
-    icon: <Apple className="w-8 h-8 text-gray-300" />,
-    description: 'Native macOS app optimized for Mac computers.',
-    downloadUrl: 'https://zl30hmmadap6eroe.public.blob.vercel-storage.com/KristalStreams-website-style-macOS-app-v3.zip',
-    version: '1.8.5',
-    size: '95 MB',
-    requirements: 'macOS 11.0+',
-    features: [
-      '4K streaming',
-      'Touch Bar support',
-      'Menu bar controls',
-      'Retina display optimized',
-      'macOS integration'
-    ]
-  },
-  {
-    id: 'firetv',
-    name: 'Kristal Streams for Fire TV',
-    platform: 'Fire TV',
-    icon: <Tv className="w-8 h-8 text-orange-500" />,
-    description: 'Optimized for Amazon Fire TV and Fire TV Stick devices.',
-    downloadUrl: '#',
-    version: '1.5.2',
-    size: '38 MB',
-    requirements: 'Fire OS 6.0+',
-    features: [
-      '4K streaming',
-      'Voice remote support',
-      'Alexa integration',
-      'Quick channel switching',
-      'Parental controls'
-    ]
-  },
-  {
-    id: 'roku',
-    name: 'Kristal Streams for Roku',
-    platform: 'Roku',
-    icon: <Tv className="w-8 h-8 text-purple-500" />,
-    description: 'Stream directly on your Roku device with our dedicated channel.',
-    downloadUrl: '#',
-    version: '1.4.8',
-    size: '25 MB',
-    requirements: 'Roku OS 9.0+',
-    features: [
-      'HD & 4K streaming',
-      'Voice remote support',
-      'Channel favorites',
-      'Sleep timer',
-      'Simple interface'
-    ]
-  }
+const supportedDevices = [
+  'Android phones and tablets',
+  'Android TV boxes',
+  'Amazon Fire TV / Firestick',
+  'NVIDIA Shield',
+  'Chromecast with Google TV',
+  'Web browser / PWA install',
 ];
 
 const DownloadApp: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [platform, setPlatform] = useState<string>('');
+  const [platform, setPlatform] = useState('Desktop');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -163,27 +41,23 @@ const DownloadApp: React.FC = () => {
       setPlatform('macOS');
     } else if (/win/.test(userAgent)) {
       setPlatform('Windows');
-    } else {
-      setPlatform('Desktop');
     }
 
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    setIsInstalled(isStandalone);
+    setIsInstalled(window.matchMedia('(display-mode: standalone)').matches);
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    const handler = (event: Event) => {
+      event.preventDefault();
+      setDeferredPrompt(event as BeforeInstallPromptEvent);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
-
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
 
-    deferredPrompt.prompt();
+    await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
 
     if (outcome === 'accepted') {
@@ -194,425 +68,164 @@ const DownloadApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen py-12 bg-dark-300">
+    <div className="min-h-screen bg-dark-300 py-12">
       <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header Section */}
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center mb-6">
-              <Download className="text-primary w-12 h-12 mr-4" />
-              <h1 className="text-4xl md:text-5xl font-bold text-white">Download Our Apps</h1>
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 text-center">
+            <div className="mb-6 flex items-center justify-center">
+              <Download className="mr-4 h-12 w-12 text-primary" />
+              <h1 className="text-4xl font-bold text-white md:text-5xl">Get the Kristal Streams App</h1>
             </div>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Stream Kristal Streams on all your favorite devices. Download our apps for the best viewing experience 
-              with optimized performance and exclusive features.
+            <p className="mx-auto max-w-3xl text-xl text-gray-400">
+              Download the Android APK for phones, tablets, Android TV boxes, and Firestick devices. You can also install the web app from your browser.
             </p>
           </div>
 
-          {/* Android APK Download */}
-<div className="bg-gradient-to-r from-green-500/10 to-green-500/5 rounded-2xl p-8 border border-green-500/30 mb-8">
-  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-    <div className="flex items-center gap-4">
-      <div className="bg-green-500/20 w-16 h-16 rounded-xl flex items-center justify-center">
-        <Smartphone className="w-8 h-8 text-green-500" />
-      </div>
-
-      <div>
-        <h2 className="text-2xl font-bold text-white">
-          Kristal Streams Android APK
-        </h2>
-
-        <p className="text-gray-400">
-          APK File · 8.6 MB · Android 7.0+
-        </p>
-      </div>
-    </div>
-
-    <a
-      href="/downloads/KristalStreams.apk"
-      download="KristalStreams.apk"
-      className="bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2"
-    >
-      <Download className="w-5 h-5" />
-      Download APK
-    </a>
-  </div>
-</div>
-          
-          {/* macOS Download — Hosted */}
-<div className="bg-gradient-to-r from-blue-500/10 to-yellow-500/5 rounded-2xl p-8 border border-blue-500/30 mb-16">
-  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-    <div className="flex items-center gap-4">
-      <div className="bg-blue-500/20 w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0">
-        <Apple className="w-8 h-8 text-gray-300" />
-      </div>
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-1">Kristal Streams for macOS</h2>
-        <p className="text-gray-400">Version {appDownloads[3].version} · 141 MB · macOS 11.0+</p>
-      </div>
-    </div>
-    <a
-      href={appDownloads[3].downloadUrl}
-      className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2 whitespace-nowrap"
-    >
-      <Download className="w-5 h-5" />
-      Download for macOS
-    </a>
-  </div>
-  <p className="text-sm text-gray-500 mt-4">
-    This Mac download is hosted outside GitHub because the app package is larger than GitHub's file limit.
-  </p>
-</div>
-
-          {/* PWA Install Section */}
-          {isInstalled ? (
-            <div className="bg-gradient-to-r from-green-500/20 to-green-500/10 rounded-2xl p-8 border border-green-500/30 mb-16">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="w-10 h-10 text-green-500" />
+          <div className="mb-8 rounded-2xl border border-green-500/30 bg-gradient-to-r from-green-500/10 to-green-500/5 p-8">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-green-500/20">
+                  <Smartphone className="h-8 w-8 text-green-500" />
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-4">App Already Installed!</h2>
-                <p className="text-gray-300 max-w-2xl mx-auto">
-                  Kristal Streams is installed on your device. You can access it from your home screen or app launcher.
-                </p>
+                <div>
+                  <p className="mb-2 text-sm font-semibold uppercase tracking-[0.22em] text-green-300">Official Android Download</p>
+                  <h2 className="text-2xl font-bold text-white">{androidApk.name}</h2>
+                  <p className="mt-2 text-gray-400">
+                    Version {androidApk.version} · {androidApk.size} · {androidApk.requirements}
+                  </p>
+                  <p className="mt-3 text-sm text-gray-500">
+                    File path: <span className="font-mono text-gray-300">{androidApk.downloadUrl}</span>
+                  </p>
+                </div>
               </div>
+
+              <a
+                href={androidApk.downloadUrl}
+                download={androidApk.fileName}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-8 py-4 font-semibold text-white transition-colors hover:bg-green-600"
+              >
+                <Download className="h-5 w-5" />
+                Download APK
+              </a>
             </div>
-          ) : (
-            <div className="bg-gradient-to-r from-primary/20 to-primary/10 rounded-2xl p-8 border border-primary/30 mb-16">
-              <div className="text-center">
-                <img src="/logo/ks-mark.png" alt="Kristal Streams" className="h-16 w-auto mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-white mb-4">Install Kristal Streams App</h2>
-                <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
-                  Install our Progressive Web App for the best experience. Works on all devices with app-like features,
-                  offline support, and instant updates.
-                </p>
+          </div>
 
-                {deferredPrompt && (
-                  <button
-                    onClick={handleInstall}
-                    className="bg-primary hover:bg-red-700 text-white px-10 py-5 rounded-lg font-bold text-xl transition-all duration-200 flex items-center justify-center mx-auto shadow-2xl hover:shadow-primary/50 hover:scale-105 mb-8"
-                  >
-                    <Download className="w-7 h-7 mr-3" />
-                    Install Kristal Streams Now
-                  </button>
-                )}
-
-                {platform === 'iOS' ? (
-                  <div className="bg-dark-100 rounded-xl p-8 max-w-2xl mx-auto mb-6 border-2 border-primary/30">
-                    <h3 className="text-xl font-bold text-white mb-6 text-center flex items-center justify-center gap-2">
-                      <Apple className="w-6 h-6" />
-                      Install on iOS/Safari
-                    </h3>
-                    <ol className="text-left space-y-4 text-gray-300">
-                      <li className="flex items-start bg-dark-200/50 p-4 rounded-lg">
-                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-lg font-bold mr-4 flex-shrink-0">1</span>
-                        <div>
-                          <p className="font-semibold text-white mb-1">Tap the Share Button</p>
-                          <p className="text-sm">Look for the square with arrow icon at the bottom of Safari</p>
-                        </div>
-                      </li>
-                      <li className="flex items-start bg-dark-200/50 p-4 rounded-lg">
-                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-lg font-bold mr-4 flex-shrink-0">2</span>
-                        <div>
-                          <p className="font-semibold text-white mb-1">Select "Add to Home Screen"</p>
-                          <p className="text-sm">Scroll down in the menu and tap this option</p>
-                        </div>
-                      </li>
-                      <li className="flex items-start bg-dark-200/50 p-4 rounded-lg">
-                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-lg font-bold mr-4 flex-shrink-0">3</span>
-                        <div>
-                          <p className="font-semibold text-white mb-1">Tap "Add"</p>
-                          <p className="text-sm">Confirm by tapping "Add" in the top right corner</p>
-                        </div>
-                      </li>
-                    </ol>
-                  </div>
-                ) : (
-                  <div className="bg-dark-100 rounded-xl p-8 max-w-2xl mx-auto mb-6 border-2 border-primary/30">
-                    <h3 className="text-xl font-bold text-white mb-6 text-center flex items-center justify-center gap-2">
-                      {platform === 'Android' ? <Smartphone className="w-6 h-6" /> : <Monitor className="w-6 h-6" />}
-                      Install on {platform}
-                    </h3>
-                    <ol className="text-left space-y-4 text-gray-300">
-                      {platform === 'Android' ? (
-                        <>
-                          <li className="flex items-start bg-dark-200/50 p-4 rounded-lg">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-lg font-bold mr-4 flex-shrink-0">1</span>
-                            <div>
-                              <p className="font-semibold text-white mb-1">Open Chrome Menu</p>
-                              <p className="text-sm">Tap the three dots (⋮) in the top right corner</p>
-                            </div>
-                          </li>
-                          <li className="flex items-start bg-dark-200/50 p-4 rounded-lg">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-lg font-bold mr-4 flex-shrink-0">2</span>
-                            <div>
-                              <p className="font-semibold text-white mb-1">Select "Install app"</p>
-                              <p className="text-sm">Look for "Install app" or "Add to Home Screen" in the menu</p>
-                            </div>
-                          </li>
-                          <li className="flex items-start bg-dark-200/50 p-4 rounded-lg">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-lg font-bold mr-4 flex-shrink-0">3</span>
-                            <div>
-                              <p className="font-semibold text-white mb-1">Confirm Installation</p>
-                              <p className="text-sm">Tap "Install" to add Kristal Streams to your home screen</p>
-                            </div>
-                          </li>
-                        </>
-                      ) : (
-                        <>
-                          <li className="flex items-start bg-dark-200/50 p-4 rounded-lg">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-lg font-bold mr-4 flex-shrink-0">1</span>
-                            <div>
-                              <p className="font-semibold text-white mb-1">Look for Install Icon</p>
-                              <p className="text-sm">Find the install/download icon in your browser's address bar (usually top-right)</p>
-                            </div>
-                          </li>
-                          <li className="flex items-start bg-dark-200/50 p-4 rounded-lg">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-lg font-bold mr-4 flex-shrink-0">2</span>
-                            <div>
-                              <p className="font-semibold text-white mb-1">Click Install</p>
-                              <p className="text-sm">Click the icon and select "Install" or "Add" from the menu</p>
-                            </div>
-                          </li>
-                          <li className="flex items-start bg-dark-200/50 p-4 rounded-lg">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-lg font-bold mr-4 flex-shrink-0">3</span>
-                            <div>
-                              <p className="font-semibold text-white mb-1">Launch the App</p>
-                              <p className="text-sm">Find and open Kristal Streams from your desktop, start menu, or taskbar</p>
-                            </div>
-                          </li>
-                        </>
-                      )}
-                    </ol>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap justify-center gap-4 mt-6">
-                  <div className="bg-dark-100 px-4 py-2 rounded-lg">
-                    <span className="text-primary font-medium">✓ No App Store</span>
-                  </div>
-                  <div className="bg-dark-100 px-4 py-2 rounded-lg">
-                    <span className="text-primary font-medium">✓ Instant Updates</span>
-                  </div>
-                  <div className="bg-dark-100 px-4 py-2 rounded-lg">
-                    <span className="text-primary font-medium">✓ Works Offline</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* App Features */}
-          <div className="mb-16">
-            <h2 className="text-3xl font-bold text-white text-center mb-12">Why Install Our App?</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-                <div className="bg-primary/20 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <Zap className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Lightning Fast</h3>
-                <p className="text-gray-400">
-                  Instant loading with service worker caching. Experience native app performance in your browser.
-                </p>
-              </div>
-
-              <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-                <div className="bg-primary/20 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <Wifi className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Works Offline</h3>
-                <p className="text-gray-400">
-                  Access previously loaded content without internet. Continue browsing even when offline.
-                </p>
-              </div>
-
-              <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-                <div className="bg-primary/20 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <Bell className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Push Notifications</h3>
-                <p className="text-gray-400">
-                  Get notified about new content, live events, and account updates even when the app is closed.
-                </p>
-              </div>
-
-              <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-                <div className="bg-primary/20 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <HardDrive className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Save Space</h3>
-                <p className="text-gray-400">
-                  No large downloads required. The app takes minimal space compared to traditional apps.
-                </p>
-              </div>
-
-              <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-                <div className="bg-primary/20 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <Lock className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Secure & Private</h3>
-                <p className="text-gray-400">
-                  HTTPS enabled with modern security. Your data is encrypted and protected.
-                </p>
-              </div>
-
-              <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
-                <div className="bg-primary/20 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <Chrome className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Cross-Platform</h3>
-                <p className="text-gray-400">
-                  Works on iOS, Android, Windows, macOS, and Linux. One app for all your devices.
+          <div className="mb-8 rounded-2xl border border-yellow-500/25 bg-yellow-500/10 p-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-1 h-5 w-5 flex-shrink-0 text-yellow-300" />
+              <div>
+                <h3 className="font-semibold text-white">Android / Firestick install note</h3>
+                <p className="mt-1 text-sm text-yellow-100/80">
+                  Android and Firestick may ask you to allow installs from your browser or Downloader app. After downloading, open the APK file and approve the install prompt.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Compatible Devices */}
-<div className="mb-16">
-  <div className="text-center mb-10">
-    <h2 className="text-3xl font-bold text-white mb-3">
-      Watch on Your Favorite Devices
-    </h2>
-    <p className="text-gray-400">
-      Kristal Streams works across phones, computers, smart TVs, and streaming devices.
-    </p>
-  </div>
+          <div className="mb-12 grid gap-6 lg:grid-cols-3">
+            <div className="rounded-xl border border-gray-800 bg-dark-100 p-6">
+              <Tv className="mb-4 h-8 w-8 text-primary" />
+              <h3 className="text-xl font-semibold text-white">TV Boxes & Firestick</h3>
+              <ol className="mt-4 space-y-3 text-sm text-gray-300">
+                <li>1. Open Downloader or your device browser.</li>
+                <li>2. Go to the Kristal Streams download page.</li>
+                <li>3. Download and open the APK file.</li>
+                <li>4. Allow install from unknown apps when prompted.</li>
+              </ol>
+            </div>
 
-  <div className="bg-[#031525] border border-cyan-500/20 rounded-2xl px-6 py-10">
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-12">
+            <div className="rounded-xl border border-gray-800 bg-dark-100 p-6">
+              <Smartphone className="mb-4 h-8 w-8 text-primary" />
+              <h3 className="text-xl font-semibold text-white">Android Phones</h3>
+              <ol className="mt-4 space-y-3 text-sm text-gray-300">
+                <li>1. Tap Download APK.</li>
+                <li>2. Open the downloaded file.</li>
+                <li>3. Approve the install permission.</li>
+                <li>4. Open Kristal Stream from your apps.</li>
+              </ol>
+            </div>
 
-      <div className="text-center">
-        <SiAndroid className="w-16 h-16 mx-auto mb-3 text-green-500" />
-        <h3 className="text-white font-semibold">Android</h3>
-        <p className="text-xs text-gray-400 mt-1">Phones & Tablets</p>
-      </div>
+            <div className="rounded-xl border border-gray-800 bg-dark-100 p-6">
+              <Monitor className="mb-4 h-8 w-8 text-primary" />
+              <h3 className="text-xl font-semibold text-white">Web App Option</h3>
+              <p className="mt-4 text-sm text-gray-300">
+                The browser version still works without installing the APK. On supported browsers, you can install Kristal Streams as a web app.
+              </p>
+              {isInstalled ? (
+                <div className="mt-4 flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-green-300">
+                  <CheckCircle className="h-5 w-5" />
+                  Web app already installed
+                </div>
+              ) : deferredPrompt ? (
+                <button
+                  type="button"
+                  onClick={handleInstall}
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-white hover:bg-red-700"
+                >
+                  <Download className="h-5 w-5" />
+                  Install Web App
+                </button>
+              ) : (
+                <p className="mt-4 text-sm text-gray-500">Current device detected: {platform}</p>
+              )}
+            </div>
+          </div>
 
-      <div className="text-center">
-        <SiApple className="w-16 h-16 mx-auto mb-3 text-gray-200" />
-        <h3 className="text-white font-semibold">Apple</h3>
-        <p className="text-xs text-gray-400 mt-1">iPhone, iPad & MacBook</p>
-      </div>
+          <div className="mb-12 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-8">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-1 h-6 w-6 flex-shrink-0 text-cyan-300" />
+              <div>
+                <h2 className="text-2xl font-bold text-white">Supported devices</h2>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {supportedDevices.map((device) => (
+                    <div key={device} className="rounded-lg border border-white/10 bg-black/20 px-4 py-3 text-gray-200">
+                      {device}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <div className="text-center">
-        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-pink-600 flex items-center justify-center">
-          <span className="text-white text-xl font-bold">im</span>
-        </div>
-        <h3 className="text-white font-semibold">Infomir</h3>
-        <p className="text-xs text-gray-400 mt-1">MAG STB Boxes</p>
-      </div>
-
-      <div className="text-center">
-        <FaWindows className="w-16 h-16 mx-auto mb-3 text-blue-500" />
-        <h3 className="text-white font-semibold">Windows</h3>
-        <p className="text-xs text-gray-400 mt-1">Desktop & Laptop</p>
-      </div>
-
-      <div className="text-center">
-        <FaAmazon className="w-16 h-16 mx-auto mb-3 text-orange-500" />
-        <h3 className="text-white font-semibold">Amazon Fire TV</h3>
-        <p className="text-xs text-gray-400 mt-1">Stick, TV & Cube</p>
-      </div>
-
-      <div className="text-center">
-        <SiLg className="w-16 h-16 mx-auto mb-3 text-red-500" />
-        <h3 className="text-white font-semibold">LG</h3>
-        <p className="text-xs text-gray-400 mt-1">Smart TVs</p>
-      </div>
-
-      <div className="text-center">
-        <SiRoku className="w-16 h-16 mx-auto mb-3 text-purple-500" />
-        <h3 className="text-white font-semibold">Roku</h3>
-        <p className="text-xs text-gray-400 mt-1">Streaming Devices</p>
-      </div>
-
-      <div className="text-center">
-        <SiNvidia className="w-16 h-16 mx-auto mb-3 text-lime-500" />
-        <h3 className="text-white font-semibold">NVIDIA Shield</h3>
-        <p className="text-xs text-gray-400 mt-1">Shield TV</p>
-      </div>
-
-      <div className="text-center">
-        <SiAppletv className="w-16 h-16 mx-auto mb-3 text-gray-200" />
-        <h3 className="text-white font-semibold">Apple TV</h3>
-        <p className="text-xs text-gray-400 mt-1">TV Streaming</p>
-      </div>
-
-      <div className="text-center">
-        <SiSamsung className="w-16 h-16 mx-auto mb-3 text-blue-500" />
-        <h3 className="text-white font-semibold">Samsung</h3>
-        <p className="text-xs text-gray-400 mt-1">Smart TVs</p>
-      </div>
-
-      <div className="text-center">
-        <Tv className="w-16 h-16 mx-auto mb-3 text-green-400" />
-        <h3 className="text-white font-semibold">Android TV</h3>
-        <p className="text-xs text-gray-400 mt-1">Smart TVs & Boxes</p>
-      </div>
-
-      <div className="text-center">
-        <SiGooglecast className="w-16 h-16 mx-auto mb-3 text-cyan-400" />
-        <h3 className="text-white font-semibold">Chromecast</h3>
-        <p className="text-xs text-gray-400 mt-1">TV Streaming</p>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-          {/* Additional Info Section */}
-          <div className="mt-16 grid md:grid-cols-2 gap-8">
-            <div className="bg-dark-100 rounded-xl p-8 border border-gray-800">
-              <h3 className="text-xl font-semibold text-white mb-4">System Requirements</h3>
+          <div className="grid gap-8 md:grid-cols-2">
+            <div className="rounded-xl border border-gray-800 bg-dark-100 p-8">
+              <h3 className="mb-4 text-xl font-semibold text-white">System requirements</h3>
               <div className="space-y-3 text-gray-300">
-                <p><strong>Internet:</strong> Minimum 5 Mbps for HD, 25 Mbps for 4K</p>
-                <p><strong>Storage:</strong> At least 1GB free space for app installation</p>
-                <p><strong>Account:</strong> Active Kristal Streams subscription required</p>
-                <p><strong>Updates:</strong> Automatic updates ensure latest features</p>
+                <p><strong>Internet:</strong> 5 Mbps for HD, 25 Mbps for 4K.</p>
+                <p><strong>Android:</strong> Android 7.0 or newer.</p>
+                <p><strong>Account:</strong> Active Kristal Streams subscription or demo access.</p>
+                <p><strong>Storage:</strong> Enough free space to install the APK.</p>
               </div>
             </div>
 
-            <div className="bg-dark-100 rounded-xl p-8 border border-gray-800">
-              <h3 className="text-xl font-semibold text-white mb-4">Need Help?</h3>
-              <div className="space-y-4">
-                <p className="text-gray-300">
-                  Having trouble with installation or setup? Our support team is here to help.
-                </p>
-                <div className="space-y-2">
-                  <a
-                    href="/support"
-                    className="block text-primary hover:text-red-700 transition-colors duration-200"
-                  >
-                    → Visit Support Center
-                  </a>
-                  <a
-                    href="/support/devices"
-                    className="block text-primary hover:text-red-700 transition-colors duration-200"
-                  >
-                    → Device Setup Guides
-                  </a>
-                  <a
-                    href="/support"
-                    className="block text-primary hover:text-red-700 transition-colors duration-200"
-                  >
-                    → Contact Support
-                  </a>
-                </div>
+            <div className="rounded-xl border border-gray-800 bg-dark-100 p-8">
+              <h3 className="mb-4 text-xl font-semibold text-white">Need help installing?</h3>
+              <p className="mb-4 text-gray-300">
+                Visit support for Android, TV box, and Firestick setup help.
+              </p>
+              <div className="space-y-2">
+                <a href="/support" className="flex items-center gap-2 text-primary hover:text-red-700">
+                  <ExternalLink className="h-4 w-4" />
+                  Visit Support Center
+                </a>
+                <a href="/support/devices" className="flex items-center gap-2 text-primary hover:text-red-700">
+                  <ExternalLink className="h-4 w-4" />
+                  Device Setup Guides
+                </a>
               </div>
             </div>
           </div>
 
-          {/* Web App Section */}
-          <div className="mt-16 bg-dark-100 rounded-xl p-8 border border-gray-800 text-center">
-            <Monitor className="w-12 h-12 text-primary mx-auto mb-4" />
-            <h3 className="text-2xl font-semibold text-white mb-4">No Download Required?</h3>
-            <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
-              You can also stream directly in your web browser without downloading any apps. 
-              Just visit our website and sign in to start watching instantly.
+          <div className="mt-12 rounded-xl border border-gray-800 bg-dark-100 p-8 text-center">
+            <Monitor className="mx-auto mb-4 h-12 w-12 text-primary" />
+            <h3 className="mb-4 text-2xl font-semibold text-white">No download required?</h3>
+            <p className="mx-auto mb-6 max-w-2xl text-gray-300">
+              You can also stream directly in your web browser. Sign in and start watching without installing the APK.
             </p>
             <button
+              type="button"
               onClick={() => window.open('/', '_blank')}
-              className="bg-dark-200 hover:bg-dark-100 text-white px-8 py-3 rounded-lg font-medium transition-colors duration-200"
+              className="rounded-lg bg-dark-200 px-8 py-3 font-medium text-white transition-colors hover:bg-dark-100"
             >
               Stream in Browser
             </button>
