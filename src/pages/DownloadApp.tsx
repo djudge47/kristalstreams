@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle, Download, ExternalLink, Monitor, ShieldCheck, Smartphone, Tv } from 'lucide-react';
+import { AlertTriangle, Apple, CheckCircle, Download, ExternalLink, Monitor, ShieldCheck, Smartphone, Tv } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -15,12 +15,22 @@ const androidApk = {
   requirements: 'Android 7.0+',
 };
 
+const macApp = {
+  name: 'Kristal Streams for Mac / Apple',
+  downloadUrl: 'https://zl30hmmadap6eroe.public.blob.vercel-storage.com/KristalStreams-website-style-macOS-app-v3.zip',
+  fileName: 'KristalStreams-website-style-macOS-app-v3.zip',
+  version: '1.8.5',
+  size: '141 MB',
+  requirements: 'macOS 11.0+',
+};
+
 const supportedDevices = [
   'Android phones and tablets',
   'Android TV boxes',
   'Amazon Fire TV / Firestick',
   'NVIDIA Shield',
   'Chromecast with Google TV',
+  'Mac / Apple computers',
   'Web browser option',
 ];
 
@@ -74,10 +84,10 @@ const DownloadApp: React.FC = () => {
           <div className="mb-12 text-center">
             <div className="mb-6 flex items-center justify-center">
               <Download className="mr-4 h-12 w-12 text-primary" />
-              <h1 className="text-4xl font-bold text-white md:text-5xl">Download Kristal Stream APK</h1>
+              <h1 className="text-4xl font-bold text-white md:text-5xl">Download Kristal Streams Apps</h1>
             </div>
             <p className="mx-auto max-w-3xl text-xl text-gray-400">
-              Download the Kristal Stream APK for Android phones, tablets, Android TV boxes, and Firestick devices.
+              Download the Kristal Stream APK for Android, Firestick, and Android TV devices. Mac / Apple users can use the Mac download or stream directly in the browser.
             </p>
           </div>
 
@@ -119,6 +129,34 @@ const DownloadApp: React.FC = () => {
                   Android and Firestick may ask you to allow installs from your browser or Downloader app. After downloading, open {androidApk.fileName} and approve the install prompt.
                 </p>
               </div>
+            </div>
+          </div>
+
+          <div className="mb-12 rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-slate-500/5 p-8">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-blue-500/20">
+                  <Apple className="h-8 w-8 text-gray-200" />
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-semibold uppercase tracking-[0.22em] text-blue-300">Apple / Mac Download</p>
+                  <h2 className="text-2xl font-bold text-white">{macApp.name}</h2>
+                  <p className="mt-2 text-gray-400">
+                    File: {macApp.fileName} · Version {macApp.version} · {macApp.size} · {macApp.requirements}
+                  </p>
+                  <p className="mt-3 text-sm text-gray-500">
+                    This Mac download is hosted separately because the app package is larger than GitHub’s file limit.
+                  </p>
+                </div>
+              </div>
+
+              <a
+                href={macApp.downloadUrl}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-8 py-4 font-semibold text-white transition-colors hover:bg-blue-600"
+              >
+                <Download className="h-5 w-5" />
+                Download for Mac / Apple
+              </a>
             </div>
           </div>
 
@@ -193,15 +231,16 @@ const DownloadApp: React.FC = () => {
               <div className="space-y-3 text-gray-300">
                 <p><strong>Internet:</strong> 5 Mbps for HD, 25 Mbps for 4K.</p>
                 <p><strong>Android:</strong> Android 7.0 or newer.</p>
+                <p><strong>Mac:</strong> macOS 11.0 or newer for the Mac download.</p>
                 <p><strong>Account:</strong> Active subscription, IPTV account, or demo access.</p>
-                <p><strong>Storage:</strong> Enough free space to install {androidApk.fileName}.</p>
+                <p><strong>Storage:</strong> Enough free space to install the download.</p>
               </div>
             </div>
 
             <div className="rounded-xl border border-gray-800 bg-dark-100 p-8">
               <h3 className="mb-4 text-xl font-semibold text-white">Need help installing?</h3>
               <p className="mb-4 text-gray-300">
-                Visit support for Android, TV box, and Firestick setup help.
+                Visit support for Android, TV box, Firestick, and Mac setup help.
               </p>
               <div className="space-y-2">
                 <a href="/support" className="flex items-center gap-2 text-primary hover:text-red-700">
