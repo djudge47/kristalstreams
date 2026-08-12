@@ -9,6 +9,8 @@ on:
       - 'android/R4_READY.txt'
       - 'android/overrides/**'
       - 'android/r4-text-source/**'
+      - 'android/full-source-parts/**'
+      - 'android/good-apk-assets/**'
       - '.github/workflows/android-apk.yml'
 
 permissions:
@@ -46,13 +48,14 @@ jobs:
           test -f android/player/app/src/main/AndroidManifest.xml
           echo "PROJECT_DIR=${GITHUB_WORKSPACE}/android/player" >> "$GITHUB_ENV"
 
-      - name: Apply playback and Gradle overrides
+      - name: Apply playback, Gradle, and original visual assets
         run: |
           set -euo pipefail
           for file in build.gradle.kts settings.gradle.kts gradle.properties; do cp "android/overrides/$file" "android/player/$file"; done
           cp android/overrides/app-build.gradle.kts android/player/app/build.gradle.kts
           mkdir -p android/player/app/src/main/java/com/kristalstreams/player
           cp android/overrides/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
+          bash android/overrides/restore-good-assets.sh
 
       - name: Ensure required Android resources
         run: |
