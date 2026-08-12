@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -38,7 +40,7 @@ val appResDir = project.projectDir.resolve("src/main/res")
 fun decodeGoodAsset(sourceName: String): ByteArray? {
     val source = goodAssetsDir.resolve(sourceName)
     if (!source.isFile) return null
-    return java.util.Base64.getMimeDecoder().decode(source.readText().trim())
+    return Base64.getMimeDecoder().decode(source.readText().trim())
 }
 
 fun removeResourceCopies(baseName: String, folderPrefix: String) {
@@ -57,11 +59,6 @@ fun restoreDrawable(sourceName: String, resourceName: String) {
 
 fun restoreLauncher() {
     val bytes = decodeGoodAsset("ic_launcher.png.b64") ?: return
-    listOf("mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi").forEach { folder ->
-        val dir = appResDir.resolve(folder).apply { mkdirs() }
-        dir.resolve("ic_launcher.png").writeBytes(bytes)
-        dir.resolve("ic_launcher_round.png").writeBytes(bytes)
-    }
     removeResourceCopies("ic_launcher", "mipmap")
     removeResourceCopies("ic_launcher_round", "mipmap")
     listOf("mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi").forEach { folder ->
