@@ -152,4 +152,31 @@ div.relative.h-56.overflow-hidden:has(> img[src*="leagues-cup-2026"]) > div {
   .card-hover {
     transform: none !important;
   }
+
+  /* Immersive player: remove ContentDetail's desktop max-width/padding wrapper on phones. */
+  .fixed.inset-0.z-\[9999\] > .w-full.h-full.max-w-7xl {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin: 0 !important;
+  }
+
+  .fixed.inset-0.z-\[9999\] > .w-full.h-full.max-w-7xl > .w-full {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .fixed.inset-0.z-\[9999\] > .w-full.h-full.max-w-7xl > .w-full > .group {
+    position: absolute !important;
+    inset: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    transform: none !important;
+    border-radius: 0 !important;
+  }
 }
