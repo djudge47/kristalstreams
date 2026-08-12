@@ -128,6 +128,30 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
     };
   }, [onEnded]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    const isMobile = window.matchMedia('(max-width: 639px)').matches;
+    if (!isMobile) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = document.body.style.overscrollBehavior;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscroll;
+    };
+  }, []);
+
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
@@ -166,14 +190,27 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
     setCurrentTime(newTime);
   };
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     const container = containerRef.current;
-    if (!container) return;
+    const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    if (!container || !video) return;
 
-    if (!document.fullscreenElement) {
-      container.requestFullscreen().then(() => setIsFullscreen(true));
-    } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false));
+    try {
+      if (!document.fullscreenElement && container.requestFullscreen) {
+        await container.requestFullscreen();
+        return;
+      }
+
+      if (document.fullscreenElement && document.exitFullscreen) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      if (video.webkitEnterFullscreen) {
+        video.webkitEnterFullscreen();
+      }
+    } catch (fullscreenError) {
+      console.warn('Native fullscreen unavailable, keeping immersive mobile player active:', fullscreenError);
     }
   };
 
@@ -195,15 +232,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
   return (
     <div
       ref={containerRef}
-      className="relative bg-black rounded-lg overflow-hidden group aspect-video"
+      className={`relative left-1/2 h-[100dvh] w-screen -translate-x-1/2 overflow-hidden bg-black group sm:left-auto sm:h-auto sm:w-full sm:translate-x-0 sm:aspect-video ${
+        isFullscreen ? 'rounded-none' : 'rounded-none sm:rounded-lg'
+      }`}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(isPlaying ? false : true)}
     >
       <video
         ref={videoRef}
-        className="w-full h-full object-contain"
+        className="h-full w-full bg-black object-contain"
         poster={poster}
         playsInline
+        controlsList="nodownload noplaybackrate"
+        disablePictureInPicture
         onClick={togglePlay}
       />
 
@@ -228,7 +269,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
       )}
 
       {title && (
-        <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="absolute top-0 left-0 right-0 p-4 pt-[max(1rem,env(safe-area-inset-top))] bg-gradient-to-b from-black/80 to-transparent">
           <h3 className="text-white text-lg font-medium">{title}</h3>
         </div>
       )}
@@ -238,7 +279,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
           showControls ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <div className="px-4 pt-8 pb-4">
+        <div className="px-4 pt-8 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <input
             type="range"
             min="0"
@@ -247,7 +288,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
             onChange={handleSeek}
             className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
             style={{
-              background: `linear-gradient(to right, #dc2626 0%, #dc2626 ${(currentTime / duration) * 100}%, #4b5563 ${(currentTime / duration) * 100}%, #4b5563 100%)`
+              background: `linear-gradient(to right, #dc2626 0%, #dc2626 ${duration ? (currentTime / duration) * 100 : 0}%, #4b5563 ${duration ? (currentTime / duration) * 100 : 0}%, #4b5563 100%)`
             }}
           />
 
@@ -274,11 +315,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
                   step="0.1"
                   value={volume}
                   onChange={handleVolumeChange}
-                  className="w-0 group-hover/volume:w-20 transition-all duration-200 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                  className="hidden w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer sm:block"
                 />
               </div>
 
-              <div className="text-white text-sm">
+              <div className="text-white text-xs sm:text-sm">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </div>
             </div>
@@ -315,6 +356,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
               <button
                 onClick={toggleFullscreen}
                 className="text-white hover:text-primary transition-colors"
+                aria-label="Toggle fullscreen"
               >
                 <Maximize size={20} />
               </button>
