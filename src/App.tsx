@@ -4,16 +4,34 @@ import InstallPrompt from './components/InstallPrompt';
 import Layout from './components/Layout';
 
 function lazyRetry(importFn: () => Promise<any>) {
-  return lazy(() => importFn().catch(() => {
-    const hasReloaded = sessionStorage.getItem('chunk-reload');
-    if (!hasReloaded) {
-      sessionStorage.setItem('chunk-reload', 'true');
-      window.location.reload();
-      return { default: () => null };
+  return lazy(async () => {
+    try {
+      const module = await importFn();
+      sessionStorage.removeItem('chunk-reload');
+      return module;
+    } catch (error) {
+      const hasReloaded = sessionStorage.getItem('chunk-reload') === 'true';
+      if (!hasReloaded) {
+        sessionStorage.setItem('chunk-reload', 'true');
+        window.location.reload();
+        return { default: () => null };
+      }
+
+      console.error('Lazy page failed after recovery reload:', error);
+      sessionStorage.removeItem('chunk-reload');
+      return {
+        default: () => (
+          <div className="flex min-h-screen items-center justify-center bg-gray-900 px-6 text-white">
+            <div className="max-w-md text-center">
+              <h1 className="mb-3 text-2xl font-semibold">Page could not load</h1>
+              <p className="mb-6 text-gray-300">Kristal Streams could not load this screen. Please refresh and try again.</p>
+              <button onClick={() => window.location.reload()} className="rounded-lg bg-red-600 px-6 py-3 font-medium hover:bg-red-700">Refresh Page</button>
+            </div>
+          </div>
+        ),
+      };
     }
-    sessionStorage.removeItem('chunk-reload');
-    return { default: () => <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white">Page failed to load. Please refresh.</div> };
-  }));
+  });
 }
 
 const pages = {
@@ -117,7 +135,6 @@ const adminPages = {
 const LoadingFallback = () => <div className="flex min-h-screen items-center justify-center bg-gray-900 text-gray-300">Loading...</div>;
 
 function App() {
-  sessionStorage.removeItem('chunk-reload');
   const P = pages;
   const S = supportPages;
   const C = clientPages;
