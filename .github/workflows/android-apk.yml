@@ -62,7 +62,7 @@ jobs:
 
           make_shape() {
             local name="$1" color="$2" stroke="$3" radius="$4"
-            if ! find "$RES" -type f \( -name "$name.png" -o -name "$name.jpg" -o -name "$name.webp" -o -name "$name.xml" \) | grep -q .; then
+            if ! find "$RES" -type f \( -name "$name.png" -o -name "$name.jpg" -o -name "$name.jpeg" -o -name "$name.webp" -o -name "$name.xml" \) | grep -q .; then
               cat > "$RES/drawable/$name.xml" <<EOF
           <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
               <solid android:color="$color" />
@@ -70,6 +70,7 @@ jobs:
               <corners android:radius="$radius" />
           </shape>
           EOF
+              echo "Created fallback drawable: $name"
             fi
           }
 
@@ -80,8 +81,9 @@ jobs:
           make_shape official_series "#151A24" "#E50914" "14dp"
           make_shape official_series_focused "#E50914" "#FFFFFF" "14dp"
           make_shape official_dashboard_bg "#080B12" "#151A24" "0dp"
+          make_shape ks_badge "#E50914" "#FFFFFF" "18dp"
 
-          if ! find "$RES" -type f \( -name 'ks_monogram.png' -o -name 'ks_monogram.jpg' -o -name 'ks_monogram.webp' -o -name 'ks_monogram.xml' \) | grep -q .; then
+          if ! find "$RES" -type f \( -name 'ks_monogram.png' -o -name 'ks_monogram.jpg' -o -name 'ks_monogram.jpeg' -o -name 'ks_monogram.webp' -o -name 'ks_monogram.xml' \) | grep -q .; then
             cat > "$RES/drawable/ks_monogram.xml" <<'EOF'
           <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="96dp" android:height="96dp" android:viewportWidth="96" android:viewportHeight="96">
               <path android:fillColor="#080B12" android:pathData="M0,0h96v96h-96z"/>
@@ -92,6 +94,43 @@ jobs:
           fi
 
           make_shape ks_banner "#080B12" "#E50914" "12dp"
+
+          # Scan the complete restored R4 XML inventory and automatically create
+          # fallbacks for every missing app-owned @drawable reference. This
+          # prevents repeated one-resource-at-a-time AAPT failures.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          res = Path('android/player/app/src/main/res')
+          refs = set()
+          for p in res.rglob('*.xml'):
+              try:
+                  text = p.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
+              refs.update(re.findall(r'(?<!android:)@drawable/([A-Za-z0-9_]+)', text))
+
+          extensions = ('.xml', '.png', '.jpg', '.jpeg', '.webp', '.gif')
+          missing = []
+          for name in sorted(refs):
+              exists = any((folder / f'{name}{ext}').exists()
+                           for folder in res.glob('drawable*') if folder.is_dir()
+                           for ext in extensions)
+              if not exists:
+                  missing.append(name)
+                  target = res / 'drawable' / f'{name}.xml'
+                  target.write_text(f'''<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#151A24" />
+    <stroke android:width="1dp" android:color="#E50914" />
+    <corners android:radius="10dp" />
+</shape>\n''', encoding='utf-8')
+
+          print(f'Drawable references found: {len(refs)}')
+          print(f'Missing drawable fallbacks created: {len(missing)}')
+          for name in missing:
+              print(f'  + {name}')
+          PY
 
           if [ ! -e "$RES/mipmap/ic_launcher.png" ] && [ ! -e "$RES/mipmap/ic_launcher.webp" ] && [ ! -e "$RES/mipmap/ic_launcher.xml" ]; then
             cat > "$RES/mipmap/ic_launcher.xml" <<'EOF'
@@ -120,7 +159,27 @@ jobs:
           echo "Android file count: $(find android/player -type f | wc -l)"
           REQUIRED=(android/player/build.gradle.kts android/player/settings.gradle.kts android/player/gradle.properties android/player/app/build.gradle.kts android/player/app/src/main/AndroidManifest.xml android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/ChannelsActivity.kt)
           for f in "${REQUIRED[@]}"; do test -f "$f" || { echo "MISSING: $f"; exit 1; }; done
-          for r in official_live_tv official_live_tv_focused official_movies official_movies_focused official_series official_series_focused official_dashboard_bg ks_monogram; do find android/player/app/src/main/res -type f \( -name "$r.xml" -o -name "$r.png" -o -name "$r.jpg" -o -name "$r.webp" \) | grep -q . || { echo "MISSING RESOURCE: $r"; exit 1; }; done
+          for r in official_live_tv official_live_tv_focused official_movies official_movies_focused official_series official_series_focused official_dashboard_bg ks_monogram ks_badge; do find android/player/app/src/main/res -type f \( -name "$r.xml" -o -name "$r.png" -o -name "$r.jpg" -o -name "$r.jpeg" -o -name "$r.webp" \) | grep -q . || { echo "MISSING RESOURCE: $r"; exit 1; }; done
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, sys
+          res = Path('android/player/app/src/main/res')
+          refs = set()
+          for p in res.rglob('*.xml'):
+              try: text = p.read_text(encoding='utf-8')
+              except UnicodeDecodeError: continue
+              refs.update(re.findall(r'(?<!android:)@drawable/([A-Za-z0-9_]+)', text))
+          exts = ('.xml','.png','.jpg','.jpeg','.webp','.gif')
+          missing = []
+          for name in sorted(refs):
+              if not any((d/f'{name}{e}').exists() for d in res.glob('drawable*') if d.is_dir() for e in exts):
+                  missing.append(name)
+          if missing:
+              print('Unresolved drawable references:', ', '.join(missing))
+              sys.exit(1)
+          print(f'All {len(refs)} drawable references resolve before Gradle build.')
+          PY
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
