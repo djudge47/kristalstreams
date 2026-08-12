@@ -6,8 +6,7 @@ on:
     branches:
       - android-dev
     paths:
-      - 'android/KristalStreams-1.6.8-RC1-R4-FULL-GUIDE-FIX.zip'
-      - '.github/workflows/android-apk.yml'
+      - 'android/R4_READY.txt'
 
 permissions:
   contents: write
@@ -24,25 +23,20 @@ jobs:
           ref: android-dev
           fetch-depth: 0
 
-      - name: Verify Android source package
+      - name: Rebuild R4 source ZIP from repository chunks
         run: |
-          test -f android/KristalStreams-1.6.8-RC1-R4-FULL-GUIDE-FIX.zip || {
-            echo "Missing R4 Android source ZIP"
-            exit 1
-          }
+          test -d android/r4-source-parts || { echo "Missing R4 source chunks"; exit 1; }
+          cat android/r4-source-parts/part-*.txt | base64 --decode > /tmp/KristalStreams-R4.zip
+          unzip -tq /tmp/KristalStreams-R4.zip
 
       - name: Expand R4 into the shared Android project
         run: |
           rm -rf .android-import android/player
           mkdir -p .android-import android/player
-          unzip -q android/KristalStreams-1.6.8-RC1-R4-FULL-GUIDE-FIX.zip -d .android-import
+          unzip -q /tmp/KristalStreams-R4.zip -d .android-import
           SOURCE_DIR="$(find .android-import -name gradlew -type f -printf '%h\n' | head -n 1)"
-          test -n "$SOURCE_DIR" || {
-            echo "gradlew was not found in the R4 source ZIP"
-            exit 1
-          }
+          test -n "$SOURCE_DIR" || { echo "gradlew was not found in the R4 source"; exit 1; }
           rsync -a --delete "$SOURCE_DIR/" android/player/
-          rm -f android/KristalStreams-1.6.8-RC1-R4-FULL-GUIDE-FIX.zip
           test -f android/player/gradlew
           test -f android/player/app/build.gradle.kts
           echo "PROJECT_DIR=${GITHUB_WORKSPACE}/android/player" >> "$GITHUB_ENV"
@@ -51,7 +45,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A android/player android/KristalStreams-1.6.8-RC1-R4-FULL-GUIDE-FIX.zip
+          git add -A android/player
           if ! git diff --cached --quiet; then
             git commit -m "Import Kristal Streams R4 Android source"
             git push origin HEAD:android-dev
@@ -82,14 +76,10 @@ jobs:
       - name: Publish APK into the shared project
         run: |
           APK="$(find "$PROJECT_DIR/app/build/outputs/apk/debug" -name '*.apk' -type f | head -n 1)"
-          test -n "$APK" || {
-            echo "APK was not produced"
-            exit 1
-          }
+          test -n "$APK" || { echo "APK was not produced"; exit 1; }
           mkdir -p android/releases out
           cp "$APK" android/releases/KristalStreams-R4-debug.apk
           cp "$APK" out/KristalStreams-R4-debug.apk
-          ls -lh android/releases/KristalStreams-R4-debug.apk
           git add android/releases/KristalStreams-R4-debug.apk
           if ! git diff --cached --quiet; then
             git commit -m "Publish Kristal Streams R4 debug APK"
