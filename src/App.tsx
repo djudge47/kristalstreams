@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import InstallPrompt from './components/InstallPrompt';
 import Layout from './components/Layout';
 
@@ -193,7 +193,19 @@ function App() {
             <Route path="support/status-history" element={<S.StatusHistory />} />
             <Route path="support/article/:slug" element={<S.Article />} />
             <Route path="support/guide/:slug" element={<S.Guide />} />
+
+            {/* Compatibility redirects for older Android/WebView builds. */}
+            <Route path="account" element={<Navigate to="/client/account" replace />} />
+            <Route path="subscription" element={<Navigate to="/client/subscription" replace />} />
+            <Route path="devices" element={<Navigate to="/client/devices" replace />} />
+            <Route path="history" element={<Navigate to="/client/history" replace />} />
+            <Route path="security" element={<Navigate to="/client/security" replace />} />
+            <Route path="settings" element={<Navigate to="/client/settings" replace />} />
+            <Route path="support-history" element={<Navigate to="/client/support" replace />} />
+            <Route path="new-ticket" element={<Navigate to="/client/support/new" replace />} />
+
             <Route path="client" element={<C.Layout />}>
+              <Route index element={<Navigate to="account" replace />} />
               <Route path="account" element={<C.Account />} />
               <Route path="subscription" element={<C.Subscription />} />
               <Route path="devices" element={<C.Devices />} />
