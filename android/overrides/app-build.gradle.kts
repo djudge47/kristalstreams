@@ -31,9 +31,9 @@ android {
     }
 }
 
-// Restore real visual assets recovered from the user's known-good APK.
-// The GitHub workflow reconstructs android/player on every run, so these are
-// applied at Gradle configuration time after that reconstruction is complete.
+// The launcher asset stored in good-apk-assets is verified and safe to restore.
+// Other visual assets are restored by the GitHub Actions workflow from the
+// repository's full-source package before Gradle configures this module.
 val goodAssetsDir = rootProject.projectDir.parentFile.resolve("good-apk-assets")
 val appResDir = project.projectDir.resolve("src/main/res")
 
@@ -49,16 +49,11 @@ fun removeResourceCopies(baseName: String, folderPrefix: String) {
     }
 }
 
-fun restoreDrawable(sourceName: String, resourceName: String) {
-    val bytes = decodeGoodAsset(sourceName) ?: return
-    removeResourceCopies(resourceName, "drawable")
-    val outDir = appResDir.resolve("drawable-nodpi").apply { mkdirs() }
-    outDir.resolve("$resourceName.png").writeBytes(bytes)
-    println("Restored good APK drawable: $resourceName")
-}
-
 fun restoreLauncher() {
     val bytes = decodeGoodAsset("ic_launcher.png.b64") ?: return
+    require(bytes.size >= 8 && bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() && bytes[2] == 0x4E.toByte() && bytes[3] == 0x47.toByte()) {
+        "Verified launcher asset is not a PNG"
+    }
     removeResourceCopies("ic_launcher", "mipmap")
     removeResourceCopies("ic_launcher_round", "mipmap")
     listOf("mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi").forEach { folder ->
@@ -66,14 +61,10 @@ fun restoreLauncher() {
         dir.resolve("ic_launcher.png").writeBytes(bytes)
         dir.resolve("ic_launcher_round.png").writeBytes(bytes)
     }
-    println("Restored good APK launcher icon")
+    println("Restored verified good APK launcher icon")
 }
 
 restoreLauncher()
-restoreDrawable("official_live_tv.png.b64", "official_live_tv")
-restoreDrawable("official_live_tv.png.b64", "official_live_tv_focused")
-restoreDrawable("official_movies.png.b64", "official_movies")
-restoreDrawable("official_movies.png.b64", "official_movies_focused")
 
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
