@@ -1,19 +1,37 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import InstallPrompt from './components/InstallPrompt';
 import Layout from './components/Layout';
 
 function lazyRetry(importFn: () => Promise<any>) {
-  return lazy(() => importFn().catch(() => {
-    const hasReloaded = sessionStorage.getItem('chunk-reload');
-    if (!hasReloaded) {
-      sessionStorage.setItem('chunk-reload', 'true');
-      window.location.reload();
-      return { default: () => null };
+  return lazy(async () => {
+    try {
+      const module = await importFn();
+      sessionStorage.removeItem('chunk-reload');
+      return module;
+    } catch (error) {
+      const hasReloaded = sessionStorage.getItem('chunk-reload') === 'true';
+      if (!hasReloaded) {
+        sessionStorage.setItem('chunk-reload', 'true');
+        window.location.reload();
+        return { default: () => null };
+      }
+
+      console.error('Lazy page failed after recovery reload:', error);
+      sessionStorage.removeItem('chunk-reload');
+      return {
+        default: () => (
+          <div className="flex min-h-screen items-center justify-center bg-gray-900 px-6 text-white">
+            <div className="max-w-md text-center">
+              <h1 className="mb-3 text-2xl font-semibold">Page could not load</h1>
+              <p className="mb-6 text-gray-300">Kristal Streams could not load this screen. Please refresh and try again.</p>
+              <button onClick={() => window.location.reload()} className="rounded-lg bg-red-600 px-6 py-3 font-medium hover:bg-red-700">Refresh Page</button>
+            </div>
+          </div>
+        ),
+      };
     }
-    sessionStorage.removeItem('chunk-reload');
-    return { default: () => <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white">Page failed to load. Please refresh.</div> };
-  }));
+  });
 }
 
 const pages = {
@@ -117,7 +135,6 @@ const adminPages = {
 const LoadingFallback = () => <div className="flex min-h-screen items-center justify-center bg-gray-900 text-gray-300">Loading...</div>;
 
 function App() {
-  sessionStorage.removeItem('chunk-reload');
   const P = pages;
   const S = supportPages;
   const C = clientPages;
@@ -193,7 +210,19 @@ function App() {
             <Route path="support/status-history" element={<S.StatusHistory />} />
             <Route path="support/article/:slug" element={<S.Article />} />
             <Route path="support/guide/:slug" element={<S.Guide />} />
+
+            {/* Compatibility redirects for older Android/WebView builds. */}
+            <Route path="account" element={<Navigate to="/client/account" replace />} />
+            <Route path="subscription" element={<Navigate to="/client/subscription" replace />} />
+            <Route path="devices" element={<Navigate to="/client/devices" replace />} />
+            <Route path="history" element={<Navigate to="/client/history" replace />} />
+            <Route path="security" element={<Navigate to="/client/security" replace />} />
+            <Route path="settings" element={<Navigate to="/client/settings" replace />} />
+            <Route path="support-history" element={<Navigate to="/client/support" replace />} />
+            <Route path="new-ticket" element={<Navigate to="/client/support/new" replace />} />
+
             <Route path="client" element={<C.Layout />}>
+              <Route index element={<Navigate to="account" replace />} />
               <Route path="account" element={<C.Account />} />
               <Route path="subscription" element={<C.Subscription />} />
               <Route path="devices" element={<C.Devices />} />

@@ -34,6 +34,50 @@ class AppErrorBoundary extends React.Component<
   }
 }
 
+// Older Android/WebView builds used a mixture of hash routes and short client paths.
+// Normalize those addresses before React Router starts so taps open the intended page
+// instead of falling through to the app's initial screen.
+const legacyPathMap: Record<string, string> = {
+  '/account': '/client/account',
+  '/subscription': '/client/subscription',
+  '/devices': '/client/devices',
+  '/history': '/client/history',
+  '/security': '/client/security',
+  '/settings': '/client/settings',
+  '/support-history': '/client/support',
+  '/support-tickets': '/client/support',
+  '/new-ticket': '/client/support/new',
+  '/tickets/new': '/client/support/new',
+  '/downloads': '/download-app',
+  '/get-app': '/download-app',
+  '/plans': '/pricing',
+  '/trial': '/free-trial',
+};
+
+const normalizeLegacyNavigation = () => {
+  let requestedPath = window.location.pathname;
+  let requestedSearch = window.location.search;
+
+  if (window.location.hash.startsWith('#/')) {
+    const hashRoute = window.location.hash.slice(1);
+    const queryIndex = hashRoute.indexOf('?');
+    requestedPath = queryIndex >= 0 ? hashRoute.slice(0, queryIndex) : hashRoute;
+    requestedSearch = queryIndex >= 0 ? hashRoute.slice(queryIndex) : '';
+  }
+
+  const normalizedPath = legacyPathMap[requestedPath] ?? requestedPath;
+  const needsRewrite =
+    normalizedPath !== window.location.pathname ||
+    requestedSearch !== window.location.search ||
+    window.location.hash.startsWith('#/');
+
+  if (needsRewrite) {
+    window.history.replaceState({}, '', `${normalizedPath}${requestedSearch}`);
+  }
+};
+
+normalizeLegacyNavigation();
+
 const isProductionSite = ['kristalstream.com', 'www.kristalstream.com'].includes(window.location.hostname);
 
 if ('serviceWorker' in navigator && isProductionSite) {
