@@ -64,8 +64,12 @@ jobs:
           test -f android/player/app/src/main/AndroidManifest.xml || { echo "Missing AndroidManifest.xml after recovery"; exit 1; }
           echo "PROJECT_DIR=${GITHUB_WORKSPACE}/android/player" >> "$GITHUB_ENV"
 
-      - name: Apply Android playback overrides
+      - name: Apply authoritative R4 project and playback overrides
         run: |
+          for file in build.gradle.kts settings.gradle.kts gradle.properties; do
+            test -f "android/overrides/$file" || { echo "Missing R4 override: $file"; exit 1; }
+            cp "android/overrides/$file" "android/player/$file"
+          done
           test -f android/overrides/PlayerActivity.kt || { echo "Missing playback override"; exit 1; }
           mkdir -p android/player/app/src/main/java/com/kristalstreams/player
           cp android/overrides/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
@@ -76,6 +80,7 @@ jobs:
           find android/player -type f | sort
           test -f android/player/build.gradle.kts || { echo "Root build.gradle.kts is missing"; exit 1; }
           test -f android/player/settings.gradle.kts || { echo "settings.gradle.kts is missing"; exit 1; }
+          test -f android/player/gradle.properties || { echo "gradle.properties is missing"; exit 1; }
           test -f android/player/app/build.gradle.kts || { echo "App build.gradle.kts is missing"; exit 1; }
           test -f android/player/app/src/main/AndroidManifest.xml || { echo "AndroidManifest.xml is missing"; exit 1; }
 
