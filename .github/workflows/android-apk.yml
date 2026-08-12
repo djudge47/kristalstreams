@@ -60,7 +60,7 @@ jobs:
               raise SystemExit('No complete bootstrap files were recovered')
           PY
           fi
-          test -f android/player/app/build.gradle.kts || { echo "Missing app/build.gradle.kts after recovery"; find android/player -maxdepth 4 -type f | sort; exit 1; }
+          test -f android/player/app/build.gradle.kts || { echo "Missing app/build.gradle.kts after recovery"; find android/player -type f | sort; exit 1; }
           test -f android/player/app/src/main/AndroidManifest.xml || { echo "Missing AndroidManifest.xml after recovery"; exit 1; }
           echo "PROJECT_DIR=${GITHUB_WORKSPACE}/android/player" >> "$GITHUB_ENV"
 
@@ -70,23 +70,26 @@ jobs:
           mkdir -p android/player/app/src/main/java/com/kristalstreams/player
           cp android/overrides/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
 
-      - name: Verify recovered Android project
+      - name: Inventory recovered Android project
         run: |
-          test -f android/player/gradlew || { echo "gradlew is missing"; exit 1; }
-          test -f android/player/gradle/wrapper/gradle-wrapper.jar || { echo "gradle-wrapper.jar is missing"; exit 1; }
-          test -f android/player/app/src/main/java/com/kristalstreams/player/XtreamClient.kt || { echo "XtreamClient.kt is missing"; exit 1; }
-          test -f android/player/app/src/main/java/com/kristalstreams/player/LibraryActivity.kt || { echo "LibraryActivity.kt is missing"; exit 1; }
-          test -f android/player/app/src/main/java/com/kristalstreams/player/SeriesDetailsActivity.kt || { echo "SeriesDetailsActivity.kt is missing"; exit 1; }
-          test -f android/player/app/src/main/java/com/kristalstreams/player/ChannelsActivity.kt || { echo "ChannelsActivity.kt is missing"; exit 1; }
-          echo "Recovered project contains Movies, Series, Live TV, and Player source paths."
+          echo "Recovered Android files:"
+          find android/player -type f | sort
+          test -f android/player/build.gradle.kts || { echo "Root build.gradle.kts is missing"; exit 1; }
+          test -f android/player/settings.gradle.kts || { echo "settings.gradle.kts is missing"; exit 1; }
+          test -f android/player/app/build.gradle.kts || { echo "App build.gradle.kts is missing"; exit 1; }
+          test -f android/player/app/src/main/AndroidManifest.xml || { echo "AndroidManifest.xml is missing"; exit 1; }
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
-          cache-dependency-path: android/player/**/*.gradle*
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+          cache-read-only: false
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -99,21 +102,19 @@ jobs:
       - name: Build R4 debug APK
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          chmod +x ./gradlew
-          ./gradlew --no-daemon clean assembleDebug --stacktrace
+          gradle --no-daemon clean assembleDebug --stacktrace
 
-      - name: Publish APK into the shared project
+      - name: Publish APK
         run: |
           APK="$(find "$PROJECT_DIR/app/build/outputs/apk/debug" -name '*.apk' -type f | head -n 1)"
           test -n "$APK" || { echo "APK was not produced"; exit 1; }
-          mkdir -p android/releases out
-          cp "$APK" android/releases/KristalStreams-R4-debug.apk
-          cp "$APK" out/KristalStreams-R4-debug.apk
+          mkdir -p out
+          cp "$APK" out/KristalStreams-R4-playback-fixed-debug.apk
 
       - name: Upload Kristal Streams APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KristalStreams-R4-APK
-          path: out/KristalStreams-R4-debug.apk
+          name: KristalStreams-R4-Playback-Fixed-APK
+          path: out/KristalStreams-R4-playback-fixed-debug.apk
           retention-days: 30
           if-no-files-found: error
