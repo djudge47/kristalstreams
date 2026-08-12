@@ -39,33 +39,46 @@ jobs:
             test -n "$SOURCE_DIR" || { echo "gradlew was not found in the R4 source"; exit 1; }
             rsync -a --delete "$SOURCE_DIR/" android/player/
           else
-            echo "R4 source chunks are unavailable; restoring from packed bootstrap source"
-            test -f android/bootstrap/packed.part-00 || { echo "Missing packed bootstrap source"; exit 1; }
-            cat android/bootstrap/packed.part-* | base64 --decode | gzip -dc > /tmp/rebuild-android.sh
-            bash -n /tmp/rebuild-android.sh
-            chmod +x /tmp/rebuild-android.sh
-            /tmp/rebuild-android.sh
+            echo "R4 source chunks unavailable; recovering every complete file embedded in the preserved bootstrap"
+            python3 - <<'PY'
+          import base64
+          import glob
+          import pathlib
+          import re
+
+          text = ''.join(pathlib.Path(p).read_text() for p in sorted(glob.glob('android/bootstrap/source.part-*')))
+          pattern = re.compile(r"printf '%s' '([A-Za-z0-9+/=]+)' \| base64 -d > \"([^\"]+)\"")
+          recovered = 0
+          for payload, raw_path in pattern.findall(text):
+              path = raw_path.replace('$ROOT', 'android/player')
+              out = pathlib.Path(path)
+              out.parent.mkdir(parents=True, exist_ok=True)
+              out.write_bytes(base64.b64decode(payload))
+              recovered += 1
+          print(f'Recovered {recovered} complete bootstrap files')
+          if recovered == 0:
+              raise SystemExit('No complete bootstrap files were recovered')
+          PY
           fi
-          test -f android/player/gradlew
-          test -f android/player/app/build.gradle.kts
-          test -f android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
+          test -f android/player/app/build.gradle.kts || { echo "Missing app/build.gradle.kts after recovery"; find android/player -maxdepth 4 -type f | sort; exit 1; }
+          test -f android/player/app/src/main/AndroidManifest.xml || { echo "Missing AndroidManifest.xml after recovery"; exit 1; }
           echo "PROJECT_DIR=${GITHUB_WORKSPACE}/android/player" >> "$GITHUB_ENV"
 
       - name: Apply Android playback overrides
         run: |
-          if [ -f android/overrides/PlayerActivity.kt ]; then
-            cp android/overrides/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
-          fi
+          test -f android/overrides/PlayerActivity.kt || { echo "Missing playback override"; exit 1; }
+          mkdir -p android/player/app/src/main/java/com/kristalstreams/player
+          cp android/overrides/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
 
-      - name: Save shared Android source to android-dev
+      - name: Verify recovered Android project
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A android/player
-          if ! git diff --cached --quiet; then
-            git commit -m "Import Kristal Streams R4 Android source"
-            git push origin HEAD:android-dev
-          fi
+          test -f android/player/gradlew || { echo "gradlew is missing"; exit 1; }
+          test -f android/player/gradle/wrapper/gradle-wrapper.jar || { echo "gradle-wrapper.jar is missing"; exit 1; }
+          test -f android/player/app/src/main/java/com/kristalstreams/player/XtreamClient.kt || { echo "XtreamClient.kt is missing"; exit 1; }
+          test -f android/player/app/src/main/java/com/kristalstreams/player/LibraryActivity.kt || { echo "LibraryActivity.kt is missing"; exit 1; }
+          test -f android/player/app/src/main/java/com/kristalstreams/player/SeriesDetailsActivity.kt || { echo "SeriesDetailsActivity.kt is missing"; exit 1; }
+          test -f android/player/app/src/main/java/com/kristalstreams/player/ChannelsActivity.kt || { echo "ChannelsActivity.kt is missing"; exit 1; }
+          echo "Recovered project contains Movies, Series, Live TV, and Player source paths."
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -96,11 +109,6 @@ jobs:
           mkdir -p android/releases out
           cp "$APK" android/releases/KristalStreams-R4-debug.apk
           cp "$APK" out/KristalStreams-R4-debug.apk
-          git add android/releases/KristalStreams-R4-debug.apk
-          if ! git diff --cached --quiet; then
-            git commit -m "Publish Kristal Streams R4 debug APK"
-            git push origin HEAD:android-dev
-          fi
 
       - name: Upload Kristal Streams APK artifact
         uses: actions/upload-artifact@v4
