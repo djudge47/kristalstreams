@@ -6,7 +6,7 @@ on:
     branches:
       - android-dev
     paths:
-      - 'android/KristalStreams-source.zip'
+      - 'android/KristalStreams-1.6.8-RC1-R4-FULL-GUIDE-FIX.zip'
       - '.github/workflows/android-apk.yml'
 
 permissions:
@@ -23,8 +23,8 @@ jobs:
 
       - name: Verify Android source package
         run: |
-          test -f android/KristalStreams-source.zip || {
-            echo "Missing android/KristalStreams-source.zip"
+          test -f android/KristalStreams-1.6.8-RC1-R4-FULL-GUIDE-FIX.zip || {
+            echo "Missing R4 Android source ZIP"
             exit 1
           }
 
@@ -32,7 +32,7 @@ jobs:
         run: |
           rm -rf .android-build
           mkdir -p .android-build
-          unzip -q android/KristalStreams-source.zip -d .android-build
+          unzip -q android/KristalStreams-1.6.8-RC1-R4-FULL-GUIDE-FIX.zip -d .android-build
           PROJECT_DIR="$(find .android-build -name gradlew -type f -printf '%h\n' | head -n 1)"
           test -n "$PROJECT_DIR" || {
             echo "gradlew was not found in the Android source ZIP"
