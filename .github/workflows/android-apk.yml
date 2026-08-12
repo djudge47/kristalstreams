@@ -63,13 +63,7 @@ jobs:
           make_shape() {
             local name="$1" color="$2" stroke="$3" radius="$4"
             if ! find "$RES" -type f \( -name "$name.png" -o -name "$name.jpg" -o -name "$name.jpeg" -o -name "$name.webp" -o -name "$name.xml" \) | grep -q .; then
-              cat > "$RES/drawable/$name.xml" <<EOF
-          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-              <solid android:color="$color" />
-              <stroke android:width="2dp" android:color="$stroke" />
-              <corners android:radius="$radius" />
-          </shape>
-          EOF
+              printf '%s\n' '<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">' "    <solid android:color=\"$color\" />" "    <stroke android:width=\"2dp\" android:color=\"$stroke\" />" "    <corners android:radius=\"$radius\" />" '</shape>' > "$RES/drawable/$name.xml"
               echo "Created fallback drawable: $name"
             fi
           }
@@ -82,26 +76,15 @@ jobs:
           make_shape official_series_focused "#E50914" "#FFFFFF" "14dp"
           make_shape official_dashboard_bg "#080B12" "#151A24" "0dp"
           make_shape ks_badge "#E50914" "#FFFFFF" "18dp"
-
-          if ! find "$RES" -type f \( -name 'ks_monogram.png' -o -name 'ks_monogram.jpg' -o -name 'ks_monogram.jpeg' -o -name 'ks_monogram.webp' -o -name 'ks_monogram.xml' \) | grep -q .; then
-            cat > "$RES/drawable/ks_monogram.xml" <<'EOF'
-          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="96dp" android:height="96dp" android:viewportWidth="96" android:viewportHeight="96">
-              <path android:fillColor="#080B12" android:pathData="M0,0h96v96h-96z"/>
-              <path android:fillColor="#E50914" android:pathData="M16,16h12v27l22,-27h15l-25,30l27,34h-16l-23,-30v30h-12z"/>
-              <path android:fillColor="#FFFFFF" android:pathData="M68,18h12v60h-12z"/>
-          </vector>
-          EOF
-          fi
-
           make_shape ks_banner "#080B12" "#E50914" "12dp"
 
-          # Scan the complete restored R4 XML inventory and automatically create
-          # fallbacks for every missing app-owned @drawable reference. This
-          # prevents repeated one-resource-at-a-time AAPT failures.
+          if ! find "$RES" -type f \( -name 'ks_monogram.png' -o -name 'ks_monogram.jpg' -o -name 'ks_monogram.jpeg' -o -name 'ks_monogram.webp' -o -name 'ks_monogram.xml' \) | grep -q .; then
+            printf '%s\n' '<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="96dp" android:height="96dp" android:viewportWidth="96" android:viewportHeight="96">' '    <path android:fillColor="#080B12" android:pathData="M0,0h96v96h-96z"/>' '    <path android:fillColor="#E50914" android:pathData="M16,16h12v27l22,-27h15l-25,30l27,34h-16l-23,-30v30h-12z"/>' '    <path android:fillColor="#FFFFFF" android:pathData="M68,18h12v60h-12z"/>' '</vector>' > "$RES/drawable/ks_monogram.xml"
+          fi
+
           python3 - <<'PY'
           from pathlib import Path
           import re
-
           res = Path('android/player/app/src/main/res')
           refs = set()
           for p in res.rglob('*.xml'):
@@ -110,22 +93,15 @@ jobs:
               except UnicodeDecodeError:
                   continue
               refs.update(re.findall(r'(?<!android:)@drawable/([A-Za-z0-9_]+)', text))
-
-          extensions = ('.xml', '.png', '.jpg', '.jpeg', '.webp', '.gif')
+          exts = ('.xml', '.png', '.jpg', '.jpeg', '.webp', '.gif')
           missing = []
           for name in sorted(refs):
-              exists = any((folder / f'{name}{ext}').exists()
-                           for folder in res.glob('drawable*') if folder.is_dir()
-                           for ext in extensions)
+              exists = any((folder / f'{name}{ext}').exists() for folder in res.glob('drawable*') if folder.is_dir() for ext in exts)
               if not exists:
                   missing.append(name)
                   target = res / 'drawable' / f'{name}.xml'
-                  target.write_text(f'''<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#151A24" />
-    <stroke android:width="1dp" android:color="#E50914" />
-    <corners android:radius="10dp" />
-</shape>\n''', encoding='utf-8')
-
+                  xml = '<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">\n    <solid android:color="#151A24" />\n    <stroke android:width="1dp" android:color="#E50914" />\n    <corners android:radius="10dp" />\n</shape>\n'
+                  target.write_text(xml, encoding='utf-8')
           print(f'Drawable references found: {len(refs)}')
           print(f'Missing drawable fallbacks created: {len(missing)}')
           for name in missing:
@@ -133,24 +109,14 @@ jobs:
           PY
 
           if [ ! -e "$RES/mipmap/ic_launcher.png" ] && [ ! -e "$RES/mipmap/ic_launcher.webp" ] && [ ! -e "$RES/mipmap/ic_launcher.xml" ]; then
-            cat > "$RES/mipmap/ic_launcher.xml" <<'EOF'
-          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-              <path android:fillColor="#080B12" android:pathData="M0,0h108v108h-108z"/>
-              <path android:fillColor="#E50914" android:pathData="M20,20h68v68h-68z"/>
-          </vector>
-          EOF
+            printf '%s\n' '<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">' '    <path android:fillColor="#080B12" android:pathData="M0,0h108v108h-108z"/>' '    <path android:fillColor="#E50914" android:pathData="M20,20h68v68h-68z"/>' '</vector>' > "$RES/mipmap/ic_launcher.xml"
           fi
           if [ ! -e "$RES/mipmap/ic_launcher_round.png" ] && [ ! -e "$RES/mipmap/ic_launcher_round.webp" ] && [ ! -e "$RES/mipmap/ic_launcher_round.xml" ]; then cp "$RES/mipmap/ic_launcher.xml" "$RES/mipmap/ic_launcher_round.xml"; fi
           if [ ! -e "$RES/xml/network_security_config.xml" ]; then
-            cat > "$RES/xml/network_security_config.xml" <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <network-security-config><base-config cleartextTrafficPermitted="true" /></network-security-config>
-          EOF
+            printf '%s\n' '<?xml version="1.0" encoding="utf-8"?>' '<network-security-config><base-config cleartextTrafficPermitted="true" /></network-security-config>' > "$RES/xml/network_security_config.xml"
           fi
           if ! grep -Rqs 'name="Theme.KristalStreams"' "$RES/values"; then
-            cat > "$RES/values/themes_cloud_fallback.xml" <<'EOF'
-          <resources><style name="Theme.KristalStreams" parent="android:style/Theme.Material.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowActionModeOverlay">true</item><item name="android:colorAccent">#E50914</item><item name="android:navigationBarColor">#000000</item><item name="android:statusBarColor">#000000</item><item name="android:windowLightStatusBar">false</item></style></resources>
-          EOF
+            printf '%s\n' '<resources><style name="Theme.KristalStreams" parent="android:style/Theme.Material.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowActionModeOverlay">true</item><item name="android:colorAccent">#E50914</item><item name="android:navigationBarColor">#000000</item><item name="android:statusBarColor">#000000</item><item name="android:windowLightStatusBar">false</item></style></resources>' > "$RES/values/themes_cloud_fallback.xml"
           fi
 
       - name: Validate complete R4 project inventory
@@ -160,20 +126,21 @@ jobs:
           REQUIRED=(android/player/build.gradle.kts android/player/settings.gradle.kts android/player/gradle.properties android/player/app/build.gradle.kts android/player/app/src/main/AndroidManifest.xml android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/ChannelsActivity.kt)
           for f in "${REQUIRED[@]}"; do test -f "$f" || { echo "MISSING: $f"; exit 1; }; done
           for r in official_live_tv official_live_tv_focused official_movies official_movies_focused official_series official_series_focused official_dashboard_bg ks_monogram ks_badge; do find android/player/app/src/main/res -type f \( -name "$r.xml" -o -name "$r.png" -o -name "$r.jpg" -o -name "$r.jpeg" -o -name "$r.webp" \) | grep -q . || { echo "MISSING RESOURCE: $r"; exit 1; }; done
-
           python3 - <<'PY'
           from pathlib import Path
           import re, sys
           res = Path('android/player/app/src/main/res')
           refs = set()
           for p in res.rglob('*.xml'):
-              try: text = p.read_text(encoding='utf-8')
-              except UnicodeDecodeError: continue
+              try:
+                  text = p.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
               refs.update(re.findall(r'(?<!android:)@drawable/([A-Za-z0-9_]+)', text))
-          exts = ('.xml','.png','.jpg','.jpeg','.webp','.gif')
+          exts = ('.xml', '.png', '.jpg', '.jpeg', '.webp', '.gif')
           missing = []
           for name in sorted(refs):
-              if not any((d/f'{name}{e}').exists() for d in res.glob('drawable*') if d.is_dir() for e in exts):
+              if not any((d / f'{name}{e}').exists() for d in res.glob('drawable*') if d.is_dir() for e in exts):
                   missing.append(name)
           if missing:
               print('Unresolved drawable references:', ', '.join(missing))
@@ -186,26 +153,32 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
       - name: Set up Gradle 9.5
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
           cache-read-only: false
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+
       - name: Install Android 35 platform
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
       - name: Build R4 debug APK
         working-directory: ${{ env.PROJECT_DIR }}
         run: gradle --no-daemon clean assembleDebug --stacktrace
+
       - name: Publish APK
         run: |
           APK="$(find "$PROJECT_DIR/app/build/outputs/apk/debug" -name '*.apk' -type f | head -n 1)"
           test -n "$APK" || { echo "APK was not produced"; exit 1; }
           mkdir -p out
           cp "$APK" out/KristalStreams-R4-playback-fixed-debug.apk
+
       - name: Upload Kristal Streams APK artifact
         uses: actions/upload-artifact@v4
         with:
