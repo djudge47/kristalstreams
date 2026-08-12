@@ -8,7 +8,7 @@ on:
     paths:
       - 'android/R4_READY.txt'
       - 'android/overrides/**'
-      - 'android/bootstrap/**'
+      - 'android/r4-text-source/**'
       - '.github/workflows/android-apk.yml'
 
 permissions:
@@ -26,46 +26,34 @@ jobs:
           ref: android-dev
           fetch-depth: 0
 
-      - name: Restore shared Android project
+      - name: Restore canonical R4 Android project
         run: |
+          set -euo pipefail
           rm -rf android/player .android-import
-          if [ -d android/r4-source-parts ]; then
-            echo "Restoring from R4 source chunks"
-            cat android/r4-source-parts/part-*.txt | base64 --decode > /tmp/KristalStreams-R4.zip
-            unzip -tq /tmp/KristalStreams-R4.zip
-            mkdir -p .android-import android/player
-            unzip -q /tmp/KristalStreams-R4.zip -d .android-import
-            SOURCE_DIR="$(find .android-import -name gradlew -type f -printf '%h\n' | head -n 1)"
-            test -n "$SOURCE_DIR" || { echo "gradlew was not found in the R4 source"; exit 1; }
-            rsync -a --delete "$SOURCE_DIR/" android/player/
-          else
-            echo "R4 source chunks unavailable; recovering every complete file embedded in the preserved bootstrap"
-            python3 - <<'PY'
-          import base64
-          import glob
-          import pathlib
-          import re
+          mkdir -p android/player .android-import
 
-          text = ''.join(pathlib.Path(p).read_text() for p in sorted(glob.glob('android/bootstrap/source.part-*')))
-          pattern = re.compile(r"printf '%s' '([A-Za-z0-9+/=]+)' \| base64 -d > \"([^\"]+)\"")
-          recovered = 0
-          for payload, raw_path in pattern.findall(text):
-              path = raw_path.replace('$ROOT', 'android/player')
-              out = pathlib.Path(path)
-              out.parent.mkdir(parents=True, exist_ok=True)
-              out.write_bytes(base64.b64decode(payload))
-              recovered += 1
-          print(f'Recovered {recovered} complete bootstrap files')
-          if recovered == 0:
-              raise SystemExit('No complete bootstrap files were recovered')
-          PY
-          fi
-          test -f android/player/app/build.gradle.kts || { echo "Missing app/build.gradle.kts after recovery"; find android/player -type f | sort; exit 1; }
-          test -f android/player/app/src/main/AndroidManifest.xml || { echo "Missing AndroidManifest.xml after recovery"; exit 1; }
+          test -d android/r4-text-source || { echo "Canonical R4 source package is missing"; exit 1; }
+          PART_COUNT="$(find android/r4-text-source -maxdepth 1 -name 'part-*.b64' -type f | wc -l)"
+          echo "Canonical R4 parts: $PART_COUNT"
+          test "$PART_COUNT" -ge 4 || { echo "Canonical R4 source package is incomplete"; exit 1; }
+
+          cat android/r4-text-source/part-*.b64 | base64 --decode > /tmp/KristalStreams-R4-text.tar.gz
+          gzip -t /tmp/KristalStreams-R4-text.tar.gz
+          tar -xzf /tmp/KristalStreams-R4-text.tar.gz -C .android-import
+
+          SOURCE_APP="$(find .android-import -path '*/app/build.gradle.kts' -type f | head -n 1)"
+          test -n "$SOURCE_APP" || { echo "app/build.gradle.kts was not found in canonical R4 archive"; find .android-import -type f | sort; exit 1; }
+          SOURCE_DIR="${SOURCE_APP%/app/build.gradle.kts}"
+          echo "Canonical R4 root: $SOURCE_DIR"
+          rsync -a "$SOURCE_DIR/" android/player/
+
+          test -f android/player/app/build.gradle.kts || { echo "Missing app/build.gradle.kts after canonical restore"; exit 1; }
+          test -f android/player/app/src/main/AndroidManifest.xml || { echo "Missing AndroidManifest.xml after canonical restore"; exit 1; }
           echo "PROJECT_DIR=${GITHUB_WORKSPACE}/android/player" >> "$GITHUB_ENV"
 
-      - name: Apply authoritative R4 project and playback overrides
+      - name: Apply playback and Gradle overrides
         run: |
+          set -euo pipefail
           for file in build.gradle.kts settings.gradle.kts gradle.properties; do
             test -f "android/overrides/$file" || { echo "Missing R4 override: $file"; exit 1; }
             cp "android/overrides/$file" "android/player/$file"
@@ -76,15 +64,77 @@ jobs:
           mkdir -p android/player/app/src/main/java/com/kristalstreams/player
           cp android/overrides/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
 
-      - name: Inventory recovered Android project
+      - name: Ensure required Android resources
         run: |
-          echo "Recovered Android files:"
-          find android/player -type f | sort
-          test -f android/player/build.gradle.kts || { echo "Root build.gradle.kts is missing"; exit 1; }
-          test -f android/player/settings.gradle.kts || { echo "settings.gradle.kts is missing"; exit 1; }
-          test -f android/player/gradle.properties || { echo "gradle.properties is missing"; exit 1; }
-          test -f android/player/app/build.gradle.kts || { echo "App build.gradle.kts is missing"; exit 1; }
-          test -f android/player/app/src/main/AndroidManifest.xml || { echo "AndroidManifest.xml is missing"; exit 1; }
+          set -euo pipefail
+          RES="android/player/app/src/main/res"
+          mkdir -p "$RES/drawable" "$RES/mipmap" "$RES/xml" "$RES/values"
+
+          if [ ! -e "$RES/drawable/ks_banner.png" ] && [ ! -e "$RES/drawable/ks_banner.jpg" ] && [ ! -e "$RES/drawable/ks_banner.webp" ] && [ ! -e "$RES/drawable/ks_banner.xml" ]; then
+            cat > "$RES/drawable/ks_banner.xml" <<'EOF'
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#080B12" />
+              <corners android:radius="12dp" />
+          </shape>
+          EOF
+          fi
+
+          if [ ! -e "$RES/mipmap/ic_launcher.png" ] && [ ! -e "$RES/mipmap/ic_launcher.webp" ] && [ ! -e "$RES/mipmap/ic_launcher.xml" ]; then
+            cat > "$RES/mipmap/ic_launcher.xml" <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#080B12" android:pathData="M0,0h108v108h-108z"/>
+              <path android:fillColor="#E50914" android:pathData="M20,20h68v68h-68z"/>
+          </vector>
+          EOF
+          fi
+
+          if [ ! -e "$RES/mipmap/ic_launcher_round.png" ] && [ ! -e "$RES/mipmap/ic_launcher_round.webp" ] && [ ! -e "$RES/mipmap/ic_launcher_round.xml" ]; then
+            cp "$RES/mipmap/ic_launcher.xml" "$RES/mipmap/ic_launcher_round.xml"
+          fi
+
+          if [ ! -e "$RES/xml/network_security_config.xml" ]; then
+            cat > "$RES/xml/network_security_config.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+              <base-config cleartextTrafficPermitted="true" />
+          </network-security-config>
+          EOF
+          fi
+
+          if ! grep -Rqs 'name="Theme.KristalStreams"' "$RES/values"; then
+            cat > "$RES/values/themes_cloud_fallback.xml" <<'EOF'
+          <resources>
+              <style name="Theme.KristalStreams" parent="android:style/Theme.Material.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+                  <item name="android:colorAccent">#E50914</item>
+                  <item name="android:navigationBarColor">#000000</item>
+                  <item name="android:statusBarColor">#000000</item>
+                  <item name="android:windowLightStatusBar">false</item>
+              </style>
+          </resources>
+          EOF
+          fi
+
+      - name: Validate complete R4 project inventory
+        run: |
+          set -euo pipefail
+          echo "Android file count: $(find android/player -type f | wc -l)"
+          REQUIRED=(
+            android/player/build.gradle.kts
+            android/player/settings.gradle.kts
+            android/player/gradle.properties
+            android/player/app/build.gradle.kts
+            android/player/app/src/main/AndroidManifest.xml
+            android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
+            android/player/app/src/main/java/com/kristalstreams/player/ChannelsActivity.kt
+          )
+          missing=0
+          for f in "${REQUIRED[@]}"; do
+            if [ ! -f "$f" ]; then echo "MISSING: $f"; missing=1; fi
+          done
+          test "$missing" -eq 0
+          find android/player/app/src/main/res -type f | sort
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
