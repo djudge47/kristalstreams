@@ -29,6 +29,55 @@ android {
     }
 }
 
+// Restore real visual assets recovered from the user's known-good APK.
+// The GitHub workflow reconstructs android/player on every run, so these are
+// applied at Gradle configuration time after that reconstruction is complete.
+val goodAssetsDir = rootProject.projectDir.parentFile.resolve("good-apk-assets")
+val appResDir = project.projectDir.resolve("src/main/res")
+
+fun decodeGoodAsset(sourceName: String): ByteArray? {
+    val source = goodAssetsDir.resolve(sourceName)
+    if (!source.isFile) return null
+    return java.util.Base64.getMimeDecoder().decode(source.readText().trim())
+}
+
+fun removeResourceCopies(baseName: String, folderPrefix: String) {
+    appResDir.listFiles()?.filter { it.isDirectory && it.name.startsWith(folderPrefix) }?.forEach { dir ->
+        dir.listFiles()?.filter { it.nameWithoutExtension == baseName }?.forEach { it.delete() }
+    }
+}
+
+fun restoreDrawable(sourceName: String, resourceName: String) {
+    val bytes = decodeGoodAsset(sourceName) ?: return
+    removeResourceCopies(resourceName, "drawable")
+    val outDir = appResDir.resolve("drawable-nodpi").apply { mkdirs() }
+    outDir.resolve("$resourceName.png").writeBytes(bytes)
+    println("Restored good APK drawable: $resourceName")
+}
+
+fun restoreLauncher() {
+    val bytes = decodeGoodAsset("ic_launcher.png.b64") ?: return
+    listOf("mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi").forEach { folder ->
+        val dir = appResDir.resolve(folder).apply { mkdirs() }
+        dir.resolve("ic_launcher.png").writeBytes(bytes)
+        dir.resolve("ic_launcher_round.png").writeBytes(bytes)
+    }
+    removeResourceCopies("ic_launcher", "mipmap")
+    removeResourceCopies("ic_launcher_round", "mipmap")
+    listOf("mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi").forEach { folder ->
+        val dir = appResDir.resolve(folder).apply { mkdirs() }
+        dir.resolve("ic_launcher.png").writeBytes(bytes)
+        dir.resolve("ic_launcher_round.png").writeBytes(bytes)
+    }
+    println("Restored good APK launcher icon")
+}
+
+restoreLauncher()
+restoreDrawable("official_live_tv.png.b64", "official_live_tv")
+restoreDrawable("official_live_tv.png.b64", "official_live_tv_focused")
+restoreDrawable("official_movies.png.b64", "official_movies")
+restoreDrawable("official_movies.png.b64", "official_movies_focused")
+
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
