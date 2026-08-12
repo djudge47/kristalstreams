@@ -1,0 +1,82 @@
+name: Build Kristal Streams Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - android-dev
+    paths:
+      - 'android/KristalStreams-source.zip'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout android-dev
+        uses: actions/checkout@v4
+
+      - name: Verify Android source package
+        run: |
+          test -f android/KristalStreams-source.zip || {
+            echo "Missing android/KristalStreams-source.zip"
+            exit 1
+          }
+
+      - name: Extract Kristal Streams Android source
+        run: |
+          rm -rf .android-build
+          mkdir -p .android-build
+          unzip -q android/KristalStreams-source.zip -d .android-build
+          PROJECT_DIR="$(find .android-build -name gradlew -type f -printf '%h\n' | head -n 1)"
+          test -n "$PROJECT_DIR" || {
+            echo "gradlew was not found in the Android source ZIP"
+            exit 1
+          }
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Android project: $PROJECT_DIR"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 35 platform
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon clean assembleDebug --stacktrace
+
+      - name: Collect APK
+        run: |
+          APK="$(find "$PROJECT_DIR/app/build/outputs/apk/debug" -name '*.apk' -type f | head -n 1)"
+          test -n "$APK" || {
+            echo "APK was not produced"
+            exit 1
+          }
+          mkdir -p out
+          cp "$APK" out/KristalStreams-R4-debug.apk
+          ls -lh out/KristalStreams-R4-debug.apk
+
+      - name: Upload Kristal Streams APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KristalStreams-R4-APK
+          path: out/KristalStreams-R4-debug.apk
+          retention-days: 30
+          if-no-files-found: error
