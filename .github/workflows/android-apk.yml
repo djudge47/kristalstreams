@@ -70,6 +70,8 @@ jobs:
             test -f "android/overrides/$file" || { echo "Missing R4 override: $file"; exit 1; }
             cp "android/overrides/$file" "android/player/$file"
           done
+          test -f android/overrides/app-build.gradle.kts || { echo "Missing R4 app Gradle override"; exit 1; }
+          cp android/overrides/app-build.gradle.kts android/player/app/build.gradle.kts
           test -f android/overrides/PlayerActivity.kt || { echo "Missing playback override"; exit 1; }
           mkdir -p android/player/app/src/main/java/com/kristalstreams/player
           cp android/overrides/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
