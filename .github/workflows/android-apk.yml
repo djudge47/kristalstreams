@@ -7,6 +7,9 @@ on:
       - android-dev
     paths:
       - 'android/R4_READY.txt'
+      - 'android/overrides/**'
+      - 'android/bootstrap/**'
+      - '.github/workflows/android-apk.yml'
 
 permissions:
   contents: write
@@ -23,23 +26,35 @@ jobs:
           ref: android-dev
           fetch-depth: 0
 
-      - name: Rebuild R4 source ZIP from repository chunks
+      - name: Restore shared Android project
         run: |
-          test -d android/r4-source-parts || { echo "Missing R4 source chunks"; exit 1; }
-          cat android/r4-source-parts/part-*.txt | base64 --decode > /tmp/KristalStreams-R4.zip
-          unzip -tq /tmp/KristalStreams-R4.zip
-
-      - name: Expand R4 into the shared Android project
-        run: |
-          rm -rf .android-import android/player
-          mkdir -p .android-import android/player
-          unzip -q /tmp/KristalStreams-R4.zip -d .android-import
-          SOURCE_DIR="$(find .android-import -name gradlew -type f -printf '%h\n' | head -n 1)"
-          test -n "$SOURCE_DIR" || { echo "gradlew was not found in the R4 source"; exit 1; }
-          rsync -a --delete "$SOURCE_DIR/" android/player/
+          rm -rf android/player .android-import
+          if [ -d android/r4-source-parts ]; then
+            echo "Restoring from R4 source chunks"
+            cat android/r4-source-parts/part-*.txt | base64 --decode > /tmp/KristalStreams-R4.zip
+            unzip -tq /tmp/KristalStreams-R4.zip
+            mkdir -p .android-import android/player
+            unzip -q /tmp/KristalStreams-R4.zip -d .android-import
+            SOURCE_DIR="$(find .android-import -name gradlew -type f -printf '%h\n' | head -n 1)"
+            test -n "$SOURCE_DIR" || { echo "gradlew was not found in the R4 source"; exit 1; }
+            rsync -a --delete "$SOURCE_DIR/" android/player/
+          else
+            echo "R4 source chunks are unavailable; restoring from preserved bootstrap source"
+            test -f android/bootstrap/source.part-000 || { echo "Missing bootstrap source"; exit 1; }
+            cat android/bootstrap/source.part-* > /tmp/rebuild-android.sh
+            chmod +x /tmp/rebuild-android.sh
+            /tmp/rebuild-android.sh
+          fi
           test -f android/player/gradlew
           test -f android/player/app/build.gradle.kts
+          test -f android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
           echo "PROJECT_DIR=${GITHUB_WORKSPACE}/android/player" >> "$GITHUB_ENV"
+
+      - name: Apply Android playback overrides
+        run: |
+          if [ -f android/overrides/PlayerActivity.kt ]; then
+            cp android/overrides/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
+          fi
 
       - name: Save shared Android source to android-dev
         run: |
