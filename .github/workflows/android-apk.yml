@@ -39,9 +39,10 @@ jobs:
             test -n "$SOURCE_DIR" || { echo "gradlew was not found in the R4 source"; exit 1; }
             rsync -a --delete "$SOURCE_DIR/" android/player/
           else
-            echo "R4 source chunks are unavailable; restoring from preserved bootstrap source"
-            test -f android/bootstrap/source.part-000 || { echo "Missing bootstrap source"; exit 1; }
-            cat android/bootstrap/source.part-* > /tmp/rebuild-android.sh
+            echo "R4 source chunks are unavailable; restoring from packed bootstrap source"
+            test -f android/bootstrap/packed.part-00 || { echo "Missing packed bootstrap source"; exit 1; }
+            cat android/bootstrap/packed.part-* | base64 --decode | gzip -dc > /tmp/rebuild-android.sh
+            bash -n /tmp/rebuild-android.sh
             chmod +x /tmp/rebuild-android.sh
             /tmp/rebuild-android.sh
           fi
