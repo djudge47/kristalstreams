@@ -1,23 +1,23 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title Kristal Streams Visible Guide Fix
+title Kristal Streams Clean Grid Fix
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksvisibleguide-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-VISIBLE-GUIDE-1681006.apk"
-set "LOG=%TEMP%\kristalstreams-visible-guide-fix-build.txt"
+set "WORK=C:\kscleangrid-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-CLEAN-GRID-1681007.apk"
+set "LOG=%TEMP%\kristalstreams-clean-grid-fix-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - VISIBLE GUIDE FIX
-echo   FRESH APK: KS-VISIBLE-GUIDE-1681006.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - CLEAN GRID FIX
+echo   FRESH APK: KS-CLEAN-GRID-1681007.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
-echo This fixes program titles being scrolled outside their boxes.
-echo Titles are centered; current slot begins on screen.
+echo This removes stacked and unevenly overlapped program cards.
+echo One continuous card lane is enforced for every channel.
 echo Original R2 remains untouched.
 echo.
 
@@ -46,16 +46,16 @@ if %RC% GEQ 8 (
     exit /b %RC%
 )
 
-echo [2/6] Applying visible guide patch...
+echo [2/6] Applying clean grid patch...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt',(B 'MODELS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\XtreamClient.kt',(B 'XTREAM')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\GuideActivity.kt',(B 'GUIDE')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt',(B 'ADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\build.gradle.kts',(B 'GRADLE')); [IO.File]::WriteAllBytes('%WORK%\REFERENCE-EPG-AUDIT.txt',(B 'AUDIT'))"
 if errorlevel 1 (
-    echo ERROR: Could not apply the visible guide patch.
+    echo ERROR: Could not apply the clean grid patch.
     pause
     exit /b 1
 )
 
-echo [3/6] Verifying visible guide code...
+echo [3/6] Verifying clean grid code...
 findstr /c:"epgChannelId" "%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt" >nul
 if errorlevel 1 (
     echo ERROR: Channel EPG ID verification failed.
@@ -98,15 +98,21 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+findstr /c:"val safeStart = max(start, cursor)" "%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Non-overlapping card-lane verification failed.
+    pause
+    exit /b 1
+)
 findstr /c:"fillTimelineGaps" "%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt" >nul
 if errorlevel 1 (
     echo ERROR: Reference APK row formatting verification failed.
     pause
     exit /b 1
 )
-findstr /c:"1.6.8-visible-guide-fix" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"1.6.8-clean-grid-fix" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: Visible guide version verification failed.
+    echo ERROR: Clean grid version verification failed.
     pause
     exit /b 1
 )
@@ -150,12 +156,12 @@ exit /b 1
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo.
-echo [5/6] Building visible guide fix...
+echo [5/6] Building clean grid fix...
 echo Gradle progress will appear below.
 echo.
 
 cd /d "%WORK%"
-set "BUILDPS=%TEMP%\ks_visible_guide_gradle_build.ps1"
+set "BUILDPS=%TEMP%\ks_clean_grid_gradle_build.ps1"
 > "%BUILDPS%" echo $ErrorActionPreference = 'Continue'
 >>"%BUILDPS%" echo ^& '.\gradlew.bat' clean assembleDebug --rerun-tasks --console=plain --stacktrace 2^>^&1 ^| Tee-Object -FilePath '%LOG%'
 >>"%BUILDPS%" echo $rc = $LASTEXITCODE
@@ -204,7 +210,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-VISIBLE-GUIDE-1681006.apk"
+    set "USBCOPY=!USBDRIVE!\KS-CLEAN-GRID-1681007.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -213,7 +219,7 @@ cls
 echo.
 echo ==========================================================
 echo.
-echo       KRISTAL STREAMS VISIBLE GUIDE FIX BUILD SUCCESSFUL
+echo       KRISTAL STREAMS CLEAN GRID FIX BUILD SUCCESSFUL
 echo.
 echo ==========================================================
 echo.
@@ -227,9 +233,9 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-VISIBLE-GUIDE-1681006.apk shown above.
-echo Program titles remain inside the visible program cards.
-echo Schedule, labels and NOW continue to use the same device clock.
+echo Install only KS-CLEAN-GRID-1681007.apk shown above.
+echo Every channel now uses one evenly spaced, non-overlapping card lane.
+echo Titles and clock alignment from the prior fix are retained.
 echo.
 explorer /select,"%FINAL%"
 pause
@@ -1268,58 +1274,68 @@ IHNvcnRlZCA9IHNvdXJjZQogICAgICAgICAgICAubWFwSW5kZXhlZE5vdE51bGwgeyBpbmRleCwg
 aXRlbSAtPgogICAgICAgICAgICAgICAgdmFsIChzdGFydCwgZW5kKSA9IHJlc29sdmVkVGltZXMo
 aXRlbSwgaW5kZXgpCiAgICAgICAgICAgICAgICBpZiAoZW5kIDw9IHRpbWVsaW5lU3RhcnRNcyB8
 fCBzdGFydCA+PSB0aW1lbGluZUVuZE1zKSBudWxsCiAgICAgICAgICAgICAgICBlbHNlIFRyaXBs
-ZShpdGVtLCBzdGFydCwgZW5kKQogICAgICAgICAgICB9CiAgICAgICAgICAgIC5zb3J0ZWRCeSB7
-IGl0LnNlY29uZCB9CgogICAgICAgIHZhbCByZXN1bHQgPSBtdXRhYmxlTGlzdE9mPEVwZ0l0ZW0+
-KCkKICAgICAgICB2YXIgY3Vyc29yID0gdGltZWxpbmVTdGFydE1zCgogICAgICAgIGZ1biBhZGRH
-YXAoZnJvbTogTG9uZywgdG86IExvbmcpIHsKICAgICAgICAgICAgdmFyIGdhcFN0YXJ0ID0gZnJv
-bQogICAgICAgICAgICB3aGlsZSAoZ2FwU3RhcnQgPCB0bykgewogICAgICAgICAgICAgICAgdmFs
-IGdhcEVuZCA9IG1pbihnYXBTdGFydCArIDYwICogNjBfMDAwTCwgdG8pCiAgICAgICAgICAgICAg
-ICByZXN1bHQuYWRkKAogICAgICAgICAgICAgICAgICAgIEVwZ0l0ZW0oCiAgICAgICAgICAgICAg
-ICAgICAgICAgIHRpdGxlID0gIk5vIEluZm9ybWF0aW9uIiwKICAgICAgICAgICAgICAgICAgICAg
-ICAgZGVzY3JpcHRpb24gPSAiIiwKICAgICAgICAgICAgICAgICAgICAgICAgc3RhcnQgPSAiIiwK
-ICAgICAgICAgICAgICAgICAgICAgICAgZW5kID0gIiIsCiAgICAgICAgICAgICAgICAgICAgICAg
-IHN0YXJ0VGltZXN0YW1wID0gZ2FwU3RhcnQgLyAxMDAwTCwKICAgICAgICAgICAgICAgICAgICAg
-ICAgZW5kVGltZXN0YW1wID0gZ2FwRW5kIC8gMTAwMEwKICAgICAgICAgICAgICAgICAgICApCiAg
-ICAgICAgICAgICAgICApCiAgICAgICAgICAgICAgICBnYXBTdGFydCA9IGdhcEVuZAogICAgICAg
-ICAgICB9CiAgICAgICAgfQoKICAgICAgICBzb3J0ZWQuZm9yRWFjaCB7IChpdGVtLCByYXdTdGFy
-dCwgcmF3RW5kKSAtPgogICAgICAgICAgICB2YWwgc3RhcnQgPSBtYXgocmF3U3RhcnQsIHRpbWVs
-aW5lU3RhcnRNcykKICAgICAgICAgICAgdmFsIGVuZCA9IG1pbihyYXdFbmQsIHRpbWVsaW5lRW5k
-TXMpCiAgICAgICAgICAgIGlmIChlbmQgPD0gc3RhcnQgfHwgZW5kIDw9IGN1cnNvcikgcmV0dXJu
-QGZvckVhY2gKICAgICAgICAgICAgaWYgKHN0YXJ0ID4gY3Vyc29yICsgNjBfMDAwTCkgYWRkR2Fw
-KGN1cnNvciwgc3RhcnQpCiAgICAgICAgICAgIHJlc3VsdC5hZGQoCiAgICAgICAgICAgICAgICBp
-dGVtLmNvcHkoCiAgICAgICAgICAgICAgICAgICAgc3RhcnRUaW1lc3RhbXAgPSByYXdTdGFydCAv
-IDEwMDBMLAogICAgICAgICAgICAgICAgICAgIGVuZFRpbWVzdGFtcCA9IHJhd0VuZCAvIDEwMDBM
-CiAgICAgICAgICAgICAgICApCiAgICAgICAgICAgICkKICAgICAgICAgICAgY3Vyc29yID0gbWF4
-KGN1cnNvciwgZW5kKQogICAgICAgIH0KCiAgICAgICAgaWYgKGN1cnNvciA8IHRpbWVsaW5lRW5k
-TXMpIGFkZEdhcChjdXJzb3IsIHRpbWVsaW5lRW5kTXMpCiAgICAgICAgcmV0dXJuIHJlc3VsdAog
-ICAgfQoKICAgIHByaXZhdGUgZnVuIHJlc29sdmVkVGltZXMoaXRlbTogRXBnSXRlbSwgaW5kZXg6
-IEludCk6IFBhaXI8TG9uZywgTG9uZz4gewogICAgICAgIHZhbCBmbG9vck5vdyA9IChub3dNcyAv
-IDFfODAwXzAwMEwpICogMV84MDBfMDAwTAogICAgICAgIHZhbCBzdGFydCA9IGl0ZW0uc3RhcnRU
-aW1lc3RhbXA/LmxldCB7IGl0ICogMTAwMEwgfQogICAgICAgICAgICA/OiBwYXJzZUd1aWRlVGlt
-ZShpdGVtLnN0YXJ0KQogICAgICAgICAgICA/OiBpZiAoaXRlbS5zdGFydC5lcXVhbHMoIk5vdyIs
-IHRydWUpKSBmbG9vck5vdyBlbHNlIGZsb29yTm93ICsgaW5kZXggKiAxXzgwMF8wMDBMCiAgICAg
-ICAgdmFsIGVuZCA9IGl0ZW0uZW5kVGltZXN0YW1wPy5sZXQgeyBpdCAqIDEwMDBMIH0KICAgICAg
-ICAgICAgPzogcGFyc2VHdWlkZVRpbWUoaXRlbS5lbmQpCiAgICAgICAgICAgID86IChzdGFydCAr
-IDFfODAwXzAwMEwpCiAgICAgICAgcmV0dXJuIHN0YXJ0IHRvIG1heChlbmQsIHN0YXJ0ICsgNSAq
-IDYwXzAwMEwpCiAgICB9CgogICAgcHJpdmF0ZSBmdW4gcGFyc2VHdWlkZVRpbWUocmF3OiBTdHJp
-bmcpOiBMb25nPyB7CiAgICAgICAgdmFsIHZhbHVlID0gcmF3LnRyaW0oKQogICAgICAgIGlmICh2
-YWx1ZS5pc0JsYW5rKCkgfHwgdmFsdWUuZXF1YWxzKCJOb3ciLCB0cnVlKSB8fCB2YWx1ZS5lcXVh
-bHMoIk5leHQiLCB0cnVlKSB8fCB2YWx1ZS5lcXVhbHMoIkxhdGVyIiwgdHJ1ZSkpIHJldHVybiBu
-dWxsCiAgICAgICAgdmFsIG51bWVyaWMgPSB2YWx1ZS50b0xvbmdPck51bGwoKQogICAgICAgIGlm
-IChudW1lcmljICE9IG51bGwpIHJldHVybiBpZiAobnVtZXJpYyA8IDEwMF8wMDBfMDAwXzAwMEwp
-IG51bWVyaWMgKiAxMDAwTCBlbHNlIG51bWVyaWMKICAgICAgICB2YWwgcGF0dGVybnMgPSBsaXN0
-T2YoInl5eXktTU0tZGQgSEg6bW06c3MiLCAieXl5eS1NTS1kZCBISDptbSIpCiAgICAgICAgZm9y
-IChwYXR0ZXJuIGluIHBhdHRlcm5zKSB7CiAgICAgICAgICAgIHRyeSB7CiAgICAgICAgICAgICAg
-ICB2YWwgcGFyc2VkID0gU2ltcGxlRGF0ZUZvcm1hdChwYXR0ZXJuLCBMb2NhbGUuVVMpLnBhcnNl
-KHZhbHVlKQogICAgICAgICAgICAgICAgaWYgKHBhcnNlZCAhPSBudWxsKSByZXR1cm4gcGFyc2Vk
-LnRpbWUKICAgICAgICAgICAgfSBjYXRjaCAoXzogRXhjZXB0aW9uKSB7IH0KICAgICAgICB9CiAg
-ICAgICAgcmV0dXJuIG51bGwKICAgIH0KCiAgICBwcml2YXRlIGZ1biBmb3JtYXRSYW5nZShzdGFy
-dDogTG9uZywgZW5kOiBMb25nKTogU3RyaW5nIHsKICAgICAgICByZXR1cm4gdHJ5IHsKICAgICAg
-ICAgICAgdmFsIGYgPSBTaW1wbGVEYXRlRm9ybWF0KCJoOm1tIGEiLCBMb2NhbGUuZ2V0RGVmYXVs
-dCgpKQogICAgICAgICAgICAiJHtmLmZvcm1hdChEYXRlKHN0YXJ0KSl9IOKAkyAke2YuZm9ybWF0
-KERhdGUoZW5kKSl9IgogICAgICAgIH0gY2F0Y2ggKF86IEV4Y2VwdGlvbikgeyAiIiB9CiAgICB9
-CgogICAgcHJpdmF0ZSB2YWwgSW50LmRwOiBJbnQgZ2V0KCkgPSAodGhpcyAqIHJvd0NvbnRleHQu
-cmVzb3VyY2VzLmRpc3BsYXlNZXRyaWNzLmRlbnNpdHkpLnRvSW50KCkKfQo=
+ZShpdGVtLCBzdGFydCwgZW5kKQogICAgICAgICAgICB9CiAgICAgICAgICAgIC8vIFByZWZlciB0
+aGUgbG9uZ2VzdCBlbnRyeSB3aGVuIHRoZSBwcm92aWRlciBzZW5kcyBkdXBsaWNhdGVzIHdpdGgK
+ICAgICAgICAgICAgLy8gdGhlIHNhbWUgc3RhcnQgdGltZSwgdGhlbiBub3JtYWxpemUgZXZlcnkg
+bGF0ZXIgb3ZlcmxhcCBiZWxvdy4KICAgICAgICAgICAgLnNvcnRlZFdpdGgoY29tcGFyZUJ5PFRy
+aXBsZTxFcGdJdGVtLCBMb25nLCBMb25nPj4geyBpdC5zZWNvbmQgfS50aGVuQnlEZXNjZW5kaW5n
+IHsgaXQudGhpcmQgfSkKCiAgICAgICAgdmFsIHJlc3VsdCA9IG11dGFibGVMaXN0T2Y8RXBnSXRl
+bT4oKQogICAgICAgIHZhciBjdXJzb3IgPSB0aW1lbGluZVN0YXJ0TXMKCiAgICAgICAgZnVuIGFk
+ZEdhcChmcm9tOiBMb25nLCB0bzogTG9uZykgewogICAgICAgICAgICB2YXIgZ2FwU3RhcnQgPSBm
+cm9tCiAgICAgICAgICAgIHdoaWxlIChnYXBTdGFydCA8IHRvKSB7CiAgICAgICAgICAgICAgICB2
+YWwgZ2FwRW5kID0gbWluKGdhcFN0YXJ0ICsgNjAgKiA2MF8wMDBMLCB0bykKICAgICAgICAgICAg
+ICAgIHJlc3VsdC5hZGQoCiAgICAgICAgICAgICAgICAgICAgRXBnSXRlbSgKICAgICAgICAgICAg
+ICAgICAgICAgICAgdGl0bGUgPSAiTm8gSW5mb3JtYXRpb24iLAogICAgICAgICAgICAgICAgICAg
+ICAgICBkZXNjcmlwdGlvbiA9ICIiLAogICAgICAgICAgICAgICAgICAgICAgICBzdGFydCA9ICIi
+LAogICAgICAgICAgICAgICAgICAgICAgICBlbmQgPSAiIiwKICAgICAgICAgICAgICAgICAgICAg
+ICAgc3RhcnRUaW1lc3RhbXAgPSBnYXBTdGFydCAvIDEwMDBMLAogICAgICAgICAgICAgICAgICAg
+ICAgICBlbmRUaW1lc3RhbXAgPSBnYXBFbmQgLyAxMDAwTAogICAgICAgICAgICAgICAgICAgICkK
+ICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgIGdhcFN0YXJ0ID0gZ2FwRW5kCiAgICAg
+ICAgICAgIH0KICAgICAgICB9CgogICAgICAgIHNvcnRlZC5mb3JFYWNoIHsgKGl0ZW0sIHJhd1N0
+YXJ0LCByYXdFbmQpIC0+CiAgICAgICAgICAgIHZhbCBzdGFydCA9IG1heChyYXdTdGFydCwgdGlt
+ZWxpbmVTdGFydE1zKQogICAgICAgICAgICB2YWwgZW5kID0gbWluKHJhd0VuZCwgdGltZWxpbmVF
+bmRNcykKICAgICAgICAgICAgaWYgKGVuZCA8PSBzdGFydCB8fCBlbmQgPD0gY3Vyc29yKSByZXR1
+cm5AZm9yRWFjaAoKICAgICAgICAgICAgaWYgKHN0YXJ0ID4gY3Vyc29yKSBhZGRHYXAoY3Vyc29y
+LCBzdGFydCkKCiAgICAgICAgICAgIC8vIFByb3ZpZGVyIGZlZWRzIGNhbiBjb250YWluIHR3byBw
+cm9ncmFtbWVzIGNvdmVyaW5nIHRoZSBzYW1lCiAgICAgICAgICAgIC8vIG1pbnV0ZXMuIERyYXcg
+b25seSB0aGUgcG9ydGlvbiBiZWdpbm5pbmcgYWZ0ZXIgdGhlIHByaW9yIGNhcmQsCiAgICAgICAg
+ICAgIC8vIGd1YXJhbnRlZWluZyBvbmUgaG9yaXpvbnRhbCBjYXJkIGxhbmUgd2l0aCBubyBzdGFj
+a2luZy4KICAgICAgICAgICAgdmFsIHNhZmVTdGFydCA9IG1heChzdGFydCwgY3Vyc29yKQogICAg
+ICAgICAgICBpZiAoZW5kIDw9IHNhZmVTdGFydCkgcmV0dXJuQGZvckVhY2gKICAgICAgICAgICAg
+cmVzdWx0LmFkZCgKICAgICAgICAgICAgICAgIGl0ZW0uY29weSgKICAgICAgICAgICAgICAgICAg
+ICBzdGFydFRpbWVzdGFtcCA9IHNhZmVTdGFydCAvIDEwMDBMLAogICAgICAgICAgICAgICAgICAg
+IGVuZFRpbWVzdGFtcCA9IGVuZCAvIDEwMDBMCiAgICAgICAgICAgICAgICApCiAgICAgICAgICAg
+ICkKICAgICAgICAgICAgY3Vyc29yID0gZW5kCiAgICAgICAgfQoKICAgICAgICBpZiAoY3Vyc29y
+IDwgdGltZWxpbmVFbmRNcykgYWRkR2FwKGN1cnNvciwgdGltZWxpbmVFbmRNcykKICAgICAgICBy
+ZXR1cm4gcmVzdWx0CiAgICB9CgogICAgcHJpdmF0ZSBmdW4gcmVzb2x2ZWRUaW1lcyhpdGVtOiBF
+cGdJdGVtLCBpbmRleDogSW50KTogUGFpcjxMb25nLCBMb25nPiB7CiAgICAgICAgdmFsIGZsb29y
+Tm93ID0gKG5vd01zIC8gMV84MDBfMDAwTCkgKiAxXzgwMF8wMDBMCiAgICAgICAgdmFsIHN0YXJ0
+ID0gaXRlbS5zdGFydFRpbWVzdGFtcD8ubGV0IHsgaXQgKiAxMDAwTCB9CiAgICAgICAgICAgID86
+IHBhcnNlR3VpZGVUaW1lKGl0ZW0uc3RhcnQpCiAgICAgICAgICAgID86IGlmIChpdGVtLnN0YXJ0
+LmVxdWFscygiTm93IiwgdHJ1ZSkpIGZsb29yTm93IGVsc2UgZmxvb3JOb3cgKyBpbmRleCAqIDFf
+ODAwXzAwMEwKICAgICAgICB2YWwgZW5kID0gaXRlbS5lbmRUaW1lc3RhbXA/LmxldCB7IGl0ICog
+MTAwMEwgfQogICAgICAgICAgICA/OiBwYXJzZUd1aWRlVGltZShpdGVtLmVuZCkKICAgICAgICAg
+ICAgPzogKHN0YXJ0ICsgMV84MDBfMDAwTCkKICAgICAgICByZXR1cm4gc3RhcnQgdG8gbWF4KGVu
+ZCwgc3RhcnQgKyA1ICogNjBfMDAwTCkKICAgIH0KCiAgICBwcml2YXRlIGZ1biBwYXJzZUd1aWRl
+VGltZShyYXc6IFN0cmluZyk6IExvbmc/IHsKICAgICAgICB2YWwgdmFsdWUgPSByYXcudHJpbSgp
+CiAgICAgICAgaWYgKHZhbHVlLmlzQmxhbmsoKSB8fCB2YWx1ZS5lcXVhbHMoIk5vdyIsIHRydWUp
+IHx8IHZhbHVlLmVxdWFscygiTmV4dCIsIHRydWUpIHx8IHZhbHVlLmVxdWFscygiTGF0ZXIiLCB0
+cnVlKSkgcmV0dXJuIG51bGwKICAgICAgICB2YWwgbnVtZXJpYyA9IHZhbHVlLnRvTG9uZ09yTnVs
+bCgpCiAgICAgICAgaWYgKG51bWVyaWMgIT0gbnVsbCkgcmV0dXJuIGlmIChudW1lcmljIDwgMTAw
+XzAwMF8wMDBfMDAwTCkgbnVtZXJpYyAqIDEwMDBMIGVsc2UgbnVtZXJpYwogICAgICAgIHZhbCBw
+YXR0ZXJucyA9IGxpc3RPZigieXl5eS1NTS1kZCBISDptbTpzcyIsICJ5eXl5LU1NLWRkIEhIOm1t
+IikKICAgICAgICBmb3IgKHBhdHRlcm4gaW4gcGF0dGVybnMpIHsKICAgICAgICAgICAgdHJ5IHsK
+ICAgICAgICAgICAgICAgIHZhbCBwYXJzZWQgPSBTaW1wbGVEYXRlRm9ybWF0KHBhdHRlcm4sIExv
+Y2FsZS5VUykucGFyc2UodmFsdWUpCiAgICAgICAgICAgICAgICBpZiAocGFyc2VkICE9IG51bGwp
+IHJldHVybiBwYXJzZWQudGltZQogICAgICAgICAgICB9IGNhdGNoIChfOiBFeGNlcHRpb24pIHsg
+fQogICAgICAgIH0KICAgICAgICByZXR1cm4gbnVsbAogICAgfQoKICAgIHByaXZhdGUgZnVuIGZv
+cm1hdFJhbmdlKHN0YXJ0OiBMb25nLCBlbmQ6IExvbmcpOiBTdHJpbmcgewogICAgICAgIHJldHVy
+biB0cnkgewogICAgICAgICAgICB2YWwgZiA9IFNpbXBsZURhdGVGb3JtYXQoImg6bW0gYSIsIExv
+Y2FsZS5nZXREZWZhdWx0KCkpCiAgICAgICAgICAgICIke2YuZm9ybWF0KERhdGUoc3RhcnQpKX0g
+4oCTICR7Zi5mb3JtYXQoRGF0ZShlbmQpKX0iCiAgICAgICAgfSBjYXRjaCAoXzogRXhjZXB0aW9u
+KSB7ICIiIH0KICAgIH0KCiAgICBwcml2YXRlIHZhbCBJbnQuZHA6IEludCBnZXQoKSA9ICh0aGlz
+ICogcm93Q29udGV4dC5yZXNvdXJjZXMuZGlzcGxheU1ldHJpY3MuZGVuc2l0eSkudG9JbnQoKQp9
+Cg==
 :::END ADAPTER
 :::BEGIN GRADLE
 cGx1Z2lucyB7CiAgICBpZCgiY29tLmFuZHJvaWQuYXBwbGljYXRpb24iKQogICAgaWQoIm9yZy5q
@@ -1327,45 +1343,48 @@ ZXRicmFpbnMua290bGluLmFuZHJvaWQiKQp9CgphbmRyb2lkIHsKICAgIG5hbWVzcGFjZSA9ICJj
 b20ua3Jpc3RhbHN0cmVhbXMucGxheWVyIgogICAgY29tcGlsZVNkayA9IDM1CgogICAgZGVmYXVs
 dENvbmZpZyB7CiAgICAgICAgYXBwbGljYXRpb25JZCA9ICJjb20ua3Jpc3RhbHN0cmVhbXMucGxh
 eWVyIgogICAgICAgIG1pblNkayA9IDIzCiAgICAgICAgdGFyZ2V0U2RrID0gMzUKICAgICAgICB2
-ZXJzaW9uQ29kZSA9IDE2ODEwMDYKICAgICAgICB2ZXJzaW9uTmFtZSA9ICIxLjYuOC12aXNpYmxl
-LWd1aWRlLWZpeCIKICAgIH0KCiAgICBidWlsZEZlYXR1cmVzIHsKICAgICAgICB2aWV3QmluZGlu
-ZyA9IGZhbHNlCiAgICB9CgogICAgY29tcGlsZU9wdGlvbnMgewogICAgICAgIHNvdXJjZUNvbXBh
-dGliaWxpdHkgPSBKYXZhVmVyc2lvbi5WRVJTSU9OXzExCiAgICAgICAgdGFyZ2V0Q29tcGF0aWJp
-bGl0eSA9IEphdmFWZXJzaW9uLlZFUlNJT05fMTEKICAgIH0KCiAgICBrb3RsaW4gewogICAgICAg
-IGp2bVRvb2xjaGFpbigxMSkKICAgIH0KfQoKZGVwZW5kZW5jaWVzIHsKICAgIGltcGxlbWVudGF0
-aW9uKCJhbmRyb2lkeC5jb3JlOmNvcmUta3R4OjEuMTUuMCIpCiAgICBpbXBsZW1lbnRhdGlvbigi
-YW5kcm9pZHguYXBwY29tcGF0OmFwcGNvbXBhdDoxLjcuMCIpCiAgICBpbXBsZW1lbnRhdGlvbigi
-Y29tLmdvb2dsZS5hbmRyb2lkLm1hdGVyaWFsOm1hdGVyaWFsOjEuMTIuMCIpCiAgICBpbXBsZW1l
-bnRhdGlvbigiYW5kcm9pZHgubWVkaWEzOm1lZGlhMy1leG9wbGF5ZXI6MS41LjEiKQogICAgaW1w
-bGVtZW50YXRpb24oImFuZHJvaWR4Lm1lZGlhMzptZWRpYTMtZXhvcGxheWVyLWhsczoxLjUuMSIp
-CiAgICBpbXBsZW1lbnRhdGlvbigiYW5kcm9pZHgubWVkaWEzOm1lZGlhMy11aToxLjUuMSIpCn0K
+ZXJzaW9uQ29kZSA9IDE2ODEwMDcKICAgICAgICB2ZXJzaW9uTmFtZSA9ICIxLjYuOC1jbGVhbi1n
+cmlkLWZpeCIKICAgIH0KCiAgICBidWlsZEZlYXR1cmVzIHsKICAgICAgICB2aWV3QmluZGluZyA9
+IGZhbHNlCiAgICB9CgogICAgY29tcGlsZU9wdGlvbnMgewogICAgICAgIHNvdXJjZUNvbXBhdGli
+aWxpdHkgPSBKYXZhVmVyc2lvbi5WRVJTSU9OXzExCiAgICAgICAgdGFyZ2V0Q29tcGF0aWJpbGl0
+eSA9IEphdmFWZXJzaW9uLlZFUlNJT05fMTEKICAgIH0KCiAgICBrb3RsaW4gewogICAgICAgIGp2
+bVRvb2xjaGFpbigxMSkKICAgIH0KfQoKZGVwZW5kZW5jaWVzIHsKICAgIGltcGxlbWVudGF0aW9u
+KCJhbmRyb2lkeC5jb3JlOmNvcmUta3R4OjEuMTUuMCIpCiAgICBpbXBsZW1lbnRhdGlvbigiYW5k
+cm9pZHguYXBwY29tcGF0OmFwcGNvbXBhdDoxLjcuMCIpCiAgICBpbXBsZW1lbnRhdGlvbigiY29t
+Lmdvb2dsZS5hbmRyb2lkLm1hdGVyaWFsOm1hdGVyaWFsOjEuMTIuMCIpCiAgICBpbXBsZW1lbnRh
+dGlvbigiYW5kcm9pZHgubWVkaWEzOm1lZGlhMy1leG9wbGF5ZXI6MS41LjEiKQogICAgaW1wbGVt
+ZW50YXRpb24oImFuZHJvaWR4Lm1lZGlhMzptZWRpYTMtZXhvcGxheWVyLWhsczoxLjUuMSIpCiAg
+ICBpbXBsZW1lbnRhdGlvbigiYW5kcm9pZHgubWVkaWEzOm1lZGlhMy11aToxLjUuMSIpCn0K
 :::END GRADLE
 :::BEGIN AUDIT
-S1JJU1RBTCBTVFJFQU1TIDEuNi44IFJDMSBSMiDigJQgVklTSUJMRSBHVUlERSBGSVgKCkJBU0VM
-SU5FCi0gS25vd24tZ29vZCBSMiBhcHAuCi0gRVBHMiBuby1vdmVybGFwIHJlbmRlcmVyIHJldGFp
-bmVkLgotIExvZ2luLCBwbGF5YmFjaywgTW92aWVzLCBTZXJpZXMgYW5kIExpdmUgVFYgTm93L05l
-eHQgYXJlIG5vdCBjaGFuZ2VkLgoKV0hBVCBDSEFOR0VECi0gTGl2ZVN0cmVhbSBwcmVzZXJ2ZXMg
-dGhlIHByb3ZpZGVyIGVwZ19jaGFubmVsX2lkLgotIFRWIEd1aWRlIHVzZXMgdGhlIHByb3ZpZGVy
-IFhNTFRWIGZlZWQgYXMgaXRzIHNvbGUgZnVsbC1ndWlkZSBzb3VyY2UsIG1hdGNoaW5nCiAgdGhl
-IGZ1bmN0aW9uYWwgS3Jpc3RhbFN0cmVhbXMuYXBrIHBpcGVsaW5lLgotIFRoZSBwcm92aWRlciBh
-ZHZlcnRpc2VzIFVUQyBldmVuIHRob3VnaCBpdHMgZmlyc3QgMTQgWE1MVFYgdGltZXN0YW1wIGRp
-Z2l0cwogIGNvbnRhaW4gbG9jYWwgd2FsbC1jbG9jayB0aW1lLiBUViBHdWlkZSBub3cgcmVhZHMg
-dGhvc2UgZGlnaXRzIGluIHRoZSBBbmRyb2lkCiAgZGV2aWNlIHRpbWUgem9uZSwga2VlcGluZyBw
-cm9ncmFtbWUgdGltZXMsIHRpbWVsaW5lIGxhYmVscyBhbmQgTk9XIHRvZ2V0aGVyLgotIFhNTFRW
-IHJlbWFpbnMgdGhlIHByZWZlcnJlZCBzY2hlZHVsZS4gVmlzaWJsZSBjaGFubmVscyB3aXRob3V0
-IHVzYWJsZSBYTUxUVgogIHJvd3MgYXV0b21hdGljYWxseSBsb2FkIHRoZSBwcm92aWRlcidzIGZ1
-bGwgcGVyLWNoYW5uZWwgdGFibGUgb25jZSBhbmQga2VlcAogIHRoZSBjb21wbGV0ZWQgcmVzdWx0
-IGNhY2hlZCBzbyBpdCBjYW5ub3QgZmxhc2ggYW5kIGRpc2FwcGVhciB3aGlsZSBzY3JvbGxpbmcu
-Ci0gUHJvZ3JhbSB0aXRsZXMgYW5kIE5PIEdVSURFIERBVEEgbGFiZWxzIHVzZSBleHBsaWNpdCB3
-aGl0ZSB0ZXh0IGluc3RlYWQgb2YgYQogIHRoZW1lLW11dGVkIGNvbG9yIHRoYXQgd2FzIG5lYXJs
-eSBpbnZpc2libGUgb24gdGhlIHRlc3QgZGV2aWNlLgotIFRoZSBndWlkZSBub3cgYmVnaW5zIGF0
-IHRoZSBjdXJyZW50IGhhbGYtaG91ciBhbmQgZG9lcyBub3QgYXV0by1zY3JvbGwgcGFzdAogIHRo
-ZSBiZWdpbm5pbmcgb2YgdGhlIGN1cnJlbnQgcHJvZ3JhbW1lIGNhcmQuCi0gUHJvZ3JhbW1lIGxh
-YmVscyBhcmUgY2VudGVyZWQgaW5zaWRlIHRoZWlyIGNhcmRzLCBzbyBhIHZpc2libGUgY2FyZCBj
-YW5ub3QKICBsZWF2ZSBpdHMgdGl0bGUgYmVoaW5kIG9mZi1zY3JlZW4gaW4gcG9ydHJhaXQgb3Ig
-bGFuZHNjYXBlLgotIE1pc3NpbmcgaW50ZXJ2YWxzIGFyZSByZW5kZXJlZCBhcyBleHBsaWNpdCBv
-bmUtaG91ciBObyBJbmZvcm1hdGlvbiBldmVudHMsCiAgbWF0Y2hpbmcgdGhlIGNvbnRpbnVvdXMg
-cmVmZXJlbmNlIGd1aWRlIGluc3RlYWQgb2YgYmxhbmsgdGhlbWUgYm94ZXMuCgpWRVJTSU9OCi0g
-dmVyc2lvbkNvZGUgMTY4MTAwNgotIHZlcnNpb25OYW1lIDEuNi44LXZpc2libGUtZ3VpZGUtZml4
-Cg==
+S1JJU1RBTCBTVFJFQU1TIDEuNi44IFJDMSBSMiDigJQgQ0xFQU4gR1JJRCBGSVgKCkJBU0VMSU5F
+Ci0gS25vd24tZ29vZCBSMiBhcHAuCi0gRVBHMiBuby1vdmVybGFwIHJlbmRlcmVyIHJldGFpbmVk
+LgotIExvZ2luLCBwbGF5YmFjaywgTW92aWVzLCBTZXJpZXMgYW5kIExpdmUgVFYgTm93L05leHQg
+YXJlIG5vdCBjaGFuZ2VkLgoKV0hBVCBDSEFOR0VECi0gTGl2ZVN0cmVhbSBwcmVzZXJ2ZXMgdGhl
+IHByb3ZpZGVyIGVwZ19jaGFubmVsX2lkLgotIFRWIEd1aWRlIHVzZXMgdGhlIHByb3ZpZGVyIFhN
+TFRWIGZlZWQgYXMgaXRzIHNvbGUgZnVsbC1ndWlkZSBzb3VyY2UsIG1hdGNoaW5nCiAgdGhlIGZ1
+bmN0aW9uYWwgS3Jpc3RhbFN0cmVhbXMuYXBrIHBpcGVsaW5lLgotIFRoZSBwcm92aWRlciBhZHZl
+cnRpc2VzIFVUQyBldmVuIHRob3VnaCBpdHMgZmlyc3QgMTQgWE1MVFYgdGltZXN0YW1wIGRpZ2l0
+cwogIGNvbnRhaW4gbG9jYWwgd2FsbC1jbG9jayB0aW1lLiBUViBHdWlkZSBub3cgcmVhZHMgdGhv
+c2UgZGlnaXRzIGluIHRoZSBBbmRyb2lkCiAgZGV2aWNlIHRpbWUgem9uZSwga2VlcGluZyBwcm9n
+cmFtbWUgdGltZXMsIHRpbWVsaW5lIGxhYmVscyBhbmQgTk9XIHRvZ2V0aGVyLgotIFhNTFRWIHJl
+bWFpbnMgdGhlIHByZWZlcnJlZCBzY2hlZHVsZS4gVmlzaWJsZSBjaGFubmVscyB3aXRob3V0IHVz
+YWJsZSBYTUxUVgogIHJvd3MgYXV0b21hdGljYWxseSBsb2FkIHRoZSBwcm92aWRlcidzIGZ1bGwg
+cGVyLWNoYW5uZWwgdGFibGUgb25jZSBhbmQga2VlcAogIHRoZSBjb21wbGV0ZWQgcmVzdWx0IGNh
+Y2hlZCBzbyBpdCBjYW5ub3QgZmxhc2ggYW5kIGRpc2FwcGVhciB3aGlsZSBzY3JvbGxpbmcuCi0g
+UHJvZ3JhbSB0aXRsZXMgYW5kIE5PIEdVSURFIERBVEEgbGFiZWxzIHVzZSBleHBsaWNpdCB3aGl0
+ZSB0ZXh0IGluc3RlYWQgb2YgYQogIHRoZW1lLW11dGVkIGNvbG9yIHRoYXQgd2FzIG5lYXJseSBp
+bnZpc2libGUgb24gdGhlIHRlc3QgZGV2aWNlLgotIFRoZSBndWlkZSBub3cgYmVnaW5zIGF0IHRo
+ZSBjdXJyZW50IGhhbGYtaG91ciBhbmQgZG9lcyBub3QgYXV0by1zY3JvbGwgcGFzdAogIHRoZSBi
+ZWdpbm5pbmcgb2YgdGhlIGN1cnJlbnQgcHJvZ3JhbW1lIGNhcmQuCi0gUHJvZ3JhbW1lIGxhYmVs
+cyBhcmUgY2VudGVyZWQgaW5zaWRlIHRoZWlyIGNhcmRzLCBzbyBhIHZpc2libGUgY2FyZCBjYW5u
+b3QKICBsZWF2ZSBpdHMgdGl0bGUgYmVoaW5kIG9mZi1zY3JlZW4gaW4gcG9ydHJhaXQgb3IgbGFu
+ZHNjYXBlLgotIENvbmZsaWN0aW5nIHByb3ZpZGVyIGVudHJpZXMgYXJlIG5vcm1hbGl6ZWQgaW50
+byBhIHNpbmdsZSBjYXJkIGxhbmUuIEVhY2gKICBsYXRlciBwcm9ncmFtbWUgYmVnaW5zIG9ubHkg
+YWZ0ZXIgdGhlIHByZXZpb3VzIGNhcmQgZW5kcywgcHJldmVudGluZyBzdGFja2VkCiAgb3IgdW5l
+dmVubHkgb3ZlcmxhcHBlZCBjYXJkcyB3aGlsZSByZXRhaW5pbmcgY29uc2lzdGVudCBndXR0ZXJz
+LgotIE1pc3NpbmcgaW50ZXJ2YWxzIGFyZSByZW5kZXJlZCBhcyBleHBsaWNpdCBvbmUtaG91ciBO
+byBJbmZvcm1hdGlvbiBldmVudHMsCiAgbWF0Y2hpbmcgdGhlIGNvbnRpbnVvdXMgcmVmZXJlbmNl
+IGd1aWRlIGluc3RlYWQgb2YgYmxhbmsgdGhlbWUgYm94ZXMuCgpWRVJTSU9OCi0gdmVyc2lvbkNv
+ZGUgMTY4MTAwNwotIHZlcnNpb25OYW1lIDEuNi44LWNsZWFuLWdyaWQtZml4Cg==
 :::END AUDIT
