@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Episode Overlap Fix 1682033
+title KS Series Portrait Boundary Fix 1682034
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksseriesepisodeoverlapfix-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-EPISODE-OVERLAP-FIX-1682033.apk"
-set "LOG=%TEMP%\ks-series-episode-overlap-fix-1682033-build.txt"
+set "WORK=C:\ksseriesportraitboundaryfix-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-PORTRAIT-BOUNDARY-FIX-1682034.apk"
+set "LOG=%TEMP%\ks-series-portrait-boundary-fix-1682034-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES EPISODE OVERLAP FIX
-echo   FRESH APK: KS-SERIES-EPISODE-OVERLAP-FIX-1682033.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES PORTRAIT BOUNDARY FIX
+echo   FRESH APK: KS-SERIES-PORTRAIT-BOUNDARY-FIX-1682034.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -249,8 +249,8 @@ if not "%RC%"=="0" (
     exit /b %RC%
 )
 
-echo [12/16] Separating portrait episodes from More Like This...
-set "OVERLAPPS=%TEMP%\ks-series-episode-overlap-fix-1682033.ps1"
+echo [12/16] Securing the portrait episode and More Like This boundaries...
+set "OVERLAPPS=%TEMP%\ks-series-portrait-boundary-fix-1682034.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'OVERLAPPATCHPS1'; $b=':::END '+'OVERLAPPATCHPS1'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing episode-overlap patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing episode-overlap patch end'}; [IO.File]::WriteAllText('%OVERLAPPS%',$raw.Substring($s,$e-$s).TrimStart([char]13,[char]10),[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
@@ -268,9 +268,9 @@ if not "%RC%"=="0" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682033').Replace('1.6.8-series-complete','1.6.8-series-episode-overlap-fix'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682034').Replace('1.6.8-series-complete','1.6.8-series-portrait-boundary-fix'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682033 application version.
+    echo ERROR: Could not set the new 1682034 application version.
     pause
     exit /b 1
 )
@@ -678,9 +678,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682033" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682034" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682033 application version verification failed.
+    echo ERROR: New 1682034 application version verification failed.
     pause
     exit /b 1
 )
@@ -690,7 +690,15 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$p='%WORK%\app\src\main\res\layout\activity_series_details.xml'; $x=[IO.File]::ReadAllText($p); try{[xml]$doc=$x}catch{throw 'Portrait Series XML boundaries are not balanced'}; if($x.IndexOf('seriesPortraitScroll') -lt 0 -or $x.LastIndexOf('</ScrollView>') -gt $x.LastIndexOf('</FrameLayout>')){throw 'Portrait Series scroll boundary verification failed'}"
+if errorlevel 1 (
+    echo ERROR: Portrait Series closing-boundary verification failed.
+    pause
+    exit /b 1
+)
 findstr /c:"android:nestedScrollingEnabled=\"false\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+
 if errorlevel 1 (
     echo ERROR: Portrait episode-grid boundary verification failed.
     pause
@@ -1015,7 +1023,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-EPISODE-OVERLAP-FIX-1682033.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-PORTRAIT-BOUNDARY-FIX-1682034.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -1038,7 +1046,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-EPISODE-OVERLAP-FIX-1682033.apk shown above.
+echo Install only KS-SERIES-PORTRAIT-BOUNDARY-FIX-1682034.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -1092,18 +1100,11 @@ $newStart = @'
 '@
 Replace-Required $portrait $oldStart $newStart 'portrait page scroll container'
 
-$oldEnd = @'
-        </LinearLayout>
-    </LinearLayout>
-</FrameLayout>
-'@
-$newEnd = @'
-        </LinearLayout>
-    </LinearLayout>
-    </ScrollView>
-</FrameLayout>
-'@
-Replace-Required $portrait $oldEnd $newEnd 'portrait page scroll closing boundary'
+$portraitXml = [IO.File]::ReadAllText($portrait)
+$frameClose = $portraitXml.LastIndexOf('</FrameLayout>', [StringComparison]::Ordinal)
+if ($frameClose -lt 0) { throw "Could not find final portrait FrameLayout boundary in $portrait" }
+$portraitXml = $portraitXml.Insert($frameClose, "    </ScrollView>`n")
+[IO.File]::WriteAllText($portrait, $portraitXml, [Text.UTF8Encoding]::new($false))
 
 $oldGrid = '<GridView android:id="@+id/episodeList" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:numColumns="2" android:horizontalSpacing="8dp" android:verticalSpacing="8dp" android:stretchMode="columnWidth" android:gravity="center" android:choiceMode="singleChoice" android:padding="8dp" android:clipToPadding="false" android:background="@android:color/transparent"/>'
 $newGrid = '<GridView android:id="@+id/episodeList" android:layout_width="match_parent" android:layout_height="wrap_content" android:numColumns="2" android:horizontalSpacing="8dp" android:verticalSpacing="8dp" android:stretchMode="columnWidth" android:gravity="center" android:choiceMode="singleChoice" android:padding="8dp" android:clipChildren="true" android:clipToPadding="true" android:nestedScrollingEnabled="false" android:background="@android:color/transparent"/>'
