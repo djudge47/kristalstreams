@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Layout Fix 1682022
+title KS Series Text Fit 1682023
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksserieslayoutfix-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LAYOUT-FIX-1682022.apk"
-set "LOG=%TEMP%\ks-series-layout-fix-1682022-build.txt"
+set "WORK=C:\ksseriestextfit-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-TEXT-FIT-1682023.apk"
+set "LOG=%TEMP%\ks-series-text-fit-1682023-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LAYOUT FIX
-echo   FRESH APK: KS-SERIES-LAYOUT-FIX-1682022.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES TEXT FIT
+echo   FRESH APK: KS-SERIES-TEXT-FIT-1682023.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -35,6 +35,7 @@ echo Adds episode Resume, Play From Beginning, Next Episode, remembered position
 echo Centers Continue, Next, and season text.
 echo Enlarges the Continue and Next control panel and episode cards.
 echo Allows two-line episode titles and descriptions.
+echo Automatically fits long Series text inside every control and card.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -47,7 +48,7 @@ if not exist "%SOURCE%\gradlew.bat" (
     exit /b 1
 )
 
-echo [1/7] Creating a brand-new working copy...
+echo [1/8] Creating a brand-new working copy...
 mkdir "%WORK%" >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Could not create:
@@ -64,7 +65,7 @@ if %RC% GEQ 8 (
     exit /b %RC%
 )
 
-echo [2/7] Installing verified 1682020 baseline and complete Series upgrade...
+echo [2/8] Installing verified 1682020 baseline and complete Series upgrade...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt',(B 'MODELS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\XtreamClient.kt',(B 'XTREAM')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\GuideActivity.kt',(B 'GUIDE')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt',(B 'ADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\UiContrastProvider.kt',(B 'UICONTEXT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt',(B 'IMMERSIVE')); [IO.File]::WriteAllBytes('%WORK%\app\build.gradle.kts',(B 'GRADLE')); [IO.File]::WriteAllBytes('%WORK%\REFERENCE-EPG-AUDIT.txt',(B 'AUDIT')); [IO.File]::WriteAllBytes('%WORK%\apply-ui-contrast.ps1',(B 'UIPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\LibraryActivity.kt',(B 'LIBRARY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MediaGridAdapter.kt',(B 'MEDIAADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieDetailsActivity.kt',(B 'MOVIEDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_details.xml',(B 'MOVIELAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_details.xml',(B 'MOVIELAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_details_panel.xml',(B 'MOVIEPANEL')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_fact.xml',(B 'MOVIEFACT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\values\movie_styles.xml',(B 'MOVIESTYLES')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlist.kt',(B 'WATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlistActivity.kt',(B 'WATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\ContinueWatching.kt',(B 'CONTINUEWATCHING')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlayerActivity.kt',(B 'PLAYER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_library.xml',(B 'LIBRARYLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_library.xml',(B 'LIBRARYLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_player.xml',(B 'PLAYERLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt',(B 'SERIESDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpisodeListAdapter.kt',(B 'EPISODEADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlist.kt',(B 'SERIESWATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlistActivity.kt',(B 'SERIESWATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesHistory.kt',(B 'SERIESHISTORY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_details.xml',(B 'SERIESLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_details.xml',(B 'SERIESLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\row_episode_modern.xml',(B 'EPISODEROW')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUTLAND'))"
 if errorlevel 1 (
@@ -81,7 +82,7 @@ if errorlevel 1 (
 )
 del /q "%WORK%\apply-ui-contrast.ps1" >nul 2>&1
 
-echo [3/7] Applying final Series Details layout measurements...
+echo [3/8] Applying final Series Details layout measurements...
 set "LAYOUTPS=%TEMP%\ks-series-layout-fix-1682022.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'LAYOUTPATCH'; $b=':::END '+'LAYOUTPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%LAYOUTPS%',[Convert]::FromBase64String($x))"
@@ -98,15 +99,32 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
+echo [4/8] Constraining all Series text inside its box...
+set "TEXTFITPS=%TEMP%\ks-series-text-fit-1682023.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682022').Replace('1.6.8-series-complete','1.6.8-series-layout-fix'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'TEXTFITPATCH'; $b=':::END '+'TEXTFITPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing text-fit patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing text-fit patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%TEXTFITPS%',[Convert]::FromBase64String($x))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682022 application version.
+    echo ERROR: Could not extract the Series text-fit correction.
+    pause
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%TEXTFITPS%" -ProjectRoot "%WORK%"
+set "RC=%ERRORLEVEL%"
+del /q "%TEXTFITPS%" >nul 2>&1
+if not "%RC%"=="0" (
+    echo ERROR: The Series text-fit correction could not be applied safely.
+    pause
+    exit /b %RC%
+)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682023').Replace('1.6.8-series-complete','1.6.8-series-text-fit'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+if errorlevel 1 (
+    echo ERROR: Could not set the new 1682023 application version.
     pause
     exit /b 1
 )
 
-echo [4/7] Verifying complete Series upgrade and corrected layout...
+echo [5/8] Verifying complete Series upgrade and bounded text layout...
 findstr /c:"epgChannelId" "%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt" >nul
 if errorlevel 1 (
     echo ERROR: Channel EPG ID verification failed.
@@ -509,19 +527,19 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682022" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682023" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682022 application version verification failed.
+    echo ERROR: New 1682023 application version verification failed.
     pause
     exit /b 1
 )
-findstr /c:"android:layout_height=\"96dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+findstr /c:"android:layout_height=\"110dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
 if errorlevel 1 (
     echo ERROR: Enlarged Continue panel verification failed.
     pause
     exit /b 1
 )
-findstr /c:"android:layout_height=\"142dp\"" "%WORK%\app\src\main\res\layout\row_episode_modern.xml" >nul
+findstr /c:"android:layout_height=\"154dp\"" "%WORK%\app\src\main\res\layout\row_episode_modern.xml" >nul
 if errorlevel 1 (
     echo ERROR: Enlarged episode-card verification failed.
     pause
@@ -534,7 +552,20 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [5/7] Preparing Windows Android build tools...
+findstr /c:"setAutoSizeTextTypeUniformWithConfiguration(holder.title" "%WORK%\app\src\main\java\com\kristalstreams\player\EpisodeListAdapter.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Episode-title automatic fitting verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"setAutoSizeTextTypeUniformWithConfiguration(button" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Continue and Next automatic fitting verification failed.
+    pause
+    exit /b 1
+)
+
+echo [6/8] Preparing Windows Android build tools...
 set "ANDROID_SDK=%LOCALAPPDATA%\Android\Sdk"
 if not exist "%ANDROID_SDK%\platforms" (
     echo ERROR: Android SDK not found:
@@ -573,7 +604,7 @@ exit /b 1
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo.
-echo [6/7] Building corrected Series APK...
+echo [7/8] Building corrected Series APK...
 echo Gradle progress will appear below.
 echo.
 
@@ -614,7 +645,7 @@ if not exist "%BUILT%" (
 )
 
 echo.
-echo [7/7] Copying finished APK...
+echo [8/8] Copying finished APK...
 copy /Y "%BUILT%" "%FINAL%" >nul
 if errorlevel 1 (
     echo ERROR: Could not copy APK to Downloads.
@@ -627,7 +658,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-COMPLETE-1682021.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-TEXT-FIT-1682023.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -636,7 +667,7 @@ cls
 echo.
 echo ==========================================================
 echo.
-echo       KS COMPLETE SERIES BUILD SUCCESSFUL
+echo       KS SERIES TEXT-FIT BUILD SUCCESSFUL
 echo.
 echo ==========================================================
 echo.
@@ -650,7 +681,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-COMPLETE-1682021.apk shown above.
+echo Install only KS-SERIES-TEXT-FIT-1682023.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -658,6 +689,7 @@ echo Movies include Search, Sort, My List, Resume, trailers, and related titles.
 echo Movie Details remains the safe step before playback.
 echo Audio and subtitle choices appear with the playback controls when tracks are available.
 echo Series now includes Search, Sort, My Series, full details, season tabs, richer episode cards, Resume, and Next Episode.
+echo Long titles and descriptions stay inside their cards and shrink only when needed.
 echo The last selected season and episode are remembered, and related shows are displayed when supplied.
 echo PLAY MOVIE starts the verified fullscreen player with the same audio and Back behavior.
 echo Live TV, Movies, and Series playback now hide both Android system bars.
@@ -5477,3 +5509,137 @@ dXRlZF8yIiBhbmRyb2lkOnRleHRTaXplPSIxMXNwIiBhbmRyb2lkOmxpbmVTcGFjaW5nRXh0cmE9
 IjFkcCInICdFcGlzb2RlIGRlc2NyaXB0aW9uIHNpemluZycKCldyaXRlLUhvc3QgJ1NlcmllcyBE
 ZXRhaWxzIGxheW91dCBtZWFzdXJlbWVudHMgdXBkYXRlZCBzdWNjZXNzZnVsbHkuJwo=
 :::END LAYOUTPATCH
+
+:::BEGIN TEXTFITPATCH
+cGFyYW0oCiAgICBbUGFyYW1ldGVyKE1hbmRhdG9yeSA9ICR0cnVlKV1bc3RyaW5nXSRQcm9qZWN0
+Um9vdAopCgokRXJyb3JBY3Rpb25QcmVmZXJlbmNlID0gJ1N0b3AnCgpmdW5jdGlvbiBSZXBsYWNl
+LVJlcXVpcmVkIHsKICAgIHBhcmFtKFtzdHJpbmddJFBhdGgsIFtzdHJpbmddJE9sZCwgW3N0cmlu
+Z10kTmV3LCBbc3RyaW5nXSRMYWJlbCkKICAgICRjb250ZW50ID0gW0lPLkZpbGVdOjpSZWFkQWxs
+VGV4dCgkUGF0aCkKICAgIGlmICgtbm90ICRjb250ZW50LkNvbnRhaW5zKCRPbGQpKSB7IHRocm93
+ICJDb3VsZCBub3QgZmluZCBleHBlY3RlZCAkTGFiZWwgaW4gJFBhdGgiIH0KICAgIFtJTy5GaWxl
+XTo6V3JpdGVBbGxUZXh0KCRQYXRoLCAkY29udGVudC5SZXBsYWNlKCRPbGQsICROZXcpLCBbVGV4
+dC5VVEY4RW5jb2RpbmddOjpuZXcoJGZhbHNlKSkKfQoKJHBvcnRyYWl0ID0gSm9pbi1QYXRoICRQ
+cm9qZWN0Um9vdCAnYXBwXHNyY1xtYWluXHJlc1xsYXlvdXRcYWN0aXZpdHlfc2VyaWVzX2RldGFp
+bHMueG1sJwokbGFuZHNjYXBlID0gSm9pbi1QYXRoICRQcm9qZWN0Um9vdCAnYXBwXHNyY1xtYWlu
+XHJlc1xsYXlvdXQtbGFuZFxhY3Rpdml0eV9zZXJpZXNfZGV0YWlscy54bWwnCiRlcGlzb2RlUm93
+ID0gSm9pbi1QYXRoICRQcm9qZWN0Um9vdCAnYXBwXHNyY1xtYWluXHJlc1xsYXlvdXRccm93X2Vw
+aXNvZGVfbW9kZXJuLnhtbCcKJGFjdGl2aXR5ID0gSm9pbi1QYXRoICRQcm9qZWN0Um9vdCAnYXBw
+XHNyY1xtYWluXGphdmFcY29tXGtyaXN0YWxzdHJlYW1zXHBsYXllclxTZXJpZXNEZXRhaWxzQWN0
+aXZpdHkua3QnCiRhZGFwdGVyID0gSm9pbi1QYXRoICRQcm9qZWN0Um9vdCAnYXBwXHNyY1xtYWlu
+XGphdmFcY29tXGtyaXN0YWxzdHJlYW1zXHBsYXllclxFcGlzb2RlTGlzdEFkYXB0ZXIua3QnCgpm
+b3JlYWNoICgkbGF5b3V0IGluIEAoJHBvcnRyYWl0LCAkbGFuZHNjYXBlKSkgewogICAgUmVwbGFj
+ZS1SZXF1aXJlZCAkbGF5b3V0ICdhbmRyb2lkOmlkPSJAK2lkL3Nlcmllc0NvbnRpbnVlUGFuZWwi
+IGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdo
+dD0iOTZkcCInICdhbmRyb2lkOmlkPSJAK2lkL3Nlcmllc0NvbnRpbnVlUGFuZWwiIGFuZHJvaWQ6
+bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iMTEwZHAi
+IGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0cnVlIiBhbmRyb2lkOmNsaXBUb1BhZGRpbmc9InRydWUi
+JyAnYm91bmRlZCBDb250aW51ZSBwYW5lbCcKICAgIFJlcGxhY2UtUmVxdWlyZWQgJGxheW91dCAn
+YW5kcm9pZDppZD0iQCtpZC9zZXJpZXNDb250aW51ZUxhYmVsIiBhbmRyb2lkOmxheW91dF93aWR0
+aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjI4ZHAiIGFuZHJvaWQ6Z3Jh
+dml0eT0iY2VudGVyX3ZlcnRpY2FsIiBhbmRyb2lkOmluY2x1ZGVGb250UGFkZGluZz0iZmFsc2Ui
+IGFuZHJvaWQ6dGV4dENvbG9yPSJAY29sb3Iva3NfbXV0ZWQiIGFuZHJvaWQ6dGV4dFNpemU9IjEw
+c3AiJyAnYW5kcm9pZDppZD0iQCtpZC9zZXJpZXNDb250aW51ZUxhYmVsIiBhbmRyb2lkOmxheW91
+dF93aWR0aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjQwZHAiIGFuZHJv
+aWQ6Z3Jhdml0eT0iY2VudGVyIiBhbmRyb2lkOnRleHRBbGlnbm1lbnQ9ImNlbnRlciIgYW5kcm9p
+ZDptYXhMaW5lcz0iMiIgYW5kcm9pZDplbGxpcHNpemU9ImVuZCIgYW5kcm9pZDpwYWRkaW5nU3Rh
+cnQ9IjhkcCIgYW5kcm9pZDpwYWRkaW5nRW5kPSI4ZHAiIGFuZHJvaWQ6aW5jbHVkZUZvbnRQYWRk
+aW5nPSJmYWxzZSIgYW5kcm9pZDp0ZXh0Q29sb3I9IkBjb2xvci9rc19tdXRlZCIgYW5kcm9pZDp0
+ZXh0U2l6ZT0iMTFzcCInICdib3VuZGVkIENvbnRpbnVlIGxhYmVsJwogICAgUmVwbGFjZS1SZXF1
+aXJlZCAkbGF5b3V0ICdhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjU2ZHAiIGFuZHJvaWQ6bGF5b3V0
+X21hcmdpblRvcD0iNGRwIiBhbmRyb2lkOm9yaWVudGF0aW9uPSJob3Jpem9udGFsIiBhbmRyb2lk
+OmdyYXZpdHk9ImNlbnRlcl92ZXJ0aWNhbCInICdhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjYyZHAi
+IGFuZHJvaWQ6bGF5b3V0X21hcmdpblRvcD0iNGRwIiBhbmRyb2lkOm9yaWVudGF0aW9uPSJob3Jp
+em9udGFsIiBhbmRyb2lkOmdyYXZpdHk9ImNlbnRlcl92ZXJ0aWNhbCIgYW5kcm9pZDpjbGlwQ2hp
+bGRyZW49InRydWUiJyAnYm91bmRlZCBDb250aW51ZSBidXR0b24gcm93JwogICAgJHhtbCA9IFtJ
+Ty5GaWxlXTo6UmVhZEFsbFRleHQoJGxheW91dCkKICAgICR4bWwgPSAkeG1sLlJlcGxhY2UoJ2Fu
+ZHJvaWQ6dGV4dFNpemU9IjEwc3AiIGFuZHJvaWQ6Z3Jhdml0eT0iY2VudGVyIiBhbmRyb2lkOnBh
+ZGRpbmc9IjBkcCIgYW5kcm9pZDptaW5IZWlnaHQ9IjBkcCIgYW5kcm9pZDppbmNsdWRlRm9udFBh
+ZGRpbmc9ImZhbHNlIiBhbmRyb2lkOmJhY2tncm91bmQ9IkBkcmF3YWJsZS9iZ19idXR0b24iJywg
+J2FuZHJvaWQ6dGV4dFNpemU9IjExc3AiIGFuZHJvaWQ6Z3Jhdml0eT0iY2VudGVyIiBhbmRyb2lk
+OnRleHRBbGlnbm1lbnQ9ImNlbnRlciIgYW5kcm9pZDptYXhMaW5lcz0iMiIgYW5kcm9pZDplbGxp
+cHNpemU9ImVuZCIgYW5kcm9pZDpwYWRkaW5nU3RhcnQ9IjVkcCIgYW5kcm9pZDpwYWRkaW5nRW5k
+PSI1ZHAiIGFuZHJvaWQ6bWluSGVpZ2h0PSIwZHAiIGFuZHJvaWQ6aW5jbHVkZUZvbnRQYWRkaW5n
+PSJmYWxzZSIgYW5kcm9pZDpiYWNrZ3JvdW5kPSJAZHJhd2FibGUvYmdfYnV0dG9uIicpCiAgICBb
+SU8uRmlsZV06OldyaXRlQWxsVGV4dCgkbGF5b3V0LCAkeG1sLCBbVGV4dC5VVEY4RW5jb2Rpbmdd
+OjpuZXcoJGZhbHNlKSkKfQoKUmVwbGFjZS1SZXF1aXJlZCAkYWN0aXZpdHkgInNldFBhZGRpbmco
+MTIuZHAsIDAsIDEyLmRwLCAwKWBuICAgICAgICAgICAgICAgIGJhY2tncm91bmQgPSBnZXREcmF3
+YWJsZShSLmRyYXdhYmxlLmJnX3JvdykiICJzZXRQYWRkaW5nKDEwLmRwLCAwLCAxMC5kcCwgMClg
+biAgICAgICAgICAgICAgICBtYXhMaW5lcyA9IDJgbiAgICAgICAgICAgICAgICBlbGxpcHNpemUg
+PSBhbmRyb2lkLnRleHQuVGV4dFV0aWxzLlRydW5jYXRlQXQuRU5EYG4gICAgICAgICAgICAgICAg
+YW5kcm9pZHguY29yZS53aWRnZXQuVGV4dFZpZXdDb21wYXQuc2V0QXV0b1NpemVUZXh0VHlwZVVu
+aWZvcm1XaXRoQ29uZmlndXJhdGlvbih0aGlzLCA4LCAxMSwgMSwgYW5kcm9pZC51dGlsLlR5cGVk
+VmFsdWUuQ09NUExFWF9VTklUX1NQKWBuICAgICAgICAgICAgICAgIGJhY2tncm91bmQgPSBnZXRE
+cmF3YWJsZShSLmRyYXdhYmxlLmJnX3JvdykiICdzZWFzb24gdGV4dCBmaXR0aW5nJwpSZXBsYWNl
+LVJlcXVpcmVkICRhY3Rpdml0eSAnbGF5b3V0UGFyYW1zID0gTGluZWFyTGF5b3V0LkxheW91dFBh
+cmFtcygxMzIuZHAsIDUwLmRwKS5hcHBseScgJ2xheW91dFBhcmFtcyA9IExpbmVhckxheW91dC5M
+YXlvdXRQYXJhbXMoMTQwLmRwLCA1NC5kcCkuYXBwbHknICdzZWFzb24gYnV0dG9uIGJvdW5kcycK
+UmVwbGFjZS1SZXF1aXJlZCAkYWN0aXZpdHkgInZhbCBjb250aW51ZUJ1dHRvbiA9IGZpbmRWaWV3
+QnlJZDxCdXR0b24+KFIuaWQuc2VyaWVzQ29udGludWUpYG4gICAgICAgIHZhbCBuZXh0QnV0dG9u
+ID0gZmluZFZpZXdCeUlkPEJ1dHRvbj4oUi5pZC5zZXJpZXNOZXh0KSIgInZhbCBjb250aW51ZUJ1
+dHRvbiA9IGZpbmRWaWV3QnlJZDxCdXR0b24+KFIuaWQuc2VyaWVzQ29udGludWUpYG4gICAgICAg
+IHZhbCBuZXh0QnV0dG9uID0gZmluZFZpZXdCeUlkPEJ1dHRvbj4oUi5pZC5zZXJpZXNOZXh0KWBu
+ICAgICAgICB2YWwgY29udGludWVMYWJlbCA9IGZpbmRWaWV3QnlJZDxUZXh0Vmlldz4oUi5pZC5z
+ZXJpZXNDb250aW51ZUxhYmVsKWBuICAgICAgICBjb250aW51ZUxhYmVsLm1heExpbmVzID0gMmBu
+ICAgICAgICBjb250aW51ZUxhYmVsLmVsbGlwc2l6ZSA9IGFuZHJvaWQudGV4dC5UZXh0VXRpbHMu
+VHJ1bmNhdGVBdC5FTkRgbiAgICAgICAgYW5kcm9pZHguY29yZS53aWRnZXQuVGV4dFZpZXdDb21w
+YXQuc2V0QXV0b1NpemVUZXh0VHlwZVVuaWZvcm1XaXRoQ29uZmlndXJhdGlvbihjb250aW51ZUxh
+YmVsLCA5LCAxMSwgMSwgYW5kcm9pZC51dGlsLlR5cGVkVmFsdWUuQ09NUExFWF9VTklUX1NQKWBu
+ICAgICAgICBsaXN0T2YoY29udGludWVCdXR0b24sIG5leHRCdXR0b24pLmZvckVhY2ggeyBidXR0
+b24gLT5gbiAgICAgICAgICAgIGJ1dHRvbi5tYXhMaW5lcyA9IDJgbiAgICAgICAgICAgIGJ1dHRv
+bi5lbGxpcHNpemUgPSBhbmRyb2lkLnRleHQuVGV4dFV0aWxzLlRydW5jYXRlQXQuRU5EYG4gICAg
+ICAgICAgICBidXR0b24uZ3Jhdml0eSA9IGFuZHJvaWQudmlldy5HcmF2aXR5LkNFTlRFUmBuICAg
+ICAgICAgICAgYW5kcm9pZHguY29yZS53aWRnZXQuVGV4dFZpZXdDb21wYXQuc2V0QXV0b1NpemVU
+ZXh0VHlwZVVuaWZvcm1XaXRoQ29uZmlndXJhdGlvbihidXR0b24sIDgsIDExLCAxLCBhbmRyb2lk
+LnV0aWwuVHlwZWRWYWx1ZS5DT01QTEVYX1VOSVRfU1ApYG4gICAgICAgIH0iICdDb250aW51ZSBh
+bmQgTmV4dCB0ZXh0IGZpdHRpbmcnCgpSZXBsYWNlLVJlcXVpcmVkICRlcGlzb2RlUm93ICdhbmRy
+b2lkOmxheW91dF93aWR0aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjE0
+MmRwIiBhbmRyb2lkOm9yaWVudGF0aW9uPSJob3Jpem9udGFsIicgJ2FuZHJvaWQ6bGF5b3V0X3dp
+ZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iMTU0ZHAiIGFuZHJvaWQ6
+b3JpZW50YXRpb249Imhvcml6b250YWwiIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0cnVlIiBhbmRy
+b2lkOmNsaXBUb1BhZGRpbmc9InRydWUiJyAnYm91bmRlZCBlcGlzb2RlIGNhcmQnClJlcGxhY2Ut
+UmVxdWlyZWQgJGVwaXNvZGVSb3cgJzxGcmFtZUxheW91dCBhbmRyb2lkOmxheW91dF93aWR0aD0i
+MTQ4ZHAiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iMTE2ZHAiPicgJzxGcmFtZUxheW91dCBhbmRy
+b2lkOmxheW91dF93aWR0aD0iMTUyZHAiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iMTMwZHAiIGFu
+ZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0cnVlIj4nICdib3VuZGVkIGVwaXNvZGUgYXJ0d29yaycKUmVw
+bGFjZS1SZXF1aXJlZCAkZXBpc29kZVJvdyAnYW5kcm9pZDptYXhMaW5lcz0iMiIgYW5kcm9pZDpl
+bGxpcHNpemU9ImVuZCIgYW5kcm9pZDpncmF2aXR5PSJjZW50ZXJfdmVydGljYWwiIGFuZHJvaWQ6
+aW5jbHVkZUZvbnRQYWRkaW5nPSJmYWxzZSIgYW5kcm9pZDp0ZXh0PSJFcGlzb2RlIHRpdGxlIicg
+J2FuZHJvaWQ6bWF4TGluZXM9IjIiIGFuZHJvaWQ6ZWxsaXBzaXplPSJlbmQiIGFuZHJvaWQ6Z3Jh
+dml0eT0ic3RhcnR8Y2VudGVyX3ZlcnRpY2FsIiBhbmRyb2lkOmluY2x1ZGVGb250UGFkZGluZz0i
+ZmFsc2UiIGFuZHJvaWQ6dGV4dD0iRXBpc29kZSB0aXRsZSInICdsZWZ0LWFsaWduZWQgZXBpc29k
+ZSB0aXRsZScKUmVwbGFjZS1SZXF1aXJlZCAkZXBpc29kZVJvdyAnYW5kcm9pZDptYXhMaW5lcz0i
+MiIgYW5kcm9pZDplbGxpcHNpemU9ImVuZCIgYW5kcm9pZDp0ZXh0Q29sb3I9IkBjb2xvci9rc19t
+dXRlZF8yIiBhbmRyb2lkOnRleHRTaXplPSIxMXNwIiBhbmRyb2lkOmxpbmVTcGFjaW5nRXh0cmE9
+IjFkcCInICdhbmRyb2lkOm1heExpbmVzPSIyIiBhbmRyb2lkOmVsbGlwc2l6ZT0iZW5kIiBhbmRy
+b2lkOmdyYXZpdHk9InN0YXJ0fGNlbnRlcl92ZXJ0aWNhbCIgYW5kcm9pZDppbmNsdWRlRm9udFBh
+ZGRpbmc9ImZhbHNlIiBhbmRyb2lkOnRleHRDb2xvcj0iQGNvbG9yL2tzX211dGVkXzIiIGFuZHJv
+aWQ6dGV4dFNpemU9IjExc3AiIGFuZHJvaWQ6bGluZVNwYWNpbmdFeHRyYT0iMWRwIicgJ2xlZnQt
+YWxpZ25lZCBlcGlzb2RlIGRlc2NyaXB0aW9uJwoKUmVwbGFjZS1SZXF1aXJlZCAkYWRhcHRlciAi
+KS5hbHNvIHsgcm93LnRhZyA9IGl0IH1gbmBuICAgICAgICB2YWwgZXBpc29kZSA9IGdldEl0ZW0o
+cG9zaXRpb24pIiAiKS5hbHNvIHsgcm93LnRhZyA9IGl0IH1gbmBuICAgICAgICBob2xkZXIudGl0
+bGUubWF4TGluZXMgPSAyYG4gICAgICAgIGhvbGRlci50aXRsZS5lbGxpcHNpemUgPSBhbmRyb2lk
+LnRleHQuVGV4dFV0aWxzLlRydW5jYXRlQXQuRU5EYG4gICAgICAgIGhvbGRlci50aXRsZS5ncmF2
+aXR5ID0gYW5kcm9pZC52aWV3LkdyYXZpdHkuU1RBUlQgb3IgYW5kcm9pZC52aWV3LkdyYXZpdHku
+Q0VOVEVSX1ZFUlRJQ0FMYG4gICAgICAgIGFuZHJvaWR4LmNvcmUud2lkZ2V0LlRleHRWaWV3Q29t
+cGF0LnNldEF1dG9TaXplVGV4dFR5cGVVbmlmb3JtV2l0aENvbmZpZ3VyYXRpb24oaG9sZGVyLnRp
+dGxlLCAxMiwgMTYsIDEsIGFuZHJvaWQudXRpbC5UeXBlZFZhbHVlLkNPTVBMRVhfVU5JVF9TUClg
+biAgICAgICAgaG9sZGVyLmRlc2NyaXB0aW9uLm1heExpbmVzID0gMmBuICAgICAgICBob2xkZXIu
+ZGVzY3JpcHRpb24uZWxsaXBzaXplID0gYW5kcm9pZC50ZXh0LlRleHRVdGlscy5UcnVuY2F0ZUF0
+LkVORGBuICAgICAgICBob2xkZXIuZGVzY3JpcHRpb24uZ3Jhdml0eSA9IGFuZHJvaWQudmlldy5H
+cmF2aXR5LlNUQVJUIG9yIGFuZHJvaWQudmlldy5HcmF2aXR5LkNFTlRFUl9WRVJUSUNBTGBuICAg
+ICAgICBhbmRyb2lkeC5jb3JlLndpZGdldC5UZXh0Vmlld0NvbXBhdC5zZXRBdXRvU2l6ZVRleHRU
+eXBlVW5pZm9ybVdpdGhDb25maWd1cmF0aW9uKGhvbGRlci5kZXNjcmlwdGlvbiwgOSwgMTEsIDEs
+IGFuZHJvaWQudXRpbC5UeXBlZFZhbHVlLkNPTVBMRVhfVU5JVF9TUClgbiAgICAgICAgaG9sZGVy
+Lm1ldGEubWF4TGluZXMgPSAxYG4gICAgICAgIGhvbGRlci5tZXRhLmVsbGlwc2l6ZSA9IGFuZHJv
+aWQudGV4dC5UZXh0VXRpbHMuVHJ1bmNhdGVBdC5FTkRgbiAgICAgICAgYW5kcm9pZHguY29yZS53
+aWRnZXQuVGV4dFZpZXdDb21wYXQuc2V0QXV0b1NpemVUZXh0VHlwZVVuaWZvcm1XaXRoQ29uZmln
+dXJhdGlvbihob2xkZXIubWV0YSwgOCwgMTAsIDEsIGFuZHJvaWQudXRpbC5UeXBlZFZhbHVlLkNP
+TVBMRVhfVU5JVF9TUClgbiAgICAgICAgaG9sZGVyLmJhZGdlLm1heExpbmVzID0gMWBuICAgICAg
+ICBob2xkZXIuYmFkZ2UuZWxsaXBzaXplID0gYW5kcm9pZC50ZXh0LlRleHRVdGlscy5UcnVuY2F0
+ZUF0LkVORGBuICAgICAgICBhbmRyb2lkeC5jb3JlLndpZGdldC5UZXh0Vmlld0NvbXBhdC5zZXRB
+dXRvU2l6ZVRleHRUeXBlVW5pZm9ybVdpdGhDb25maWd1cmF0aW9uKGhvbGRlci5iYWRnZSwgOCwg
+MTAsIDEsIGFuZHJvaWQudXRpbC5UeXBlZFZhbHVlLkNPTVBMRVhfVU5JVF9TUClgbmBuICAgICAg
+ICB2YWwgZXBpc29kZSA9IGdldEl0ZW0ocG9zaXRpb24pIiAnZXBpc29kZSB0ZXh0IGZpdHRpbmcn
+CgpXcml0ZS1Ib3N0ICdBbGwgU2VyaWVzIERldGFpbHMgdGV4dCBpcyBjb25zdHJhaW5lZCBpbnNp
+ZGUgaXRzIGNhcmQuJwo=
+:::END TEXTFITPATCH
