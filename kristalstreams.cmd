@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Audio Track Fallback 1682017
+title KS Software Audio 1682018
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksplaybackcontrol-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-AUDIO-TRACK-FALLBACK-1682017.apk"
-set "LOG=%TEMP%\ks-audio-track-fallback-1682017-build.txt"
+set "WORK=C:\kssoftwareaudio-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SOFTWARE-AUDIO-1682018.apk"
+set "LOG=%TEMP%\ks-software-audio-1682018-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - AUDIO TRACK FALLBACK
-echo   FRESH APK: KS-AUDIO-TRACK-FALLBACK-1682017.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SOFTWARE AUDIO DECODER
+echo   FRESH APK: KS-SOFTWARE-AUDIO-1682018.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -24,6 +24,7 @@ echo Removes the persistent channel name and NOW/NEXT banner.
 echo Removes side bars without zoom-cropping the picture.
 echo Restores player audio and makes Back exit playback reliably.
 echo Automatically selects a supported audio track when one is available.
+echo Adds software decoding for AC3, EAC3, DTS, and TrueHD audio.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -269,6 +270,18 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+findstr /c:"org.jellyfin.media3:media3-ffmpeg-decoder:1.5.0+1" "%WORK%\app\build.gradle.kts" >nul
+if errorlevel 1 (
+    echo ERROR: Software audio-decoder dependency verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"EXTENSION_RENDERER_MODE_PREFER" "%WORK%\app\src\main\java\com\kristalstreams\player\PlayerActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Software audio renderer activation verification failed.
+    pause
+    exit /b 1
+)
 findstr /c:"OnBackPressedCallback" "%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt" >nul
 if errorlevel 1 (
     echo ERROR: Playback Back handling verification failed.
@@ -281,7 +294,7 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"1.6.8-audio-track-fallback" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"1.6.8-software-audio" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
     echo ERROR: Immersive playback version verification failed.
     pause
@@ -332,7 +345,7 @@ echo Gradle progress will appear below.
 echo.
 
 cd /d "%WORK%"
-set "BUILDPS=%TEMP%\ks_audio_track_fallback_1682017_gradle_build.ps1"
+set "BUILDPS=%TEMP%\ks_software_audio_1682018_gradle_build.ps1"
 > "%BUILDPS%" echo $ErrorActionPreference = 'Continue'
 >>"%BUILDPS%" echo ^& '.\gradlew.bat' clean assembleDebug --rerun-tasks --console=plain --stacktrace 2^>^&1 ^| Tee-Object -FilePath '%LOG%'
 >>"%BUILDPS%" echo $rc = $LASTEXITCODE
@@ -381,7 +394,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-AUDIO-TRACK-FALLBACK-1682017.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SOFTWARE-AUDIO-1682018.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -390,7 +403,7 @@ cls
 echo.
 echo ==========================================================
 echo.
-echo       KS AUDIO TRACK FALLBACK BUILD SUCCESSFUL
+echo       KS SOFTWARE AUDIO BUILD SUCCESSFUL
 echo.
 echo ==========================================================
 echo.
@@ -404,7 +417,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-AUDIO-TRACK-FALLBACK-1682017.apk shown above.
+echo Install only KS-SOFTWARE-AUDIO-1682018.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -412,6 +425,7 @@ echo Live TV, Movies, and Series playback now hide both Android system bars.
 echo Video fills the display without side bars or zoom-cropping.
 echo Player audio is unmuted and hardware volume controls adjust media volume.
 echo A supported alternate audio track is selected automatically when available.
+echo AC3, EAC3, DTS, and TrueHD audio use the bundled software decoder when needed.
 echo Phone gestures, Android Back, and TV remote Back exit playback.
 echo The persistent channel name and NOW/NEXT banner is removed during playback.
 echo.
@@ -1553,19 +1567,20 @@ ZXRicmFpbnMua290bGluLmFuZHJvaWQiKQp9CgphbmRyb2lkIHsKICAgIG5hbWVzcGFjZSA9ICJj
 b20ua3Jpc3RhbHN0cmVhbXMucGxheWVyIgogICAgY29tcGlsZVNkayA9IDM1CgogICAgZGVmYXVs
 dENvbmZpZyB7CiAgICAgICAgYXBwbGljYXRpb25JZCA9ICJjb20ua3Jpc3RhbHN0cmVhbXMucGxh
 eWVyIgogICAgICAgIG1pblNkayA9IDIzCiAgICAgICAgdGFyZ2V0U2RrID0gMzUKICAgICAgICB2
-ZXJzaW9uQ29kZSA9IDE2ODIwMTcKICAgICAgICB2ZXJzaW9uTmFtZSA9ICIxLjYuOC1hdWRpby10
-cmFjay1mYWxsYmFjayIKICAgIH0KCiAgICBidWlsZEZlYXR1cmVzIHsKICAgICAgICB2aWV3Qmlu
-ZGluZyA9IGZhbHNlCiAgICB9CgogICAgY29tcGlsZU9wdGlvbnMgewogICAgICAgIHNvdXJjZUNv
-bXBhdGliaWxpdHkgPSBKYXZhVmVyc2lvbi5WRVJTSU9OXzExCiAgICAgICAgdGFyZ2V0Q29tcGF0
-aWJpbGl0eSA9IEphdmFWZXJzaW9uLlZFUlNJT05fMTEKICAgIH0KCiAgICBrb3RsaW4gewogICAg
-ICAgIGp2bVRvb2xjaGFpbigxMSkKICAgIH0KfQoKZGVwZW5kZW5jaWVzIHsKICAgIGltcGxlbWVu
-dGF0aW9uKCJhbmRyb2lkeC5jb3JlOmNvcmUta3R4OjEuMTUuMCIpCiAgICBpbXBsZW1lbnRhdGlv
-bigiYW5kcm9pZHguYXBwY29tcGF0OmFwcGNvbXBhdDoxLjcuMCIpCiAgICBpbXBsZW1lbnRhdGlv
-bigiY29tLmdvb2dsZS5hbmRyb2lkLm1hdGVyaWFsOm1hdGVyaWFsOjEuMTIuMCIpCiAgICBpbXBs
-ZW1lbnRhdGlvbigiYW5kcm9pZHgubWVkaWEzOm1lZGlhMy1leG9wbGF5ZXI6MS41LjEiKQogICAg
-aW1wbGVtZW50YXRpb24oImFuZHJvaWR4Lm1lZGlhMzptZWRpYTMtZXhvcGxheWVyLWhsczoxLjUu
-MSIpCiAgICBpbXBsZW1lbnRhdGlvbigiYW5kcm9pZHgubWVkaWEzOm1lZGlhMy11aToxLjUuMSIp
-Cn0K
+ZXJzaW9uQ29kZSA9IDE2ODIwMTgKICAgICAgICB2ZXJzaW9uTmFtZSA9ICIxLjYuOC1zb2Z0d2Fy
+ZS1hdWRpbyIKICAgIH0KCiAgICBidWlsZEZlYXR1cmVzIHsKICAgICAgICB2aWV3QmluZGluZyA9
+IGZhbHNlCiAgICB9CgogICAgY29tcGlsZU9wdGlvbnMgewogICAgICAgIHNvdXJjZUNvbXBhdGli
+aWxpdHkgPSBKYXZhVmVyc2lvbi5WRVJTSU9OXzExCiAgICAgICAgdGFyZ2V0Q29tcGF0aWJpbGl0
+eSA9IEphdmFWZXJzaW9uLlZFUlNJT05fMTEKICAgIH0KCiAgICBrb3RsaW4gewogICAgICAgIGp2
+bVRvb2xjaGFpbigxMSkKICAgIH0KfQoKZGVwZW5kZW5jaWVzIHsKICAgIGltcGxlbWVudGF0aW9u
+KCJhbmRyb2lkeC5jb3JlOmNvcmUta3R4OjEuMTUuMCIpCiAgICBpbXBsZW1lbnRhdGlvbigiYW5k
+cm9pZHguYXBwY29tcGF0OmFwcGNvbXBhdDoxLjcuMCIpCiAgICBpbXBsZW1lbnRhdGlvbigiY29t
+Lmdvb2dsZS5hbmRyb2lkLm1hdGVyaWFsOm1hdGVyaWFsOjEuMTIuMCIpCiAgICBpbXBsZW1lbnRh
+dGlvbigiYW5kcm9pZHgubWVkaWEzOm1lZGlhMy1leG9wbGF5ZXI6MS41LjEiKQogICAgaW1wbGVt
+ZW50YXRpb24oImFuZHJvaWR4Lm1lZGlhMzptZWRpYTMtZXhvcGxheWVyLWhsczoxLjUuMSIpCiAg
+ICBpbXBsZW1lbnRhdGlvbigiYW5kcm9pZHgubWVkaWEzOm1lZGlhMy11aToxLjUuMSIpCiAgICBp
+bXBsZW1lbnRhdGlvbigib3JnLmplbGx5ZmluLm1lZGlhMzptZWRpYTMtZmZtcGVnLWRlY29kZXI6
+MS41LjArMSIpCn0K
 :::END GRADLE
 :::BEGIN AUDIT
 S1JJU1RBTCBTVFJFQU1TIDEuNi44IFJDMSBSMiDigJQgREFTSEJPQVJEIEhFQURFUiBCTEFDSyBS
@@ -2153,5 +2168,42 @@ KSB7CiAgICAgICAgdGhyb3cgJ0FuZHJvaWQgbWFuaWZlc3QgYXBwbGljYXRpb24gZWxlbWVudCB3
 YXMgbm90IGZvdW5kLicKICAgIH0KICAgICRjb250ZW50ID0gJGNvbnRlbnQuUmVwbGFjZSgnPC9h
 cHBsaWNhdGlvbj4nLCAiJHByb3ZpZGVyYHJgbiAgICA8L2FwcGxpY2F0aW9uPiIpCiAgICBbSU8u
 RmlsZV06OldyaXRlQWxsVGV4dCgkbWFuaWZlc3QsICRjb250ZW50LCBbVGV4dC5VVEY4RW5jb2Rp
-bmddOjpuZXcoJGZhbHNlKSkKfQo=
+bmddOjpuZXcoJGZhbHNlKSkKfQoKJHBsYXllckFjdGl2aXR5ID0gSm9pbi1QYXRoICRQcm9qZWN0
+Um9vdCAnYXBwXHNyY1xtYWluXGphdmFcY29tXGtyaXN0YWxzdHJlYW1zXHBsYXllclxQbGF5ZXJB
+Y3Rpdml0eS5rdCcKaWYgKC1ub3QgKFRlc3QtUGF0aCAtTGl0ZXJhbFBhdGggJHBsYXllckFjdGl2
+aXR5KSkgewogICAgdGhyb3cgIlBsYXllciBhY3Rpdml0eSBub3QgZm91bmQ6ICRwbGF5ZXJBY3Rp
+dml0eSIKfQoKJHBsYXllckNvbnRlbnQgPSBbSU8uRmlsZV06OlJlYWRBbGxUZXh0KCRwbGF5ZXJB
+Y3Rpdml0eSkKaWYgKCRwbGF5ZXJDb250ZW50IC1ub3RtYXRjaCAnRVhURU5TSU9OX1JFTkRFUkVS
+X01PREVfUFJFRkVSJykgewogICAgaWYgKCRwbGF5ZXJDb250ZW50IC1ub3RtYXRjaCAnaW1wb3J0
+IGFuZHJvaWR4XC5tZWRpYTNcLmV4b3BsYXllclwuRGVmYXVsdFJlbmRlcmVyc0ZhY3RvcnknKSB7
+CiAgICAgICAgaWYgKCRwbGF5ZXJDb250ZW50IC1tYXRjaCAnaW1wb3J0IGFuZHJvaWR4XC5tZWRp
+YTNcLmV4b3BsYXllclwuRXhvUGxheWVyJykgewogICAgICAgICAgICAkcGxheWVyQ29udGVudCA9
+ICRwbGF5ZXJDb250ZW50LlJlcGxhY2UoCiAgICAgICAgICAgICAgICAnaW1wb3J0IGFuZHJvaWR4
+Lm1lZGlhMy5leG9wbGF5ZXIuRXhvUGxheWVyJywKICAgICAgICAgICAgICAgICJpbXBvcnQgYW5k
+cm9pZHgubWVkaWEzLmV4b3BsYXllci5FeG9QbGF5ZXJgcmBuaW1wb3J0IGFuZHJvaWR4Lm1lZGlh
+My5leG9wbGF5ZXIuRGVmYXVsdFJlbmRlcmVyc0ZhY3RvcnkiCiAgICAgICAgICAgICkKICAgICAg
+ICB9IGVsc2UgewogICAgICAgICAgICAkcGFja2FnZVBhdHRlcm4gPSAnKD9tKV4ocGFja2FnZVxz
+K1teXHJcbl0rKScKICAgICAgICAgICAgaWYgKCRwbGF5ZXJDb250ZW50IC1ub3RtYXRjaCAkcGFj
+a2FnZVBhdHRlcm4pIHsKICAgICAgICAgICAgICAgIHRocm93ICdQbGF5ZXJBY3Rpdml0eSBwYWNr
+YWdlIGRlY2xhcmF0aW9uIHdhcyBub3QgZm91bmQuJwogICAgICAgICAgICB9CiAgICAgICAgICAg
+ICRwbGF5ZXJDb250ZW50ID0gW3JlZ2V4XTo6UmVwbGFjZSgKICAgICAgICAgICAgICAgICRwbGF5
+ZXJDb250ZW50LAogICAgICAgICAgICAgICAgJHBhY2thZ2VQYXR0ZXJuLAogICAgICAgICAgICAg
+ICAgJyQxJyArICJgcmBuYHJgbmltcG9ydCBhbmRyb2lkeC5tZWRpYTMuZXhvcGxheWVyLkRlZmF1
+bHRSZW5kZXJlcnNGYWN0b3J5IiwKICAgICAgICAgICAgICAgIDEKICAgICAgICAgICAgKQogICAg
+ICAgIH0KICAgIH0KCiAgICAkYnVpbGRlclBhdHRlcm4gPSAnRXhvUGxheWVyXC5CdWlsZGVyXChc
+cyoodGhpcyg/OkBQbGF5ZXJBY3Rpdml0eSk/fGFwcGxpY2F0aW9uQ29udGV4dHx0aGlzXC5hcHBs
+aWNhdGlvbkNvbnRleHQpXHMqXCknCiAgICAkYnVpbGRlck1hdGNoID0gW3JlZ2V4XTo6TWF0Y2go
+JHBsYXllckNvbnRlbnQsICRidWlsZGVyUGF0dGVybikKICAgIGlmICgtbm90ICRidWlsZGVyTWF0
+Y2guU3VjY2VzcykgewogICAgICAgIHRocm93ICdUaGUgRXhvUGxheWVyIGJ1aWxkZXIgaW4gUGxh
+eWVyQWN0aXZpdHkgY291bGQgbm90IGJlIGxvY2F0ZWQgc2FmZWx5LicKICAgIH0KCiAgICAkY3R4
+ID0gJGJ1aWxkZXJNYXRjaC5Hcm91cHNbMV0uVmFsdWUKICAgICRyZXBsYWNlbWVudCA9ICJFeG9Q
+bGF5ZXIuQnVpbGRlcigkY3R4LCBEZWZhdWx0UmVuZGVyZXJzRmFjdG9yeSgkY3R4KS5zZXRFeHRl
+bnNpb25SZW5kZXJlck1vZGUoRGVmYXVsdFJlbmRlcmVyc0ZhY3RvcnkuRVhURU5TSU9OX1JFTkRF
+UkVSX01PREVfUFJFRkVSKS5zZXRFbmFibGVEZWNvZGVyRmFsbGJhY2sodHJ1ZSkpIgogICAgJHBs
+YXllckNvbnRlbnQgPSBbcmVnZXhdOjpSZXBsYWNlKCRwbGF5ZXJDb250ZW50LCAkYnVpbGRlclBh
+dHRlcm4sICRyZXBsYWNlbWVudCwgMSkKICAgIFtJTy5GaWxlXTo6V3JpdGVBbGxUZXh0KCRwbGF5
+ZXJBY3Rpdml0eSwgJHBsYXllckNvbnRlbnQsIFtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFs
+c2UpKQp9CgppZiAoJHBsYXllckNvbnRlbnQgLW5vdG1hdGNoICdFWFRFTlNJT05fUkVOREVSRVJf
+TU9ERV9QUkVGRVInKSB7CiAgICB0aHJvdyAnU29mdHdhcmUgYXVkaW8gcmVuZGVyZXIgd2FzIG5v
+dCBlbmFibGVkIGluIFBsYXllckFjdGl2aXR5LicKfQo=
 :::END UIPATCH
