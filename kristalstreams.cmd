@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Landscape Neutral Controls 1682038
+title KS Series Landscape Spacing 1682039
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksserieslandscapeneutralcontrols-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-NEUTRAL-CONTROLS-1682038.apk"
-set "LOG=%TEMP%\ks-series-landscape-neutral-controls-1682038-build.txt"
+set "WORK=C:\ksserieslandscapespacing-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-SPACING-1682039.apk"
+set "LOG=%TEMP%\ks-series-landscape-spacing-1682039-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE NEUTRAL CONTROLS
-echo   FRESH APK: KS-SERIES-LANDSCAPE-NEUTRAL-CONTROLS-1682038.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE SPACING
+echo   FRESH APK: KS-SERIES-LANDSCAPE-SPACING-1682039.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -50,7 +50,7 @@ echo Verifies the three-column Smart TV/box layout and related-Series section re
 echo Expands the full portrait episode grid before More Like This begins.
 echo Prevents episode cards and related-Series cards from sharing the same screen space.
 echo Matches multiline Series source blocks regardless of Windows or Unix line endings.
-echo Uses the standard dark card background for phone-landscape Resume and Next controls.
+echo Adds breathing room between mobile-landscape controls, labels, and episode cards.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -251,8 +251,8 @@ if not "%RC%"=="0" (
     exit /b %RC%
 )
 
-echo [12/16] Matching landscape Resume and Next controls to the surrounding cards...
-set "OVERLAPPS=%TEMP%\ks-series-landscape-neutral-controls-1682038.ps1"
+echo [12/16] Spacing every mobile-landscape Series control and episode card...
+set "OVERLAPPS=%TEMP%\ks-series-landscape-spacing-1682039.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'OVERLAPPATCHPS1'; $b=':::END '+'OVERLAPPATCHPS1'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing episode-overlap patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing episode-overlap patch end'}; [IO.File]::WriteAllText('%OVERLAPPS%',$raw.Substring($s,$e-$s).TrimStart([char]13,[char]10),[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
@@ -270,9 +270,9 @@ if not "%RC%"=="0" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682038').Replace('1.6.8-series-complete','1.6.8-series-landscape-neutral-controls'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682039').Replace('1.6.8-series-complete','1.6.8-series-landscape-spacing'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682038 application version.
+    echo ERROR: Could not set the new 1682039 application version.
     pause
     exit /b 1
 )
@@ -680,9 +680,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682038" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682039" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682038 application version verification failed.
+    echo ERROR: New 1682039 application version verification failed.
     pause
     exit /b 1
 )
@@ -703,6 +703,18 @@ findstr /c:"android:nestedScrollingEnabled=\"false\"" "%WORK%\app\src\main\res\l
 
 if errorlevel 1 (
     echo ERROR: Portrait episode-grid boundary verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"list.verticalSpacing = 10.dp" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Mobile-landscape episode-card spacing verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"params.bottomMargin = 10.dp" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Mobile-landscape control spacing verification failed.
     pause
     exit /b 1
 )
@@ -1037,7 +1049,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-NEUTRAL-CONTROLS-1682038.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-SPACING-1682039.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -1060,7 +1072,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-LANDSCAPE-NEUTRAL-CONTROLS-1682038.apk shown above.
+echo Install only KS-SERIES-LANDSCAPE-SPACING-1682039.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -1164,11 +1176,28 @@ $newLandscapeControls = @'
         if (isMobileLandscape()) {
             continueButton.background = getDrawable(R.drawable.bg_row)
             nextButton.background = getDrawable(R.drawable.bg_row)
+            (findViewById<View>(R.id.seriesSeasonBar).parent as? View)?.let { seasonStrip ->
+                (seasonStrip.layoutParams as? LinearLayout.LayoutParams)?.let { params ->
+                    params.bottomMargin = 6.dp
+                    seasonStrip.layoutParams = params
+                }
+            }
             (panel.layoutParams as? LinearLayout.LayoutParams)?.let { params ->
                 params.height = 68.dp
-                params.bottomMargin = 8.dp
+                params.topMargin = 6.dp
+                params.bottomMargin = 10.dp
                 panel.layoutParams = params
             }
+            findViewById<TextView>(R.id.episodeCount).let { episodeCounter ->
+                (episodeCounter.layoutParams as? LinearLayout.LayoutParams)?.let { params ->
+                    params.topMargin = 4.dp
+                    params.bottomMargin = 6.dp
+                    episodeCounter.layoutParams = params
+                }
+            }
+            list.horizontalSpacing = 8.dp
+            list.verticalSpacing = 10.dp
+            list.setPadding(6.dp, 6.dp, 6.dp, 10.dp)
             continueLabel.layoutParams = continueLabel.layoutParams.apply { height = 18.dp }
             (continueButton.parent as? View)?.let { buttonRow ->
                 buttonRow.layoutParams = buttonRow.layoutParams.apply { height = 38.dp }
