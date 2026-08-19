@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Button Clearance 1682024
+title KS Series Button Padding 1682025
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksseriesbuttonclearance-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-BUTTON-CLEARANCE-1682024.apk"
-set "LOG=%TEMP%\ks-series-button-clearance-1682024-build.txt"
+set "WORK=C:\ksseriesbuttonpadding-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-BUTTON-PADDING-1682025.apk"
+set "LOG=%TEMP%\ks-series-button-padding-1682025-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES BUTTON CLEARANCE
-echo   FRESH APK: KS-SERIES-BUTTON-CLEARANCE-1682024.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES BUTTON PADDING
+echo   FRESH APK: KS-SERIES-BUTTON-PADDING-1682025.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -37,6 +37,7 @@ echo Enlarges the Continue and Next control panel and episode cards.
 echo Allows two-line episode titles and descriptions.
 echo Automatically fits long Series text inside every control and card.
 echo Keeps every red Series Details button completely visible.
+echo Adds extra bottom padding beneath the Choose-an-episode red button.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -49,7 +50,7 @@ if not exist "%SOURCE%\gradlew.bat" (
     exit /b 1
 )
 
-echo [1/9] Creating a brand-new working copy...
+echo [1/10] Creating a brand-new working copy...
 mkdir "%WORK%" >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Could not create:
@@ -66,7 +67,7 @@ if %RC% GEQ 8 (
     exit /b %RC%
 )
 
-echo [2/9] Installing verified 1682020 baseline and complete Series upgrade...
+echo [2/10] Installing verified 1682020 baseline and complete Series upgrade...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt',(B 'MODELS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\XtreamClient.kt',(B 'XTREAM')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\GuideActivity.kt',(B 'GUIDE')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt',(B 'ADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\UiContrastProvider.kt',(B 'UICONTEXT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt',(B 'IMMERSIVE')); [IO.File]::WriteAllBytes('%WORK%\app\build.gradle.kts',(B 'GRADLE')); [IO.File]::WriteAllBytes('%WORK%\REFERENCE-EPG-AUDIT.txt',(B 'AUDIT')); [IO.File]::WriteAllBytes('%WORK%\apply-ui-contrast.ps1',(B 'UIPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\LibraryActivity.kt',(B 'LIBRARY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MediaGridAdapter.kt',(B 'MEDIAADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieDetailsActivity.kt',(B 'MOVIEDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_details.xml',(B 'MOVIELAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_details.xml',(B 'MOVIELAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_details_panel.xml',(B 'MOVIEPANEL')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_fact.xml',(B 'MOVIEFACT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\values\movie_styles.xml',(B 'MOVIESTYLES')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlist.kt',(B 'WATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlistActivity.kt',(B 'WATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\ContinueWatching.kt',(B 'CONTINUEWATCHING')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlayerActivity.kt',(B 'PLAYER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_library.xml',(B 'LIBRARYLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_library.xml',(B 'LIBRARYLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_player.xml',(B 'PLAYERLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt',(B 'SERIESDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpisodeListAdapter.kt',(B 'EPISODEADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlist.kt',(B 'SERIESWATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlistActivity.kt',(B 'SERIESWATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesHistory.kt',(B 'SERIESHISTORY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_details.xml',(B 'SERIESLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_details.xml',(B 'SERIESLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\row_episode_modern.xml',(B 'EPISODEROW')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUTLAND'))"
 if errorlevel 1 (
@@ -83,7 +84,7 @@ if errorlevel 1 (
 )
 del /q "%WORK%\apply-ui-contrast.ps1" >nul 2>&1
 
-echo [3/9] Applying final Series Details layout measurements...
+echo [3/10] Applying final Series Details layout measurements...
 set "LAYOUTPS=%TEMP%\ks-series-layout-fix-1682022.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'LAYOUTPATCH'; $b=':::END '+'LAYOUTPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%LAYOUTPS%',[Convert]::FromBase64String($x))"
@@ -100,7 +101,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [4/9] Constraining all Series text inside its box...
+echo [4/10] Constraining all Series text inside its box...
 set "TEXTFITPS=%TEMP%\ks-series-text-fit-1682023.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'TEXTFITPATCH'; $b=':::END '+'TEXTFITPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing text-fit patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing text-fit patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%TEXTFITPS%',[Convert]::FromBase64String($x))"
@@ -117,7 +118,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [5/9] Restoring full red-button visibility and bottom clearance...
+echo [5/10] Restoring full red-button visibility and bottom clearance...
 set "BUTTONPS=%TEMP%\ks-series-button-clearance-1682024.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'BUTTONPATCH'; $b=':::END '+'BUTTONPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing button-clearance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing button-clearance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%BUTTONPS%',[Convert]::FromBase64String($x))"
@@ -134,15 +135,32 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
+echo [6/10] Adding extra space beneath the red episode button...
+set "PADDINGPS=%TEMP%\ks-series-button-padding-1682025.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682024').Replace('1.6.8-series-complete','1.6.8-series-button-clearance'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'PADDINGPATCH'; $b=':::END '+'PADDINGPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing bottom-padding patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing bottom-padding patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%PADDINGPS%',[Convert]::FromBase64String($x))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682024 application version.
+    echo ERROR: Could not extract the red-button bottom-padding correction.
+    pause
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PADDINGPS%" -ProjectRoot "%WORK%"
+set "RC=%ERRORLEVEL%"
+del /q "%PADDINGPS%" >nul 2>&1
+if not "%RC%"=="0" (
+    echo ERROR: The red-button bottom-padding correction could not be applied safely.
+    pause
+    exit /b %RC%
+)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682025').Replace('1.6.8-series-complete','1.6.8-series-button-padding'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+if errorlevel 1 (
+    echo ERROR: Could not set the new 1682025 application version.
     pause
     exit /b 1
 )
 
-echo [6/9] Verifying Series text and complete button visibility...
+echo [7/10] Verifying the added red-button bottom padding...
 findstr /c:"epgChannelId" "%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt" >nul
 if errorlevel 1 (
     echo ERROR: Channel EPG ID verification failed.
@@ -545,13 +563,13 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682024" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682025" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682024 application version verification failed.
+    echo ERROR: New 1682025 application version verification failed.
     pause
     exit /b 1
 )
-findstr /c:"android:layout_height=\"124dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+findstr /c:"android:layout_height=\"136dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
 if errorlevel 1 (
     echo ERROR: Enlarged Continue panel verification failed.
     pause
@@ -582,9 +600,15 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"android:layout_height=\"74dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+findstr /c:"android:layout_height=\"84dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
 if errorlevel 1 (
     echo ERROR: Continue and Next bottom-clearance verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:paddingBottom=\"17dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Extra red-button bottom-padding verification failed.
     pause
     exit /b 1
 )
@@ -595,7 +619,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [7/9] Preparing Windows Android build tools...
+echo [8/10] Preparing Windows Android build tools...
 set "ANDROID_SDK=%LOCALAPPDATA%\Android\Sdk"
 if not exist "%ANDROID_SDK%\platforms" (
     echo ERROR: Android SDK not found:
@@ -634,7 +658,7 @@ exit /b 1
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo.
-echo [8/9] Building corrected Series APK...
+echo [9/10] Building corrected Series APK...
 echo Gradle progress will appear below.
 echo.
 
@@ -675,7 +699,7 @@ if not exist "%BUILT%" (
 )
 
 echo.
-echo [9/9] Copying finished APK...
+echo [10/10] Copying finished APK...
 copy /Y "%BUILT%" "%FINAL%" >nul
 if errorlevel 1 (
     echo ERROR: Could not copy APK to Downloads.
@@ -688,7 +712,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-BUTTON-CLEARANCE-1682024.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-BUTTON-PADDING-1682025.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -697,7 +721,7 @@ cls
 echo.
 echo ==========================================================
 echo.
-echo       KS SERIES BUTTON-CLEARANCE BUILD SUCCESSFUL
+echo       KS SERIES BUTTON-PADDING BUILD SUCCESSFUL
 echo.
 echo ==========================================================
 echo.
@@ -711,7 +735,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-BUTTON-CLEARANCE-1682024.apk shown above.
+echo Install only KS-SERIES-BUTTON-PADDING-1682025.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -721,6 +745,7 @@ echo Audio and subtitle choices appear with the playback controls when tracks ar
 echo Series now includes Search, Sort, My Series, full details, season tabs, richer episode cards, Resume, and Next Episode.
 echo Long titles and descriptions stay inside their cards and shrink only when needed.
 echo Continue, Next, Season, Trailer, and My Series buttons have full vertical clearance.
+echo The red episode button now has a dedicated 17dp bottom inset.
 echo The last selected season and episode are remembered, and related shows are displayed when supplied.
 echo PLAY MOVIE starts the verified fullscreen player with the same audio and Back behavior.
 echo Live TV, Movies, and Series playback now hide both Android system bars.
@@ -5739,3 +5764,36 @@ YWxzZSI+JyAnbGFuZHNjYXBlIGFjdGlvbi1idXR0b24gY2xlYXJhbmNlJwoKV3JpdGUtSG9zdCAn
 QWxsIFNlcmllcyBEZXRhaWxzIGJ1dHRvbiBjb250YWluZXJzIG5vdyBoYXZlIGNvbXBsZXRlIGJv
 dHRvbSBjbGVhcmFuY2UuJwo=
 :::END BUTTONPATCH
+
+:::BEGIN PADDINGPATCH
+cGFyYW0oCiAgICBbUGFyYW1ldGVyKE1hbmRhdG9yeSA9ICR0cnVlKV1bc3RyaW5nXSRQcm9qZWN0
+Um9vdAopCgokRXJyb3JBY3Rpb25QcmVmZXJlbmNlID0gJ1N0b3AnCgpmdW5jdGlvbiBSZXBsYWNl
+LVJlcXVpcmVkIHsKICAgIHBhcmFtKFtzdHJpbmddJFBhdGgsIFtzdHJpbmddJE9sZCwgW3N0cmlu
+Z10kTmV3LCBbc3RyaW5nXSRMYWJlbCkKICAgICRjb250ZW50ID0gW0lPLkZpbGVdOjpSZWFkQWxs
+VGV4dCgkUGF0aCkKICAgIGlmICgtbm90ICRjb250ZW50LkNvbnRhaW5zKCRPbGQpKSB7IHRocm93
+ICJDb3VsZCBub3QgZmluZCBleHBlY3RlZCAkTGFiZWwgaW4gJFBhdGgiIH0KICAgIFtJTy5GaWxl
+XTo6V3JpdGVBbGxUZXh0KCRQYXRoLCAkY29udGVudC5SZXBsYWNlKCRPbGQsICROZXcpLCBbVGV4
+dC5VVEY4RW5jb2RpbmddOjpuZXcoJGZhbHNlKSkKfQoKJHBvcnRyYWl0ID0gSm9pbi1QYXRoICRQ
+cm9qZWN0Um9vdCAnYXBwXHNyY1xtYWluXHJlc1xsYXlvdXRcYWN0aXZpdHlfc2VyaWVzX2RldGFp
+bHMueG1sJwokbGFuZHNjYXBlID0gSm9pbi1QYXRoICRQcm9qZWN0Um9vdCAnYXBwXHNyY1xtYWlu
+XHJlc1xsYXlvdXQtbGFuZFxhY3Rpdml0eV9zZXJpZXNfZGV0YWlscy54bWwnCgpmb3JlYWNoICgk
+bGF5b3V0IGluIEAoJHBvcnRyYWl0LCAkbGFuZHNjYXBlKSkgewogICAgUmVwbGFjZS1SZXF1aXJl
+ZCAkbGF5b3V0ICdhbmRyb2lkOmlkPSJAK2lkL3Nlcmllc0NvbnRpbnVlUGFuZWwiIGFuZHJvaWQ6
+bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iMTI0ZHAi
+IGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJmYWxzZSIgYW5kcm9pZDpjbGlwVG9QYWRkaW5nPSJmYWxz
+ZSInICdhbmRyb2lkOmlkPSJAK2lkL3Nlcmllc0NvbnRpbnVlUGFuZWwiIGFuZHJvaWQ6bGF5b3V0
+X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iMTM2ZHAiIGFuZHJv
+aWQ6Y2xpcENoaWxkcmVuPSJmYWxzZSIgYW5kcm9pZDpjbGlwVG9QYWRkaW5nPSJmYWxzZSInICdD
+b250aW51ZSBwYW5lbCBib3R0b20gc3BhY2UnCiAgICBSZXBsYWNlLVJlcXVpcmVkICRsYXlvdXQg
+J2FuZHJvaWQ6bGF5b3V0X2hlaWdodD0iNzRkcCIgYW5kcm9pZDpsYXlvdXRfbWFyZ2luVG9wPSI0
+ZHAiIGFuZHJvaWQ6b3JpZW50YXRpb249Imhvcml6b250YWwiIGFuZHJvaWQ6Z3Jhdml0eT0iY2Vu
+dGVyX3ZlcnRpY2FsIiBhbmRyb2lkOnBhZGRpbmdUb3A9IjNkcCIgYW5kcm9pZDpwYWRkaW5nQm90
+dG9tPSI3ZHAiIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJmYWxzZSIgYW5kcm9pZDpjbGlwVG9QYWRk
+aW5nPSJmYWxzZSInICdhbmRyb2lkOmxheW91dF9oZWlnaHQ9Ijg0ZHAiIGFuZHJvaWQ6bGF5b3V0
+X21hcmdpblRvcD0iNGRwIiBhbmRyb2lkOm9yaWVudGF0aW9uPSJob3Jpem9udGFsIiBhbmRyb2lk
+OmdyYXZpdHk9ImNlbnRlcl92ZXJ0aWNhbCIgYW5kcm9pZDpwYWRkaW5nVG9wPSIzZHAiIGFuZHJv
+aWQ6cGFkZGluZ0JvdHRvbT0iMTdkcCIgYW5kcm9pZDpjbGlwQ2hpbGRyZW49ImZhbHNlIiBhbmRy
+b2lkOmNsaXBUb1BhZGRpbmc9ImZhbHNlIicgJ3JlZCBidXR0b24gYm90dG9tIHBhZGRpbmcnCn0K
+CldyaXRlLUhvc3QgJ0V4dHJhIGJvdHRvbSBwYWRkaW5nIGFkZGVkIGJlbmVhdGggdGhlIFNlcmll
+cyByZWQgYnV0dG9uLicK
+:::END PADDINGPATCH
