@@ -1,23 +1,25 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title Kristal Streams Dashboard Header Black Removed
+title KS Cinema Fullscreen 1682012
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksheaderblackremoved-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-HEADER-BLACK-REMOVED-1682011.apk"
-set "LOG=%TEMP%\kristalstreams-header-black-removed-build.txt"
+set "WORK=C:\kscinemafullscreen-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-CINEMA-FULLSCREEN-1682012.apk"
+set "LOG=%TEMP%\ks-cinema-fullscreen-1682012-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - HEADER BLACK REMOVED
-echo   FRESH APK: KS-HEADER-BLACK-REMOVED-1682011.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - TRUE FULLSCREEN
+echo   FRESH APK: KS-CINEMA-FULLSCREEN-1682012.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
 echo Lightens every regular Live TV channel-logo panel.
 echo Removes black outside and inside the dashboard KS banner.
+echo Hides Android status and navigation bars during playback.
+echo Draws Live TV, Movies, and Series video edge-to-edge.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -47,24 +49,24 @@ if %RC% GEQ 8 (
     exit /b %RC%
 )
 
-echo [2/6] Removing dashboard header black...
+echo [2/6] Installing verified UI and immersive playback files...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt',(B 'MODELS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\XtreamClient.kt',(B 'XTREAM')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\GuideActivity.kt',(B 'GUIDE')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt',(B 'ADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\UiContrastProvider.kt',(B 'UICONTEXT')); [IO.File]::WriteAllBytes('%WORK%\app\build.gradle.kts',(B 'GRADLE')); [IO.File]::WriteAllBytes('%WORK%\REFERENCE-EPG-AUDIT.txt',(B 'AUDIT')); [IO.File]::WriteAllBytes('%WORK%\apply-ui-contrast.ps1',(B 'UIPATCH'))"
+ "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt',(B 'MODELS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\XtreamClient.kt',(B 'XTREAM')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\GuideActivity.kt',(B 'GUIDE')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt',(B 'ADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\UiContrastProvider.kt',(B 'UICONTEXT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt',(B 'IMMERSIVE')); [IO.File]::WriteAllBytes('%WORK%\app\build.gradle.kts',(B 'GRADLE')); [IO.File]::WriteAllBytes('%WORK%\REFERENCE-EPG-AUDIT.txt',(B 'AUDIT')); [IO.File]::WriteAllBytes('%WORK%\apply-ui-contrast.ps1',(B 'UIPATCH'))"
 if errorlevel 1 (
-    echo ERROR: Could not install header black-removal files.
+    echo ERROR: Could not install immersive playback files.
     pause
     exit /b 1
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%WORK%\apply-ui-contrast.ps1" -ProjectRoot "%WORK%"
 if errorlevel 1 (
-    echo ERROR: Could not register the Live TV logo controller.
+    echo ERROR: Could not register the UI and fullscreen controllers.
     pause
     exit /b 1
 )
 del /q "%WORK%\apply-ui-contrast.ps1" >nul 2>&1
 
-echo [3/6] Verifying dashboard header black removal...
+echo [3/6] Verifying stable UI and true fullscreen playback...
 findstr /c:"epgChannelId" "%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt" >nul
 if errorlevel 1 (
     echo ERROR: Channel EPG ID verification failed.
@@ -215,9 +217,39 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"1.6.8-header-black-removed" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"class PlaybackImmersiveProvider" "%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt" >nul
 if errorlevel 1 (
-    echo ERROR: Header black-removal version verification failed.
+    echo ERROR: Immersive playback controller verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"WindowInsets.Type.systemBars()" "%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Android system-bar hiding verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"WindowCompat.setDecorFitsSystemWindows(window, false)" "%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Edge-to-edge video verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"AspectRatioFrameLayout.RESIZE_MODE_ZOOM" "%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Full-display video zoom verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"PlaybackImmersiveProvider" "%WORK%\app\src\main\AndroidManifest.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Immersive playback manifest registration failed.
+    pause
+    exit /b 1
+)
+findstr /c:"1.6.8-immersive-playback" "%WORK%\app\build.gradle.kts" >nul
+if errorlevel 1 (
+    echo ERROR: Immersive playback version verification failed.
     pause
     exit /b 1
 )
@@ -261,12 +293,12 @@ exit /b 1
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo.
-echo [5/6] Building dashboard header black removal...
+echo [5/6] Building true fullscreen playback APK...
 echo Gradle progress will appear below.
 echo.
 
 cd /d "%WORK%"
-set "BUILDPS=%TEMP%\ks_header_black_removed_gradle_build.ps1"
+set "BUILDPS=%TEMP%\ks_cinema_fullscreen_1682012_gradle_build.ps1"
 > "%BUILDPS%" echo $ErrorActionPreference = 'Continue'
 >>"%BUILDPS%" echo ^& '.\gradlew.bat' clean assembleDebug --rerun-tasks --console=plain --stacktrace 2^>^&1 ^| Tee-Object -FilePath '%LOG%'
 >>"%BUILDPS%" echo $rc = $LASTEXITCODE
@@ -315,7 +347,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-HEADER-BLACK-REMOVED-1682011.apk"
+    set "USBCOPY=!USBDRIVE!\KS-CINEMA-FULLSCREEN-1682012.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -324,7 +356,7 @@ cls
 echo.
 echo ==========================================================
 echo.
-echo       KRISTAL STREAMS HEADER BLACK REMOVAL BUILD SUCCESSFUL
+echo       KS CINEMA FULLSCREEN BUILD SUCCESSFUL
 echo.
 echo ==========================================================
 echo.
@@ -338,10 +370,12 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-HEADER-BLACK-REMOVED-1682011.apk shown above.
+echo Install only KS-CINEMA-FULLSCREEN-1682012.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
+echo Live TV, Movies, and Series playback now hide both Android system bars.
+echo Video uses aspect-safe zoom to fill extra-wide displays without stretching.
 echo.
 explorer /select,"%FINAL%"
 pause
@@ -1481,19 +1515,19 @@ ZXRicmFpbnMua290bGluLmFuZHJvaWQiKQp9CgphbmRyb2lkIHsKICAgIG5hbWVzcGFjZSA9ICJj
 b20ua3Jpc3RhbHN0cmVhbXMucGxheWVyIgogICAgY29tcGlsZVNkayA9IDM1CgogICAgZGVmYXVs
 dENvbmZpZyB7CiAgICAgICAgYXBwbGljYXRpb25JZCA9ICJjb20ua3Jpc3RhbHN0cmVhbXMucGxh
 eWVyIgogICAgICAgIG1pblNkayA9IDIzCiAgICAgICAgdGFyZ2V0U2RrID0gMzUKICAgICAgICB2
-ZXJzaW9uQ29kZSA9IDE2ODIwMTEKICAgICAgICB2ZXJzaW9uTmFtZSA9ICIxLjYuOC1oZWFkZXIt
-YmxhY2stcmVtb3ZlZCIKICAgIH0KCiAgICBidWlsZEZlYXR1cmVzIHsKICAgICAgICB2aWV3Qmlu
-ZGluZyA9IGZhbHNlCiAgICB9CgogICAgY29tcGlsZU9wdGlvbnMgewogICAgICAgIHNvdXJjZUNv
-bXBhdGliaWxpdHkgPSBKYXZhVmVyc2lvbi5WRVJTSU9OXzExCiAgICAgICAgdGFyZ2V0Q29tcGF0
-aWJpbGl0eSA9IEphdmFWZXJzaW9uLlZFUlNJT05fMTEKICAgIH0KCiAgICBrb3RsaW4gewogICAg
-ICAgIGp2bVRvb2xjaGFpbigxMSkKICAgIH0KfQoKZGVwZW5kZW5jaWVzIHsKICAgIGltcGxlbWVu
-dGF0aW9uKCJhbmRyb2lkeC5jb3JlOmNvcmUta3R4OjEuMTUuMCIpCiAgICBpbXBsZW1lbnRhdGlv
-bigiYW5kcm9pZHguYXBwY29tcGF0OmFwcGNvbXBhdDoxLjcuMCIpCiAgICBpbXBsZW1lbnRhdGlv
-bigiY29tLmdvb2dsZS5hbmRyb2lkLm1hdGVyaWFsOm1hdGVyaWFsOjEuMTIuMCIpCiAgICBpbXBs
-ZW1lbnRhdGlvbigiYW5kcm9pZHgubWVkaWEzOm1lZGlhMy1leG9wbGF5ZXI6MS41LjEiKQogICAg
-aW1wbGVtZW50YXRpb24oImFuZHJvaWR4Lm1lZGlhMzptZWRpYTMtZXhvcGxheWVyLWhsczoxLjUu
-MSIpCiAgICBpbXBsZW1lbnRhdGlvbigiYW5kcm9pZHgubWVkaWEzOm1lZGlhMy11aToxLjUuMSIp
-Cn0K
+ZXJzaW9uQ29kZSA9IDE2ODIwMTIKICAgICAgICB2ZXJzaW9uTmFtZSA9ICIxLjYuOC1pbW1lcnNp
+dmUtcGxheWJhY2siCiAgICB9CgogICAgYnVpbGRGZWF0dXJlcyB7CiAgICAgICAgdmlld0JpbmRp
+bmcgPSBmYWxzZQogICAgfQoKICAgIGNvbXBpbGVPcHRpb25zIHsKICAgICAgICBzb3VyY2VDb21w
+YXRpYmlsaXR5ID0gSmF2YVZlcnNpb24uVkVSU0lPTl8xMQogICAgICAgIHRhcmdldENvbXBhdGli
+aWxpdHkgPSBKYXZhVmVyc2lvbi5WRVJTSU9OXzExCiAgICB9CgogICAga290bGluIHsKICAgICAg
+ICBqdm1Ub29sY2hhaW4oMTEpCiAgICB9Cn0KCmRlcGVuZGVuY2llcyB7CiAgICBpbXBsZW1lbnRh
+dGlvbigiYW5kcm9pZHguY29yZTpjb3JlLWt0eDoxLjE1LjAiKQogICAgaW1wbGVtZW50YXRpb24o
+ImFuZHJvaWR4LmFwcGNvbXBhdDphcHBjb21wYXQ6MS43LjAiKQogICAgaW1wbGVtZW50YXRpb24o
+ImNvbS5nb29nbGUuYW5kcm9pZC5tYXRlcmlhbDptYXRlcmlhbDoxLjEyLjAiKQogICAgaW1wbGVt
+ZW50YXRpb24oImFuZHJvaWR4Lm1lZGlhMzptZWRpYTMtZXhvcGxheWVyOjEuNS4xIikKICAgIGlt
+cGxlbWVudGF0aW9uKCJhbmRyb2lkeC5tZWRpYTM6bWVkaWEzLWV4b3BsYXllci1obHM6MS41LjEi
+KQogICAgaW1wbGVtZW50YXRpb24oImFuZHJvaWR4Lm1lZGlhMzptZWRpYTMtdWk6MS41LjEiKQp9
+Cg==
 :::END GRADLE
 :::BEGIN AUDIT
 S1JJU1RBTCBTVFJFQU1TIDEuNi44IFJDMSBSMiDigJQgREFTSEJPQVJEIEhFQURFUiBCTEFDSyBS
@@ -1796,6 +1830,111 @@ Q291bnQpIHZpc2l0KHJvb3QuZ2V0Q2hpbGRBdChpbmRleCksIGFjdGlvbikKICAgICAgICB9CiAg
 ICB9Cn0K
 :::END UICONTEXT
 
+:::BEGIN IMMERSIVE
+cGFja2FnZSBjb20ua3Jpc3RhbHN0cmVhbXMucGxheWVyCgppbXBvcnQgYW5kcm9pZC5hcHAuQWN0
+aXZpdHkKaW1wb3J0IGFuZHJvaWQuYXBwLkFwcGxpY2F0aW9uCmltcG9ydCBhbmRyb2lkLmNvbnRl
+bnQuQ29udGVudFByb3ZpZGVyCmltcG9ydCBhbmRyb2lkLmNvbnRlbnQuQ29udGVudFZhbHVlcwpp
+bXBvcnQgYW5kcm9pZC5kYXRhYmFzZS5DdXJzb3IKaW1wb3J0IGFuZHJvaWQuZ3JhcGhpY3MuQ29s
+b3IKaW1wb3J0IGFuZHJvaWQubmV0LlVyaQppbXBvcnQgYW5kcm9pZC5vcy5CdWlsZAppbXBvcnQg
+YW5kcm9pZC5vcy5CdW5kbGUKaW1wb3J0IGFuZHJvaWQub3MuSGFuZGxlcgppbXBvcnQgYW5kcm9p
+ZC5vcy5Mb29wZXIKaW1wb3J0IGFuZHJvaWQudmlldy5WaWV3CmltcG9ydCBhbmRyb2lkLnZpZXcu
+Vmlld0dyb3VwCmltcG9ydCBhbmRyb2lkLnZpZXcuV2luZG93SW5zZXRzCmltcG9ydCBhbmRyb2lk
+LnZpZXcuV2luZG93SW5zZXRzQ29udHJvbGxlcgppbXBvcnQgYW5kcm9pZC52aWV3LldpbmRvd01h
+bmFnZXIKaW1wb3J0IGFuZHJvaWR4LmNvcmUudmlldy5XaW5kb3dDb21wYXQKaW1wb3J0IGFuZHJv
+aWR4Lm1lZGlhMy51aS5Bc3BlY3RSYXRpb0ZyYW1lTGF5b3V0CmltcG9ydCBhbmRyb2lkeC5tZWRp
+YTMudWkuUGxheWVyVmlldwoKLyoqCiAqIEtlZXBzIHBsYXliYWNrIHRydWx5IGVkZ2UtdG8tZWRn
+ZSB3aXRob3V0IG1vZGlmeWluZyBQbGF5ZXJBY3Rpdml0eSBvciBhbnkKICogc3RyZWFtLXJvdXRp
+bmcgY29kZS4gQWxsIG5vbi1wbGF5ZXIgc2NyZWVucyByZXRhaW4gdGhlaXIgZXhpc3Rpbmcgc3lz
+dGVtIFVJLgogKi8KY2xhc3MgUGxheWJhY2tJbW1lcnNpdmVQcm92aWRlciA6IENvbnRlbnRQcm92
+aWRlcigpIHsKICAgIHByaXZhdGUgdmFsIG1haW5IYW5kbGVyID0gSGFuZGxlcihMb29wZXIuZ2V0
+TWFpbkxvb3BlcigpKQoKICAgIG92ZXJyaWRlIGZ1biBvbkNyZWF0ZSgpOiBCb29sZWFuIHsKICAg
+ICAgICB2YWwgYXBwID0gY29udGV4dD8uYXBwbGljYXRpb25Db250ZXh0IGFzPyBBcHBsaWNhdGlv
+biA/OiByZXR1cm4gZmFsc2UKICAgICAgICBhcHAucmVnaXN0ZXJBY3Rpdml0eUxpZmVjeWNsZUNh
+bGxiYWNrcyhvYmplY3QgOiBBcHBsaWNhdGlvbi5BY3Rpdml0eUxpZmVjeWNsZUNhbGxiYWNrcyB7
+CiAgICAgICAgICAgIG92ZXJyaWRlIGZ1biBvbkFjdGl2aXR5Q3JlYXRlZChhY3Rpdml0eTogQWN0
+aXZpdHksIHN0YXRlOiBCdW5kbGU/KSB7CiAgICAgICAgICAgICAgICBpZiAoaXNQbGF5ZXIoYWN0
+aXZpdHkpKSBpbnN0YWxsSW1tZXJzaXZlTW9kZShhY3Rpdml0eSkKICAgICAgICAgICAgfQoKICAg
+ICAgICAgICAgb3ZlcnJpZGUgZnVuIG9uQWN0aXZpdHlSZXN1bWVkKGFjdGl2aXR5OiBBY3Rpdml0
+eSkgewogICAgICAgICAgICAgICAgaWYgKGlzUGxheWVyKGFjdGl2aXR5KSkgaW5zdGFsbEltbWVy
+c2l2ZU1vZGUoYWN0aXZpdHkpCiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIG92ZXJyaWRlIGZ1
+biBvbkFjdGl2aXR5U3RhcnRlZChhY3Rpdml0eTogQWN0aXZpdHkpID0gVW5pdAogICAgICAgICAg
+ICBvdmVycmlkZSBmdW4gb25BY3Rpdml0eVBhdXNlZChhY3Rpdml0eTogQWN0aXZpdHkpID0gVW5p
+dAogICAgICAgICAgICBvdmVycmlkZSBmdW4gb25BY3Rpdml0eVN0b3BwZWQoYWN0aXZpdHk6IEFj
+dGl2aXR5KSA9IFVuaXQKICAgICAgICAgICAgb3ZlcnJpZGUgZnVuIG9uQWN0aXZpdHlTYXZlSW5z
+dGFuY2VTdGF0ZShhY3Rpdml0eTogQWN0aXZpdHksIHN0YXRlOiBCdW5kbGUpID0gVW5pdAogICAg
+ICAgICAgICBvdmVycmlkZSBmdW4gb25BY3Rpdml0eURlc3Ryb3llZChhY3Rpdml0eTogQWN0aXZp
+dHkpID0gVW5pdAogICAgICAgIH0pCiAgICAgICAgcmV0dXJuIHRydWUKICAgIH0KCiAgICBwcml2
+YXRlIGZ1biBpc1BsYXllcihhY3Rpdml0eTogQWN0aXZpdHkpOiBCb29sZWFuIHsKICAgICAgICBy
+ZXR1cm4gYWN0aXZpdHkuamF2YUNsYXNzLm5hbWUgPT0gImNvbS5rcmlzdGFsc3RyZWFtcy5wbGF5
+ZXIuUGxheWVyQWN0aXZpdHkiIHx8CiAgICAgICAgICAgIGFjdGl2aXR5LmphdmFDbGFzcy5zaW1w
+bGVOYW1lID09ICJQbGF5ZXJBY3Rpdml0eSIKICAgIH0KCiAgICBwcml2YXRlIGZ1biBpbnN0YWxs
+SW1tZXJzaXZlTW9kZShhY3Rpdml0eTogQWN0aXZpdHkpIHsKICAgICAgICB2YWwgd2luZG93ID0g
+YWN0aXZpdHkud2luZG93CiAgICAgICAgd2luZG93LmFkZEZsYWdzKFdpbmRvd01hbmFnZXIuTGF5
+b3V0UGFyYW1zLkZMQUdfRlVMTFNDUkVFTikKICAgICAgICB3aW5kb3cuYWRkRmxhZ3MoV2luZG93
+TWFuYWdlci5MYXlvdXRQYXJhbXMuRkxBR19LRUVQX1NDUkVFTl9PTikKICAgICAgICB3aW5kb3cu
+c3RhdHVzQmFyQ29sb3IgPSBDb2xvci5UUkFOU1BBUkVOVAogICAgICAgIHdpbmRvdy5uYXZpZ2F0
+aW9uQmFyQ29sb3IgPSBDb2xvci5UUkFOU1BBUkVOVAogICAgICAgIFdpbmRvd0NvbXBhdC5zZXRE
+ZWNvckZpdHNTeXN0ZW1XaW5kb3dzKHdpbmRvdywgZmFsc2UpCgogICAgICAgIGlmIChCdWlsZC5W
+RVJTSU9OLlNES19JTlQgPj0gQnVpbGQuVkVSU0lPTl9DT0RFUy5QKSB7CiAgICAgICAgICAgIHdp
+bmRvdy5hdHRyaWJ1dGVzID0gd2luZG93LmF0dHJpYnV0ZXMuYXBwbHkgewogICAgICAgICAgICAg
+ICAgbGF5b3V0SW5EaXNwbGF5Q3V0b3V0TW9kZSA9CiAgICAgICAgICAgICAgICAgICAgV2luZG93
+TWFuYWdlci5MYXlvdXRQYXJhbXMuTEFZT1VUX0lOX0RJU1BMQVlfQ1VUT1VUX01PREVfU0hPUlRf
+RURHRVMKICAgICAgICAgICAgfQogICAgICAgIH0KCiAgICAgICAgaGlkZVN5c3RlbUJhcnMoYWN0
+aXZpdHkpCiAgICAgICAgZXhwYW5kVmlkZW9Ub0ZpbGwoYWN0aXZpdHkpCgogICAgICAgIEBTdXBw
+cmVzcygiREVQUkVDQVRJT04iKQogICAgICAgIHdpbmRvdy5kZWNvclZpZXcuc2V0T25TeXN0ZW1V
+aVZpc2liaWxpdHlDaGFuZ2VMaXN0ZW5lciB7CiAgICAgICAgICAgIGlmIChpc1BsYXllcihhY3Rp
+dml0eSkpIHsKICAgICAgICAgICAgICAgIG1haW5IYW5kbGVyLnBvc3REZWxheWVkKHsKICAgICAg
+ICAgICAgICAgICAgICBpZiAoIWFjdGl2aXR5LmlzRmluaXNoaW5nICYmICFhY3Rpdml0eS5pc0Rl
+c3Ryb3llZCkgewogICAgICAgICAgICAgICAgICAgICAgICBoaWRlU3lzdGVtQmFycyhhY3Rpdml0
+eSkKICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICB9LCAxODBMKQogICAgICAg
+ICAgICB9CiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgZnVuIGV4cGFuZFZpZGVvVG9GaWxs
+KGFjdGl2aXR5OiBBY3Rpdml0eSkgewogICAgICAgIHZhbCByb290ID0gYWN0aXZpdHkud2luZG93
+LmRlY29yVmlldwogICAgICAgIGxpc3RPZigwTCwgMjUwTCwgOTAwTCkuZm9yRWFjaCB7IGRlbGF5
+IC0+CiAgICAgICAgICAgIG1haW5IYW5kbGVyLnBvc3REZWxheWVkKHsKICAgICAgICAgICAgICAg
+IGlmICghYWN0aXZpdHkuaXNGaW5pc2hpbmcgJiYgIWFjdGl2aXR5LmlzRGVzdHJveWVkKSB7CiAg
+ICAgICAgICAgICAgICAgICAgdmlzaXQocm9vdCkgeyB2aWV3IC0+CiAgICAgICAgICAgICAgICAg
+ICAgICAgIGlmICh2aWV3IGlzIFBsYXllclZpZXcpIHsKICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgIHZpZXcucmVzaXplTW9kZSA9IEFzcGVjdFJhdGlvRnJhbWVMYXlvdXQuUkVTSVpFX01PREVf
+Wk9PTQogICAgICAgICAgICAgICAgICAgICAgICAgICAgdmlldy5sYXlvdXRQYXJhbXMgPSB2aWV3
+LmxheW91dFBhcmFtcz8uYXBwbHkgewogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHdp
+ZHRoID0gVmlld0dyb3VwLkxheW91dFBhcmFtcy5NQVRDSF9QQVJFTlQKICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICBoZWlnaHQgPSBWaWV3R3JvdXAuTGF5b3V0UGFyYW1zLk1BVENIX1BB
+UkVOVAogICAgICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgdmlldy5yZXF1ZXN0TGF5b3V0KCkKICAgICAgICAgICAgICAgICAgICAgICAgfQogICAg
+ICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfSwgZGVsYXkp
+CiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgZnVuIHZpc2l0KHZpZXc6IFZpZXcsIGFjdGlv
+bjogKFZpZXcpIC0+IFVuaXQpIHsKICAgICAgICBhY3Rpb24odmlldykKICAgICAgICBpZiAodmll
+dyBpcyBWaWV3R3JvdXApIHsKICAgICAgICAgICAgZm9yIChpbmRleCBpbiAwIHVudGlsIHZpZXcu
+Y2hpbGRDb3VudCkgewogICAgICAgICAgICAgICAgdmlzaXQodmlldy5nZXRDaGlsZEF0KGluZGV4
+KSwgYWN0aW9uKQogICAgICAgICAgICB9CiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgZnVu
+IGhpZGVTeXN0ZW1CYXJzKGFjdGl2aXR5OiBBY3Rpdml0eSkgewogICAgICAgIHZhbCB3aW5kb3cg
+PSBhY3Rpdml0eS53aW5kb3cKICAgICAgICBXaW5kb3dDb21wYXQuc2V0RGVjb3JGaXRzU3lzdGVt
+V2luZG93cyh3aW5kb3csIGZhbHNlKQoKICAgICAgICBpZiAoQnVpbGQuVkVSU0lPTi5TREtfSU5U
+ID49IEJ1aWxkLlZFUlNJT05fQ09ERVMuUikgewogICAgICAgICAgICB3aW5kb3cuaW5zZXRzQ29u
+dHJvbGxlcj8ubGV0IHsgY29udHJvbGxlciAtPgogICAgICAgICAgICAgICAgY29udHJvbGxlci5o
+aWRlKFdpbmRvd0luc2V0cy5UeXBlLnN5c3RlbUJhcnMoKSkKICAgICAgICAgICAgICAgIGNvbnRy
+b2xsZXIuc3lzdGVtQmFyc0JlaGF2aW9yID0KICAgICAgICAgICAgICAgICAgICBXaW5kb3dJbnNl
+dHNDb250cm9sbGVyLkJFSEFWSU9SX1NIT1dfVFJBTlNJRU5UX0JBUlNfQllfU1dJUEUKICAgICAg
+ICAgICAgfQogICAgICAgIH0KCiAgICAgICAgQFN1cHByZXNzKCJERVBSRUNBVElPTiIpCiAgICAg
+ICAgd2luZG93LmRlY29yVmlldy5zeXN0ZW1VaVZpc2liaWxpdHkgPQogICAgICAgICAgICBWaWV3
+LlNZU1RFTV9VSV9GTEFHX0lNTUVSU0lWRV9TVElDS1kgb3IKICAgICAgICAgICAgICAgIFZpZXcu
+U1lTVEVNX1VJX0ZMQUdfRlVMTFNDUkVFTiBvcgogICAgICAgICAgICAgICAgVmlldy5TWVNURU1f
+VUlfRkxBR19ISURFX05BVklHQVRJT04gb3IKICAgICAgICAgICAgICAgIFZpZXcuU1lTVEVNX1VJ
+X0ZMQUdfTEFZT1VUX1NUQUJMRSBvcgogICAgICAgICAgICAgICAgVmlldy5TWVNURU1fVUlfRkxB
+R19MQVlPVVRfRlVMTFNDUkVFTiBvcgogICAgICAgICAgICAgICAgVmlldy5TWVNURU1fVUlfRkxB
+R19MQVlPVVRfSElERV9OQVZJR0FUSU9OCiAgICB9CgogICAgb3ZlcnJpZGUgZnVuIHF1ZXJ5KAog
+ICAgICAgIHVyaTogVXJpLAogICAgICAgIHByb2plY3Rpb246IEFycmF5PG91dCBTdHJpbmc+PywK
+ICAgICAgICBzZWxlY3Rpb246IFN0cmluZz8sCiAgICAgICAgc2VsZWN0aW9uQXJnczogQXJyYXk8
+b3V0IFN0cmluZz4/LAogICAgICAgIHNvcnRPcmRlcjogU3RyaW5nPwogICAgKTogQ3Vyc29yPyA9
+IG51bGwKCiAgICBvdmVycmlkZSBmdW4gZ2V0VHlwZSh1cmk6IFVyaSk6IFN0cmluZz8gPSBudWxs
+CiAgICBvdmVycmlkZSBmdW4gaW5zZXJ0KHVyaTogVXJpLCB2YWx1ZXM6IENvbnRlbnRWYWx1ZXM/
+KTogVXJpPyA9IG51bGwKICAgIG92ZXJyaWRlIGZ1biBkZWxldGUodXJpOiBVcmksIHNlbGVjdGlv
+bjogU3RyaW5nPywgc2VsZWN0aW9uQXJnczogQXJyYXk8b3V0IFN0cmluZz4/KTogSW50ID0gMAog
+ICAgb3ZlcnJpZGUgZnVuIHVwZGF0ZSh1cmk6IFVyaSwgdmFsdWVzOiBDb250ZW50VmFsdWVzPywg
+c2VsZWN0aW9uOiBTdHJpbmc/LCBzZWxlY3Rpb25BcmdzOiBBcnJheTxvdXQgU3RyaW5nPj8pOiBJ
+bnQgPSAwCn0K
+:::END IMMERSIVE
+
 :::BEGIN UIPATCH
 cGFyYW0oCiAgICBbUGFyYW1ldGVyKE1hbmRhdG9yeSA9ICR0cnVlKV0KICAgIFtzdHJpbmddJFBy
 b2plY3RSb290CikKCiRtYW5pZmVzdCA9IEpvaW4tUGF0aCAkUHJvamVjdFJvb3QgJ2FwcFxzcmNc
@@ -1810,5 +1949,15 @@ KCRjb250ZW50IC1ub3RtYXRjaCAnPC9hcHBsaWNhdGlvbj4nKSB7CiAgICAgICAgdGhyb3cgJ0Fu
 ZHJvaWQgbWFuaWZlc3QgYXBwbGljYXRpb24gZWxlbWVudCB3YXMgbm90IGZvdW5kLicKICAgIH0K
 ICAgICRjb250ZW50ID0gJGNvbnRlbnQuUmVwbGFjZSgnPC9hcHBsaWNhdGlvbj4nLCAiJHByb3Zp
 ZGVyYHJgbiAgICA8L2FwcGxpY2F0aW9uPiIpCiAgICBbSU8uRmlsZV06OldyaXRlQWxsVGV4dCgk
-bWFuaWZlc3QsICRjb250ZW50LCBbVGV4dC5VVEY4RW5jb2RpbmddOjpuZXcoJGZhbHNlKSkKfQo=
+bWFuaWZlc3QsICRjb250ZW50LCBbVGV4dC5VVEY4RW5jb2RpbmddOjpuZXcoJGZhbHNlKSkKfQoK
+aWYgKCRjb250ZW50IC1ub3RtYXRjaCAnUGxheWJhY2tJbW1lcnNpdmVQcm92aWRlcicpIHsKICAg
+ICRwcm92aWRlciA9ICcgICAgICAgIDxwcm92aWRlciBhbmRyb2lkOm5hbWU9Ii5QbGF5YmFja0lt
+bWVyc2l2ZVByb3ZpZGVyIiBhbmRyb2lkOmF1dGhvcml0aWVzPSIke2FwcGxpY2F0aW9uSWR9LnBs
+YXliYWNrX2ltbWVyc2l2ZSIgYW5kcm9pZDpleHBvcnRlZD0iZmFsc2UiIGFuZHJvaWQ6aW5pdE9y
+ZGVyPSIxMTAiIC8+JwogICAgaWYgKCRjb250ZW50IC1ub3RtYXRjaCAnPC9hcHBsaWNhdGlvbj4n
+KSB7CiAgICAgICAgdGhyb3cgJ0FuZHJvaWQgbWFuaWZlc3QgYXBwbGljYXRpb24gZWxlbWVudCB3
+YXMgbm90IGZvdW5kLicKICAgIH0KICAgICRjb250ZW50ID0gJGNvbnRlbnQuUmVwbGFjZSgnPC9h
+cHBsaWNhdGlvbj4nLCAiJHByb3ZpZGVyYHJgbiAgICA8L2FwcGxpY2F0aW9uPiIpCiAgICBbSU8u
+RmlsZV06OldyaXRlQWxsVGV4dCgkbWFuaWZlc3QsICRjb250ZW50LCBbVGV4dC5VVEY4RW5jb2Rp
+bmddOjpuZXcoJGZhbHNlKSkKfQo=
 :::END UIPATCH
