@@ -21,7 +21,7 @@ echo Preserves the complete working Series build and protected R2 source.
 echo.
 
 set "SOURCE="
-for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$preferred='C:\KristalStreams168-R2-WORKING'; if(Test-Path (Join-Path $preferred 'app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt')){$preferred}else{Get-ChildItem C:\ -Directory -Filter 'ksseriescomplete-*' -ErrorAction SilentlyContinue ^| Where-Object {Test-Path (Join-Path $_.FullName 'app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt')} ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1 -ExpandProperty FullName}"`) do set "SOURCE=%%D"
+for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$roots=@(); $preferred='C:\KristalStreams168-R2-WORKING'; if(Test-Path $preferred){$roots+=Get-Item $preferred}; $roots+=@(Get-ChildItem C:\ -Directory -Filter 'ksseriescomplete-*' -ErrorAction SilentlyContinue); $roots ^| Where-Object {(Test-Path (Join-Path $_.FullName 'gradlew.bat')) -and (Test-Path (Join-Path $_.FullName 'app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt'))} ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1 -ExpandProperty FullName"`) do set "SOURCE=%%D"
 
 if not defined SOURCE (
     echo ERROR: The completed Series working source was not found.
@@ -29,19 +29,19 @@ if not defined SOURCE (
     pause
     exit /b 1
 )
-if not exist "%SOURCE%\gradlew.bat" (
+if not exist "!SOURCE!\gradlew.bat" (
     echo ERROR: Gradle wrapper was not found in:
-    echo   %SOURCE%
+    echo   !SOURCE!
     pause
     exit /b 1
 )
 
 echo Using completed Series source:
-echo   %SOURCE%
+echo   !SOURCE!
 echo.
 echo [1/6] Creating a fresh working copy...
 mkdir "%WORK%" >nul 2>&1
-robocopy "%SOURCE%" "%WORK%" /E /COPY:DAT /DCOPY:DAT /R:1 /W:1 /NFL /NDL /NP >nul
+robocopy "!SOURCE!" "%WORK%" /E /COPY:DAT /DCOPY:DAT /R:1 /W:1 /NFL /NDL /NP >nul
 set "RC=%ERRORLEVEL%"
 if %RC% GEQ 8 (
     echo ERROR: Could not create the fresh working copy.
