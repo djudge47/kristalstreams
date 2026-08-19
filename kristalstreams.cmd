@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Portrait Boundary Fix 1682034
+title KS Series Source Match Fix 1682035
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksseriesportraitboundaryfix-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-PORTRAIT-BOUNDARY-FIX-1682034.apk"
-set "LOG=%TEMP%\ks-series-portrait-boundary-fix-1682034-build.txt"
+set "WORK=C:\ksseriessourcematchfix-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-SOURCE-MATCH-FIX-1682035.apk"
+set "LOG=%TEMP%\ks-series-source-match-fix-1682035-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES PORTRAIT BOUNDARY FIX
-echo   FRESH APK: KS-SERIES-PORTRAIT-BOUNDARY-FIX-1682034.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES SOURCE MATCH FIX
+echo   FRESH APK: KS-SERIES-SOURCE-MATCH-FIX-1682035.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -49,6 +49,7 @@ echo Verifies the two-column mobile portrait layout remains protected.
 echo Verifies the three-column Smart TV/box layout and related-Series section remain available.
 echo Expands the full portrait episode grid before More Like This begins.
 echo Prevents episode cards and related-Series cards from sharing the same screen space.
+echo Matches multiline Series source blocks regardless of Windows or Unix line endings.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -249,8 +250,8 @@ if not "%RC%"=="0" (
     exit /b %RC%
 )
 
-echo [12/16] Securing the portrait episode and More Like This boundaries...
-set "OVERLAPPS=%TEMP%\ks-series-portrait-boundary-fix-1682034.ps1"
+echo [12/16] Securing line-ending-independent Series boundaries...
+set "OVERLAPPS=%TEMP%\ks-series-source-match-fix-1682035.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'OVERLAPPATCHPS1'; $b=':::END '+'OVERLAPPATCHPS1'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing episode-overlap patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing episode-overlap patch end'}; [IO.File]::WriteAllText('%OVERLAPPS%',$raw.Substring($s,$e-$s).TrimStart([char]13,[char]10),[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
@@ -268,9 +269,9 @@ if not "%RC%"=="0" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682034').Replace('1.6.8-series-complete','1.6.8-series-portrait-boundary-fix'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682035').Replace('1.6.8-series-complete','1.6.8-series-source-match-fix'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682034 application version.
+    echo ERROR: Could not set the new 1682035 application version.
     pause
     exit /b 1
 )
@@ -678,9 +679,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682034" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682035" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682034 application version verification failed.
+    echo ERROR: New 1682035 application version verification failed.
     pause
     exit /b 1
 )
@@ -1023,7 +1024,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-PORTRAIT-BOUNDARY-FIX-1682034.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-SOURCE-MATCH-FIX-1682035.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -1046,7 +1047,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-PORTRAIT-BOUNDARY-FIX-1682034.apk shown above.
+echo Install only KS-SERIES-SOURCE-MATCH-FIX-1682035.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -1083,9 +1084,11 @@ $ErrorActionPreference = 'Stop'
 
 function Replace-Required {
     param([string]$Path, [string]$Old, [string]$New, [string]$Label)
-    $content = [IO.File]::ReadAllText($Path)
-    if (-not $content.Contains($Old)) { throw "Could not find expected $Label in $Path" }
-    [IO.File]::WriteAllText($Path, $content.Replace($Old, $New), [Text.UTF8Encoding]::new($false))
+    $content = [IO.File]::ReadAllText($Path).Replace("`r`n", "`n")
+    $oldText = $Old.Replace("`r`n", "`n")
+    $newText = $New.Replace("`r`n", "`n")
+    if (-not $content.Contains($oldText)) { throw "Could not find expected $Label in $Path" }
+    [IO.File]::WriteAllText($Path, $content.Replace($oldText, $newText), [Text.UTF8Encoding]::new($false))
 }
 
 $portrait = Join-Path $ProjectRoot 'app\src\main\res\layout\activity_series_details.xml'
