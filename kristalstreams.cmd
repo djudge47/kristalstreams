@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Button Padding 1682025
+title KS Series Layout Rebalance 1682026
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksseriesbuttonpadding-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-BUTTON-PADDING-1682025.apk"
-set "LOG=%TEMP%\ks-series-button-padding-1682025-build.txt"
+set "WORK=C:\ksserieslayoutrebalance-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LAYOUT-REBALANCE-1682026.apk"
+set "LOG=%TEMP%\ks-series-layout-rebalance-1682026-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES BUTTON PADDING
-echo   FRESH APK: KS-SERIES-BUTTON-PADDING-1682025.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LAYOUT REBALANCE
+echo   FRESH APK: KS-SERIES-LAYOUT-REBALANCE-1682026.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -38,6 +38,7 @@ echo Allows two-line episode titles and descriptions.
 echo Automatically fits long Series text inside every control and card.
 echo Keeps every red Series Details button completely visible.
 echo Adds extra bottom padding beneath the Choose-an-episode red button.
+echo Restores the full Season box directly beneath the red button.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -50,7 +51,7 @@ if not exist "%SOURCE%\gradlew.bat" (
     exit /b 1
 )
 
-echo [1/10] Creating a brand-new working copy...
+echo [1/11] Creating a brand-new working copy...
 mkdir "%WORK%" >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Could not create:
@@ -67,7 +68,7 @@ if %RC% GEQ 8 (
     exit /b %RC%
 )
 
-echo [2/10] Installing verified 1682020 baseline and complete Series upgrade...
+echo [2/11] Installing verified 1682020 baseline and complete Series upgrade...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt',(B 'MODELS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\XtreamClient.kt',(B 'XTREAM')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\GuideActivity.kt',(B 'GUIDE')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt',(B 'ADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\UiContrastProvider.kt',(B 'UICONTEXT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt',(B 'IMMERSIVE')); [IO.File]::WriteAllBytes('%WORK%\app\build.gradle.kts',(B 'GRADLE')); [IO.File]::WriteAllBytes('%WORK%\REFERENCE-EPG-AUDIT.txt',(B 'AUDIT')); [IO.File]::WriteAllBytes('%WORK%\apply-ui-contrast.ps1',(B 'UIPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\LibraryActivity.kt',(B 'LIBRARY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MediaGridAdapter.kt',(B 'MEDIAADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieDetailsActivity.kt',(B 'MOVIEDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_details.xml',(B 'MOVIELAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_details.xml',(B 'MOVIELAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_details_panel.xml',(B 'MOVIEPANEL')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_fact.xml',(B 'MOVIEFACT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\values\movie_styles.xml',(B 'MOVIESTYLES')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlist.kt',(B 'WATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlistActivity.kt',(B 'WATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\ContinueWatching.kt',(B 'CONTINUEWATCHING')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlayerActivity.kt',(B 'PLAYER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_library.xml',(B 'LIBRARYLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_library.xml',(B 'LIBRARYLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_player.xml',(B 'PLAYERLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt',(B 'SERIESDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpisodeListAdapter.kt',(B 'EPISODEADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlist.kt',(B 'SERIESWATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlistActivity.kt',(B 'SERIESWATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesHistory.kt',(B 'SERIESHISTORY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_details.xml',(B 'SERIESLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_details.xml',(B 'SERIESLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\row_episode_modern.xml',(B 'EPISODEROW')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUTLAND'))"
 if errorlevel 1 (
@@ -84,7 +85,7 @@ if errorlevel 1 (
 )
 del /q "%WORK%\apply-ui-contrast.ps1" >nul 2>&1
 
-echo [3/10] Applying final Series Details layout measurements...
+echo [3/11] Applying final Series Details layout measurements...
 set "LAYOUTPS=%TEMP%\ks-series-layout-fix-1682022.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'LAYOUTPATCH'; $b=':::END '+'LAYOUTPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%LAYOUTPS%',[Convert]::FromBase64String($x))"
@@ -101,7 +102,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [4/10] Constraining all Series text inside its box...
+echo [4/11] Constraining all Series text inside its box...
 set "TEXTFITPS=%TEMP%\ks-series-text-fit-1682023.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'TEXTFITPATCH'; $b=':::END '+'TEXTFITPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing text-fit patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing text-fit patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%TEXTFITPS%',[Convert]::FromBase64String($x))"
@@ -118,7 +119,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [5/10] Restoring full red-button visibility and bottom clearance...
+echo [5/11] Restoring full red-button visibility and bottom clearance...
 set "BUTTONPS=%TEMP%\ks-series-button-clearance-1682024.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'BUTTONPATCH'; $b=':::END '+'BUTTONPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing button-clearance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing button-clearance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%BUTTONPS%',[Convert]::FromBase64String($x))"
@@ -135,7 +136,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [6/10] Adding extra space beneath the red episode button...
+echo [6/11] Adding extra space beneath the red episode button...
 set "PADDINGPS=%TEMP%\ks-series-button-padding-1682025.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'PADDINGPATCH'; $b=':::END '+'PADDINGPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing bottom-padding patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing bottom-padding patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%PADDINGPS%',[Convert]::FromBase64String($x))"
@@ -152,15 +153,32 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
+echo [7/11] Rebalancing the red-button panel and Season box...
+set "REBALANCEPS=%TEMP%\ks-series-layout-rebalance-1682026.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682025').Replace('1.6.8-series-complete','1.6.8-series-button-padding'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'REBALANCEPATCH'; $b=':::END '+'REBALANCEPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout-rebalance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout-rebalance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%REBALANCEPS%',[Convert]::FromBase64String($x))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682025 application version.
+    echo ERROR: Could not extract the Series layout-rebalance correction.
+    pause
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%REBALANCEPS%" -ProjectRoot "%WORK%"
+set "RC=%ERRORLEVEL%"
+del /q "%REBALANCEPS%" >nul 2>&1
+if not "%RC%"=="0" (
+    echo ERROR: The Series layout-rebalance correction could not be applied safely.
+    pause
+    exit /b %RC%
+)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682026').Replace('1.6.8-series-complete','1.6.8-series-layout-rebalance'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+if errorlevel 1 (
+    echo ERROR: Could not set the new 1682026 application version.
     pause
     exit /b 1
 )
 
-echo [7/10] Verifying the added red-button bottom padding...
+echo [8/11] Verifying the balanced Series controls...
 findstr /c:"epgChannelId" "%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt" >nul
 if errorlevel 1 (
     echo ERROR: Channel EPG ID verification failed.
@@ -563,15 +581,15 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682025" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682026" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682025 application version verification failed.
+    echo ERROR: New 1682026 application version verification failed.
     pause
     exit /b 1
 )
-findstr /c:"android:layout_height=\"136dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+findstr /c:"android:layout_height=\"110dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
 if errorlevel 1 (
-    echo ERROR: Enlarged Continue panel verification failed.
+    echo ERROR: Rebalanced Continue panel verification failed.
     pause
     exit /b 1
 )
@@ -600,26 +618,32 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"android:layout_height=\"84dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+findstr /c:"android:layout_height=\"66dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
 if errorlevel 1 (
-    echo ERROR: Continue and Next bottom-clearance verification failed.
+    echo ERROR: Rebalanced Continue and Next row verification failed.
     pause
     exit /b 1
 )
-findstr /c:"android:paddingBottom=\"17dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+findstr /c:"android:paddingBottom=\"12dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
 if errorlevel 1 (
-    echo ERROR: Extra red-button bottom-padding verification failed.
+    echo ERROR: Red-button bottom-clearance verification failed.
     pause
     exit /b 1
 )
-findstr /c:"android:layout_height=\"64dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+findstr /c:"android:layout_height=\"56dp\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
 if errorlevel 1 (
-    echo ERROR: Season-button clearance verification failed.
+    echo ERROR: Restored Season-box verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"LinearLayout.LayoutParams(140.dp, 46.dp).apply" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Restored Season-button verification failed.
     pause
     exit /b 1
 )
 
-echo [8/10] Preparing Windows Android build tools...
+echo [9/11] Preparing Windows Android build tools...
 set "ANDROID_SDK=%LOCALAPPDATA%\Android\Sdk"
 if not exist "%ANDROID_SDK%\platforms" (
     echo ERROR: Android SDK not found:
@@ -658,7 +682,7 @@ exit /b 1
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo.
-echo [9/10] Building corrected Series APK...
+echo [10/11] Building corrected Series APK...
 echo Gradle progress will appear below.
 echo.
 
@@ -699,7 +723,7 @@ if not exist "%BUILT%" (
 )
 
 echo.
-echo [10/10] Copying finished APK...
+echo [11/11] Copying finished APK...
 copy /Y "%BUILT%" "%FINAL%" >nul
 if errorlevel 1 (
     echo ERROR: Could not copy APK to Downloads.
@@ -712,7 +736,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-BUTTON-PADDING-1682025.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-LAYOUT-REBALANCE-1682026.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -721,7 +745,7 @@ cls
 echo.
 echo ==========================================================
 echo.
-echo       KS SERIES BUTTON-PADDING BUILD SUCCESSFUL
+echo       KS SERIES LAYOUT-REBALANCE BUILD SUCCESSFUL
 echo.
 echo ==========================================================
 echo.
@@ -735,7 +759,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-BUTTON-PADDING-1682025.apk shown above.
+echo Install only KS-SERIES-LAYOUT-REBALANCE-1682026.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -5727,42 +5751,37 @@ aWdodD0iNzRkcCIgYW5kcm9pZDpsYXlvdXRfbWFyZ2luVG9wPSI0ZHAiIGFuZHJvaWQ6b3JpZW50
 YXRpb249Imhvcml6b250YWwiIGFuZHJvaWQ6Z3Jhdml0eT0iY2VudGVyX3ZlcnRpY2FsIiBhbmRy
 b2lkOnBhZGRpbmdUb3A9IjNkcCIgYW5kcm9pZDpwYWRkaW5nQm90dG9tPSI3ZHAiIGFuZHJvaWQ6
 Y2xpcENoaWxkcmVuPSJmYWxzZSIgYW5kcm9pZDpjbGlwVG9QYWRkaW5nPSJmYWxzZSInICdDb250
-aW51ZSBidXR0b24gYm90dG9tIGNsZWFyYW5jZScKICAgIFJlcGxhY2UtUmVxdWlyZWQgJGxheW91
-dCAnYW5kcm9pZDpwYWRkaW5nU3RhcnQ9IjVkcCIgYW5kcm9pZDpwYWRkaW5nRW5kPSI1ZHAiIGFu
-ZHJvaWQ6bWluSGVpZ2h0PSIwZHAiJyAnYW5kcm9pZDpwYWRkaW5nU3RhcnQ9IjVkcCIgYW5kcm9p
-ZDpwYWRkaW5nVG9wPSIwZHAiIGFuZHJvaWQ6cGFkZGluZ0VuZD0iNWRwIiBhbmRyb2lkOnBhZGRp
-bmdCb3R0b209IjBkcCIgYW5kcm9pZDptaW5IZWlnaHQ9IjBkcCInICdDb250aW51ZSBidXR0b24g
-dmVydGljYWwgcGFkZGluZycKfQoKUmVwbGFjZS1SZXF1aXJlZCAkcG9ydHJhaXQgJzxIb3Jpem9u
-dGFsU2Nyb2xsVmlldyBhbmRyb2lkOmxheW91dF93aWR0aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lk
-OmxheW91dF9oZWlnaHQ9IjU2ZHAiIGFuZHJvaWQ6bGF5b3V0X21hcmdpblN0YXJ0PSIxMGRwIicg
-JzxIb3Jpem9udGFsU2Nyb2xsVmlldyBhbmRyb2lkOmxheW91dF93aWR0aD0ibWF0Y2hfcGFyZW50
-IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjY0ZHAiIGFuZHJvaWQ6bGF5b3V0X21hcmdpblN0YXJ0
-PSIxMGRwIicgJ3BvcnRyYWl0IHNlYXNvbi1idXR0b24gY2xlYXJhbmNlJwpSZXBsYWNlLVJlcXVp
-cmVkICRsYW5kc2NhcGUgJzxIb3Jpem9udGFsU2Nyb2xsVmlldyBhbmRyb2lkOmxheW91dF93aWR0
-aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjU2ZHAiIGFuZHJvaWQ6bGF5
-b3V0X21hcmdpblRvcD0iNmRwIicgJzxIb3Jpem9udGFsU2Nyb2xsVmlldyBhbmRyb2lkOmxheW91
-dF93aWR0aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjY0ZHAiIGFuZHJv
-aWQ6bGF5b3V0X21hcmdpblRvcD0iNmRwIicgJ2xhbmRzY2FwZSBzZWFzb24tYnV0dG9uIGNsZWFy
-YW5jZScKClJlcGxhY2UtUmVxdWlyZWQgJHBvcnRyYWl0ICc8TGluZWFyTGF5b3V0IGFuZHJvaWQ6
-bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iNDhkcCIg
-YW5kcm9pZDpsYXlvdXRfbWFyZ2luU3RhcnQ9IjEwZHAiIGFuZHJvaWQ6bGF5b3V0X21hcmdpbkVu
-ZD0iMTBkcCIgYW5kcm9pZDpvcmllbnRhdGlvbj0iaG9yaXpvbnRhbCI+JyAnPExpbmVhckxheW91
-dCBhbmRyb2lkOmxheW91dF93aWR0aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWln
-aHQ9IjQ4ZHAiIGFuZHJvaWQ6bGF5b3V0X21hcmdpblN0YXJ0PSIxMGRwIiBhbmRyb2lkOmxheW91
-dF9tYXJnaW5FbmQ9IjEwZHAiIGFuZHJvaWQ6b3JpZW50YXRpb249Imhvcml6b250YWwiIGFuZHJv
-aWQ6cGFkZGluZ1RvcD0iM2RwIiBhbmRyb2lkOnBhZGRpbmdCb3R0b209IjNkcCIgYW5kcm9pZDpj
-bGlwQ2hpbGRyZW49ImZhbHNlIiBhbmRyb2lkOmNsaXBUb1BhZGRpbmc9ImZhbHNlIj4nICdwb3J0
-cmFpdCBhY3Rpb24tYnV0dG9uIGNsZWFyYW5jZScKUmVwbGFjZS1SZXF1aXJlZCAkbGFuZHNjYXBl
-ICc8TGluZWFyTGF5b3V0IGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJv
-aWQ6bGF5b3V0X2hlaWdodD0iNDhkcCIgYW5kcm9pZDpsYXlvdXRfbWFyZ2luVG9wPSIxMGRwIiBh
-bmRyb2lkOm9yaWVudGF0aW9uPSJob3Jpem9udGFsIj4nICc8TGluZWFyTGF5b3V0IGFuZHJvaWQ6
-bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iNDhkcCIg
-YW5kcm9pZDpsYXlvdXRfbWFyZ2luVG9wPSIxMGRwIiBhbmRyb2lkOm9yaWVudGF0aW9uPSJob3Jp
-em9udGFsIiBhbmRyb2lkOnBhZGRpbmdUb3A9IjNkcCIgYW5kcm9pZDpwYWRkaW5nQm90dG9tPSIz
-ZHAiIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJmYWxzZSIgYW5kcm9pZDpjbGlwVG9QYWRkaW5nPSJm
-YWxzZSI+JyAnbGFuZHNjYXBlIGFjdGlvbi1idXR0b24gY2xlYXJhbmNlJwoKV3JpdGUtSG9zdCAn
-QWxsIFNlcmllcyBEZXRhaWxzIGJ1dHRvbiBjb250YWluZXJzIG5vdyBoYXZlIGNvbXBsZXRlIGJv
-dHRvbSBjbGVhcmFuY2UuJwo=
+aW51ZSBidXR0b24gYm90dG9tIGNsZWFyYW5jZScKfQoKUmVwbGFjZS1SZXF1aXJlZCAkcG9ydHJh
+aXQgJzxIb3Jpem9udGFsU2Nyb2xsVmlldyBhbmRyb2lkOmxheW91dF93aWR0aD0ibWF0Y2hfcGFy
+ZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjU2ZHAiIGFuZHJvaWQ6bGF5b3V0X21hcmdpblN0
+YXJ0PSIxMGRwIicgJzxIb3Jpem9udGFsU2Nyb2xsVmlldyBhbmRyb2lkOmxheW91dF93aWR0aD0i
+bWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjY0ZHAiIGFuZHJvaWQ6bGF5b3V0
+X21hcmdpblN0YXJ0PSIxMGRwIicgJ3BvcnRyYWl0IHNlYXNvbi1idXR0b24gY2xlYXJhbmNlJwpS
+ZXBsYWNlLVJlcXVpcmVkICRsYW5kc2NhcGUgJzxIb3Jpem9udGFsU2Nyb2xsVmlldyBhbmRyb2lk
+OmxheW91dF93aWR0aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjU2ZHAi
+IGFuZHJvaWQ6bGF5b3V0X21hcmdpblRvcD0iNmRwIicgJzxIb3Jpem9udGFsU2Nyb2xsVmlldyBh
+bmRyb2lkOmxheW91dF93aWR0aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9
+IjY0ZHAiIGFuZHJvaWQ6bGF5b3V0X21hcmdpblRvcD0iNmRwIicgJ2xhbmRzY2FwZSBzZWFzb24t
+YnV0dG9uIGNsZWFyYW5jZScKClJlcGxhY2UtUmVxdWlyZWQgJHBvcnRyYWl0ICc8TGluZWFyTGF5
+b3V0IGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hl
+aWdodD0iNDhkcCIgYW5kcm9pZDpsYXlvdXRfbWFyZ2luU3RhcnQ9IjEwZHAiIGFuZHJvaWQ6bGF5
+b3V0X21hcmdpbkVuZD0iMTBkcCIgYW5kcm9pZDpvcmllbnRhdGlvbj0iaG9yaXpvbnRhbCI+JyAn
+PExpbmVhckxheW91dCBhbmRyb2lkOmxheW91dF93aWR0aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lk
+OmxheW91dF9oZWlnaHQ9IjQ4ZHAiIGFuZHJvaWQ6bGF5b3V0X21hcmdpblN0YXJ0PSIxMGRwIiBh
+bmRyb2lkOmxheW91dF9tYXJnaW5FbmQ9IjEwZHAiIGFuZHJvaWQ6b3JpZW50YXRpb249Imhvcml6
+b250YWwiIGFuZHJvaWQ6cGFkZGluZ1RvcD0iM2RwIiBhbmRyb2lkOnBhZGRpbmdCb3R0b209IjNk
+cCIgYW5kcm9pZDpjbGlwQ2hpbGRyZW49ImZhbHNlIiBhbmRyb2lkOmNsaXBUb1BhZGRpbmc9ImZh
+bHNlIj4nICdwb3J0cmFpdCBhY3Rpb24tYnV0dG9uIGNsZWFyYW5jZScKUmVwbGFjZS1SZXF1aXJl
+ZCAkbGFuZHNjYXBlICc8TGluZWFyTGF5b3V0IGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9w
+YXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iNDhkcCIgYW5kcm9pZDpsYXlvdXRfbWFyZ2lu
+VG9wPSIxMGRwIiBhbmRyb2lkOm9yaWVudGF0aW9uPSJob3Jpem9udGFsIj4nICc8TGluZWFyTGF5
+b3V0IGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hl
+aWdodD0iNDhkcCIgYW5kcm9pZDpsYXlvdXRfbWFyZ2luVG9wPSIxMGRwIiBhbmRyb2lkOm9yaWVu
+dGF0aW9uPSJob3Jpem9udGFsIiBhbmRyb2lkOnBhZGRpbmdUb3A9IjNkcCIgYW5kcm9pZDpwYWRk
+aW5nQm90dG9tPSIzZHAiIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJmYWxzZSIgYW5kcm9pZDpjbGlw
+VG9QYWRkaW5nPSJmYWxzZSI+JyAnbGFuZHNjYXBlIGFjdGlvbi1idXR0b24gY2xlYXJhbmNlJwoK
+V3JpdGUtSG9zdCAnQWxsIFNlcmllcyBEZXRhaWxzIGJ1dHRvbiBjb250YWluZXJzIG5vdyBoYXZl
+IGNvbXBsZXRlIGJvdHRvbSBjbGVhcmFuY2UuJwo=
 :::END BUTTONPATCH
 
 :::BEGIN PADDINGPATCH
@@ -5797,3 +5816,55 @@ b2lkOmNsaXBUb1BhZGRpbmc9ImZhbHNlIicgJ3JlZCBidXR0b24gYm90dG9tIHBhZGRpbmcnCn0K
 CldyaXRlLUhvc3QgJ0V4dHJhIGJvdHRvbSBwYWRkaW5nIGFkZGVkIGJlbmVhdGggdGhlIFNlcmll
 cyByZWQgYnV0dG9uLicK
 :::END PADDINGPATCH
+
+:::BEGIN REBALANCEPATCH
+cGFyYW0oCiAgICBbUGFyYW1ldGVyKE1hbmRhdG9yeSA9ICR0cnVlKV1bc3RyaW5nXSRQcm9qZWN0
+Um9vdAopCgokRXJyb3JBY3Rpb25QcmVmZXJlbmNlID0gJ1N0b3AnCgpmdW5jdGlvbiBSZXBsYWNl
+LVJlcXVpcmVkIHsKICAgIHBhcmFtKFtzdHJpbmddJFBhdGgsIFtzdHJpbmddJE9sZCwgW3N0cmlu
+Z10kTmV3LCBbc3RyaW5nXSRMYWJlbCkKICAgICRjb250ZW50ID0gW0lPLkZpbGVdOjpSZWFkQWxs
+VGV4dCgkUGF0aCkKICAgIGlmICgtbm90ICRjb250ZW50LkNvbnRhaW5zKCRPbGQpKSB7IHRocm93
+ICJDb3VsZCBub3QgZmluZCBleHBlY3RlZCAkTGFiZWwgaW4gJFBhdGgiIH0KICAgIFtJTy5GaWxl
+XTo6V3JpdGVBbGxUZXh0KCRQYXRoLCAkY29udGVudC5SZXBsYWNlKCRPbGQsICROZXcpLCBbVGV4
+dC5VVEY4RW5jb2RpbmddOjpuZXcoJGZhbHNlKSkKfQoKJHBvcnRyYWl0ID0gSm9pbi1QYXRoICRQ
+cm9qZWN0Um9vdCAnYXBwXHNyY1xtYWluXHJlc1xsYXlvdXRcYWN0aXZpdHlfc2VyaWVzX2RldGFp
+bHMueG1sJwokbGFuZHNjYXBlID0gSm9pbi1QYXRoICRQcm9qZWN0Um9vdCAnYXBwXHNyY1xtYWlu
+XHJlc1xsYXlvdXQtbGFuZFxhY3Rpdml0eV9zZXJpZXNfZGV0YWlscy54bWwnCiRhY3Rpdml0eSA9
+IEpvaW4tUGF0aCAkUHJvamVjdFJvb3QgJ2FwcFxzcmNcbWFpblxqYXZhXGNvbVxrcmlzdGFsc3Ry
+ZWFtc1xwbGF5ZXJcU2VyaWVzRGV0YWlsc0FjdGl2aXR5Lmt0JwoKZm9yZWFjaCAoJGxheW91dCBp
+biBAKCRwb3J0cmFpdCwgJGxhbmRzY2FwZSkpIHsKICAgIFJlcGxhY2UtUmVxdWlyZWQgJGxheW91
+dCAnYW5kcm9pZDppZD0iQCtpZC9zZXJpZXNDb250aW51ZVBhbmVsIiBhbmRyb2lkOmxheW91dF93
+aWR0aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjEzNmRwIiBhbmRyb2lk
+OmNsaXBDaGlsZHJlbj0iZmFsc2UiIGFuZHJvaWQ6Y2xpcFRvUGFkZGluZz0iZmFsc2UiJyAnYW5k
+cm9pZDppZD0iQCtpZC9zZXJpZXNDb250aW51ZVBhbmVsIiBhbmRyb2lkOmxheW91dF93aWR0aD0i
+bWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjExMGRwIiBhbmRyb2lkOmNsaXBD
+aGlsZHJlbj0iZmFsc2UiIGFuZHJvaWQ6Y2xpcFRvUGFkZGluZz0iZmFsc2UiJyAnQ29udGludWUg
+cGFuZWwgaGVpZ2h0JwogICAgUmVwbGFjZS1SZXF1aXJlZCAkbGF5b3V0ICdhbmRyb2lkOmlkPSJA
+K2lkL3Nlcmllc0NvbnRpbnVlTGFiZWwiIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJl
+bnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iNDBkcCInICdhbmRyb2lkOmlkPSJAK2lkL3Nlcmll
+c0NvbnRpbnVlTGFiZWwiIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJv
+aWQ6bGF5b3V0X2hlaWdodD0iMzZkcCInICdDb250aW51ZSBsYWJlbCBoZWlnaHQnCiAgICBSZXBs
+YWNlLVJlcXVpcmVkICRsYXlvdXQgJ2FuZHJvaWQ6bGF5b3V0X2hlaWdodD0iODRkcCIgYW5kcm9p
+ZDpsYXlvdXRfbWFyZ2luVG9wPSI0ZHAiIGFuZHJvaWQ6b3JpZW50YXRpb249Imhvcml6b250YWwi
+IGFuZHJvaWQ6Z3Jhdml0eT0iY2VudGVyX3ZlcnRpY2FsIiBhbmRyb2lkOnBhZGRpbmdUb3A9IjNk
+cCIgYW5kcm9pZDpwYWRkaW5nQm90dG9tPSIxN2RwIiBhbmRyb2lkOmNsaXBDaGlsZHJlbj0iZmFs
+c2UiIGFuZHJvaWQ6Y2xpcFRvUGFkZGluZz0iZmFsc2UiJyAnYW5kcm9pZDpsYXlvdXRfaGVpZ2h0
+PSI2NmRwIiBhbmRyb2lkOmxheW91dF9tYXJnaW5Ub3A9IjJkcCIgYW5kcm9pZDpvcmllbnRhdGlv
+bj0iaG9yaXpvbnRhbCIgYW5kcm9pZDpncmF2aXR5PSJjZW50ZXJfdmVydGljYWwiIGFuZHJvaWQ6
+cGFkZGluZ1RvcD0iMmRwIiBhbmRyb2lkOnBhZGRpbmdCb3R0b209IjEyZHAiIGFuZHJvaWQ6Y2xp
+cENoaWxkcmVuPSJmYWxzZSIgYW5kcm9pZDpjbGlwVG9QYWRkaW5nPSJmYWxzZSInICdyZWQtYnV0
+dG9uIHJvdyBiYWxhbmNlJwp9CgpSZXBsYWNlLVJlcXVpcmVkICRwb3J0cmFpdCAnYW5kcm9pZDps
+YXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSI2NGRwIiBh
+bmRyb2lkOmxheW91dF9tYXJnaW5TdGFydD0iMTBkcCInICdhbmRyb2lkOmxheW91dF93aWR0aD0i
+bWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjU2ZHAiIGFuZHJvaWQ6bGF5b3V0
+X21hcmdpblN0YXJ0PSIxMGRwIicgJ3BvcnRyYWl0IFNlYXNvbiBib3ggaGVpZ2h0JwpSZXBsYWNl
+LVJlcXVpcmVkICRsYW5kc2NhcGUgJ2FuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQi
+IGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iNjRkcCIgYW5kcm9pZDpsYXlvdXRfbWFyZ2luVG9wPSI2
+ZHAiJyAnYW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIgYW5kcm9pZDpsYXlvdXRf
+aGVpZ2h0PSI1NmRwIiBhbmRyb2lkOmxheW91dF9tYXJnaW5Ub3A9IjZkcCInICdsYW5kc2NhcGUg
+U2Vhc29uIGJveCBoZWlnaHQnClJlcGxhY2UtUmVxdWlyZWQgJGFjdGl2aXR5ICdsYXlvdXRQYXJh
+bXMgPSBMaW5lYXJMYXlvdXQuTGF5b3V0UGFyYW1zKDE0MC5kcCwgNTQuZHApLmFwcGx5JyAnbGF5
+b3V0UGFyYW1zID0gTGluZWFyTGF5b3V0LkxheW91dFBhcmFtcygxNDAuZHAsIDQ2LmRwKS5hcHBs
+eScgJ1NlYXNvbiBidXR0b24gaGVpZ2h0JwoKV3JpdGUtSG9zdCAnU2VyaWVzIGNvbnRyb2xzIHJl
+YmFsYW5jZWQ6IHJlZC1idXR0b24gY2xlYXJhbmNlIHByZXNlcnZlZCBhbmQgU2Vhc29uIGJveCBy
+ZXN0b3JlZC4nCg==
+:::END REBALANCEPATCH
