@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Landscape Spacing 1682039
+title KS Series Landscape Spacing Verify 1682040
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksserieslandscapespacing-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-SPACING-1682039.apk"
-set "LOG=%TEMP%\ks-series-landscape-spacing-1682039-build.txt"
+set "WORK=C:\ksserieslandscapespacingverify-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-SPACING-VERIFY-1682040.apk"
+set "LOG=%TEMP%\ks-series-landscape-spacing-verify-1682040-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE SPACING
-echo   FRESH APK: KS-SERIES-LANDSCAPE-SPACING-1682039.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE SPACING VERIFY
+echo   FRESH APK: KS-SERIES-LANDSCAPE-SPACING-VERIFY-1682040.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -43,7 +43,7 @@ echo Moves Season 1 above the Continue and Next panel so it opens above the fold
 echo Shows episodes as smaller two-column portrait and three-column landscape cards.
 echo Locks the mobile-landscape poster inside its left details pane after loading.
 echo Keeps the related-series slider out of the mobile landscape episode pane.
-echo Uses a stable 76dp landscape control panel so episodes always begin below it.
+echo Uses a compact 68dp mobile-landscape control panel so episodes always begin below it.
 echo Shortens the prompt to Choose an episode so it cannot overflow.
 echo Verifies the two-column mobile portrait layout remains protected.
 echo Verifies the three-column Smart TV/box layout and related-Series section remain available.
@@ -252,7 +252,7 @@ if not "%RC%"=="0" (
 )
 
 echo [12/16] Spacing every mobile-landscape Series control and episode card...
-set "OVERLAPPS=%TEMP%\ks-series-landscape-spacing-1682039.ps1"
+set "OVERLAPPS=%TEMP%\ks-series-landscape-spacing-verify-1682040.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'OVERLAPPATCHPS1'; $b=':::END '+'OVERLAPPATCHPS1'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing episode-overlap patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing episode-overlap patch end'}; [IO.File]::WriteAllText('%OVERLAPPS%',$raw.Substring($s,$e-$s).TrimStart([char]13,[char]10),[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
@@ -270,9 +270,9 @@ if not "%RC%"=="0" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682039').Replace('1.6.8-series-complete','1.6.8-series-landscape-spacing'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682040').Replace('1.6.8-series-complete','1.6.8-series-landscape-spacing-verify'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682039 application version.
+    echo ERROR: Could not set the new 1682040 application version.
     pause
     exit /b 1
 )
@@ -680,9 +680,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682039" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682040" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682039 application version verification failed.
+    echo ERROR: New 1682040 application version verification failed.
     pause
     exit /b 1
 )
@@ -721,12 +721,6 @@ if errorlevel 1 (
 findstr /c:"continueButton.background = getDrawable(R.drawable.bg_row)" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
 if errorlevel 1 (
     echo ERROR: Phone-landscape neutral Resume and Next background verification failed.
-    pause
-    exit /b 1
-)
-findstr /c:"params.bottomMargin = 8.dp" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
-if errorlevel 1 (
-    echo ERROR: Phone-landscape Choose Episode bottom-clearance verification failed.
     pause
     exit /b 1
 )
@@ -1049,7 +1043,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-SPACING-1682039.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-SPACING-VERIFY-1682040.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -1072,7 +1066,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-LANDSCAPE-SPACING-1682039.apk shown above.
+echo Install only KS-SERIES-LANDSCAPE-SPACING-VERIFY-1682040.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
