@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Landscape Red Clearance 1682037
+title KS Series Landscape Neutral Controls 1682038
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksserieslandscaperedclearance-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-RED-CLEARANCE-1682037.apk"
-set "LOG=%TEMP%\ks-series-landscape-red-clearance-1682037-build.txt"
+set "WORK=C:\ksserieslandscapeneutralcontrols-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-NEUTRAL-CONTROLS-1682038.apk"
+set "LOG=%TEMP%\ks-series-landscape-neutral-controls-1682038-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE RED CLEARANCE
-echo   FRESH APK: KS-SERIES-LANDSCAPE-RED-CLEARANCE-1682037.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE NEUTRAL CONTROLS
+echo   FRESH APK: KS-SERIES-LANDSCAPE-NEUTRAL-CONTROLS-1682038.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -50,7 +50,7 @@ echo Verifies the three-column Smart TV/box layout and related-Series section re
 echo Expands the full portrait episode grid before More Like This begins.
 echo Prevents episode cards and related-Series cards from sharing the same screen space.
 echo Matches multiline Series source blocks regardless of Windows or Unix line endings.
-echo Raises the phone-landscape red controls and protects their bottom clearance.
+echo Uses the standard dark card background for phone-landscape Resume and Next controls.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -251,8 +251,8 @@ if not "%RC%"=="0" (
     exit /b %RC%
 )
 
-echo [12/16] Locking the landscape red controls above the card bottom...
-set "OVERLAPPS=%TEMP%\ks-series-landscape-red-clearance-1682037.ps1"
+echo [12/16] Matching landscape Resume and Next controls to the surrounding cards...
+set "OVERLAPPS=%TEMP%\ks-series-landscape-neutral-controls-1682038.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'OVERLAPPATCHPS1'; $b=':::END '+'OVERLAPPATCHPS1'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing episode-overlap patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing episode-overlap patch end'}; [IO.File]::WriteAllText('%OVERLAPPS%',$raw.Substring($s,$e-$s).TrimStart([char]13,[char]10),[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
@@ -270,9 +270,9 @@ if not "%RC%"=="0" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682037').Replace('1.6.8-series-complete','1.6.8-series-landscape-red-clearance'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682038').Replace('1.6.8-series-complete','1.6.8-series-landscape-neutral-controls'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682037 application version.
+    echo ERROR: Could not set the new 1682038 application version.
     pause
     exit /b 1
 )
@@ -680,9 +680,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682037" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682038" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682037 application version verification failed.
+    echo ERROR: New 1682038 application version verification failed.
     pause
     exit /b 1
 )
@@ -703,6 +703,12 @@ findstr /c:"android:nestedScrollingEnabled=\"false\"" "%WORK%\app\src\main\res\l
 
 if errorlevel 1 (
     echo ERROR: Portrait episode-grid boundary verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"continueButton.background = getDrawable(R.drawable.bg_row)" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Phone-landscape neutral Resume and Next background verification failed.
     pause
     exit /b 1
 )
@@ -1031,7 +1037,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-RED-CLEARANCE-1682037.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-NEUTRAL-CONTROLS-1682038.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -1054,7 +1060,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-LANDSCAPE-RED-CLEARANCE-1682037.apk shown above.
+echo Install only KS-SERIES-LANDSCAPE-NEUTRAL-CONTROLS-1682038.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -1156,6 +1162,8 @@ $newLandscapeControls = @'
             androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(button, 8, 11, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
         }
         if (isMobileLandscape()) {
+            continueButton.background = getDrawable(R.drawable.bg_row)
+            nextButton.background = getDrawable(R.drawable.bg_row)
             (panel.layoutParams as? LinearLayout.LayoutParams)?.let { params ->
                 params.height = 68.dp
                 params.bottomMargin = 8.dp
