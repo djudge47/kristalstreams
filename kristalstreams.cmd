@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Source Match Fix 1682035
+title KS Series Landscape Control Fix 1682036
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksseriessourcematchfix-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-SOURCE-MATCH-FIX-1682035.apk"
-set "LOG=%TEMP%\ks-series-source-match-fix-1682035-build.txt"
+set "WORK=C:\ksserieslandscapecontrolfix-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-CONTROL-FIX-1682036.apk"
+set "LOG=%TEMP%\ks-series-landscape-control-fix-1682036-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES SOURCE MATCH FIX
-echo   FRESH APK: KS-SERIES-SOURCE-MATCH-FIX-1682035.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE CONTROL FIX
+echo   FRESH APK: KS-SERIES-LANDSCAPE-CONTROL-FIX-1682036.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -50,6 +50,7 @@ echo Verifies the three-column Smart TV/box layout and related-Series section re
 echo Expands the full portrait episode grid before More Like This begins.
 echo Prevents episode cards and related-Series cards from sharing the same screen space.
 echo Matches multiline Series source blocks regardless of Windows or Unix line endings.
+echo Keeps the phone-landscape Choose Episode controls fully inside their panel.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -250,8 +251,8 @@ if not "%RC%"=="0" (
     exit /b %RC%
 )
 
-echo [12/16] Securing line-ending-independent Series boundaries...
-set "OVERLAPPS=%TEMP%\ks-series-source-match-fix-1682035.ps1"
+echo [12/16] Securing phone-landscape Choose Episode clearance...
+set "OVERLAPPS=%TEMP%\ks-series-landscape-control-fix-1682036.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'OVERLAPPATCHPS1'; $b=':::END '+'OVERLAPPATCHPS1'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing episode-overlap patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing episode-overlap patch end'}; [IO.File]::WriteAllText('%OVERLAPPS%',$raw.Substring($s,$e-$s).TrimStart([char]13,[char]10),[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
@@ -269,9 +270,9 @@ if not "%RC%"=="0" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682035').Replace('1.6.8-series-complete','1.6.8-series-source-match-fix'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682036').Replace('1.6.8-series-complete','1.6.8-series-landscape-control-fix'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682035 application version.
+    echo ERROR: Could not set the new 1682036 application version.
     pause
     exit /b 1
 )
@@ -679,9 +680,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682035" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682036" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682035 application version verification failed.
+    echo ERROR: New 1682036 application version verification failed.
     pause
     exit /b 1
 )
@@ -702,6 +703,12 @@ findstr /c:"android:nestedScrollingEnabled=\"false\"" "%WORK%\app\src\main\res\l
 
 if errorlevel 1 (
     echo ERROR: Portrait episode-grid boundary verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"params.bottomMargin = 4.dp" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Phone-landscape Choose Episode bottom-clearance verification failed.
     pause
     exit /b 1
 )
@@ -1024,7 +1031,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-SOURCE-MATCH-FIX-1682035.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-CONTROL-FIX-1682036.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -1047,7 +1054,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-SOURCE-MATCH-FIX-1682035.apk shown above.
+echo Install only KS-SERIES-LANDSCAPE-CONTROL-FIX-1682036.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -1132,6 +1139,36 @@ $newAdapter = @'
         list.visibility = View.VISIBLE
 '@
 Replace-Required $activity $oldAdapter $newAdapter 'portrait episode-grid height calculation'
+
+$oldLandscapeControls = @'
+        listOf(continueButton, nextButton).forEach { button ->
+            button.maxLines = 2
+            button.ellipsize = android.text.TextUtils.TruncateAt.END
+            button.gravity = android.view.Gravity.CENTER
+            androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(button, 8, 11, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+        }
+'@
+$newLandscapeControls = @'
+        listOf(continueButton, nextButton).forEach { button ->
+            button.maxLines = 2
+            button.ellipsize = android.text.TextUtils.TruncateAt.END
+            button.gravity = android.view.Gravity.CENTER
+            androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(button, 8, 11, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+        }
+        if (isMobileLandscape()) {
+            (panel.layoutParams as? LinearLayout.LayoutParams)?.let { params ->
+                params.height = 76.dp
+                params.bottomMargin = 4.dp
+                panel.layoutParams = params
+            }
+            continueLabel.layoutParams = continueLabel.layoutParams.apply { height = 20.dp }
+            (continueButton.parent as? View)?.let { buttonRow ->
+                buttonRow.layoutParams = buttonRow.layoutParams.apply { height = 46.dp }
+                buttonRow.setPadding(buttonRow.paddingLeft, 1.dp, buttonRow.paddingRight, 8.dp)
+            }
+        }
+'@
+Replace-Required $activity $oldLandscapeControls $newLandscapeControls 'phone-landscape Choose Episode clearance'
 
 $oldMobileLandscape = @'
     private fun isMobileLandscape(): Boolean {
