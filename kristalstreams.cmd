@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Landscape Episode Lock 1682030
+title KS Series All-Screen Lock 1682031
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksserieslandscapeepisodelock-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-EPISODE-LOCK-1682030.apk"
-set "LOG=%TEMP%\ks-series-landscape-episode-lock-1682030-build.txt"
+set "WORK=C:\ksseriesallscreenlock-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-ALL-SCREEN-LOCK-1682031.apk"
+set "LOG=%TEMP%\ks-series-all-screen-lock-1682031-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE EPISODE LOCK
-echo   FRESH APK: KS-SERIES-LANDSCAPE-EPISODE-LOCK-1682030.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES ALL-SCREEN LOCK
+echo   FRESH APK: KS-SERIES-ALL-SCREEN-LOCK-1682031.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -44,6 +44,8 @@ echo Shows episodes as smaller two-column portrait and three-column landscape ca
 echo Locks the mobile-landscape poster inside its left details pane after loading.
 echo Keeps the related-series slider out of the mobile landscape episode pane.
 echo Uses a shorter fixed Continue panel so episodes always begin below it.
+echo Verifies the two-column mobile portrait layout remains protected.
+echo Verifies the three-column Smart TV/box layout and related-Series section remain available.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -210,7 +212,7 @@ if not "%RC%"=="0" (
     exit /b %RC%
 )
 echo [10/15] Locking the landscape poster inside its details pane...
-set "POSTERLOCKPS=%TEMP%\ks-series-landscape-episode-lock-1682030.ps1"
+set "POSTERLOCKPS=%TEMP%\ks-series-all-screen-lock-1682031.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'POSTERLOCKPATCH'; $b=':::END '+'POSTERLOCKPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing poster-lock patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing poster-lock patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%POSTERLOCKPS%',[Convert]::FromBase64String($x))"
 if errorlevel 1 (
@@ -227,7 +229,7 @@ if not "%RC%"=="0" (
     exit /b %RC%
 )
 echo [11/15] Isolating the mobile landscape controls and episode grid...
-set "EPISODELOCKPS=%TEMP%\ks-series-landscape-episode-lock-1682030.ps1"
+set "EPISODELOCKPS=%TEMP%\ks-series-all-screen-lock-1682031.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%EPISODELOCKPS%',(B 'EPISODELOCKPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_details.xml',(B 'SERIESLANDLOCKLAYOUT'))"
 if errorlevel 1 (
@@ -245,14 +247,14 @@ if not "%RC%"=="0" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682030').Replace('1.6.8-series-complete','1.6.8-series-landscape-episode-lock'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682031').Replace('1.6.8-series-complete','1.6.8-series-all-screen-lock'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682030 application version.
+    echo ERROR: Could not set the new 1682031 application version.
     pause
     exit /b 1
 )
 
-echo [12/15] Verifying the protected landscape layout...
+echo [12/15] Verifying mobile portrait, mobile landscape, and Smart TV/box layouts...
 findstr /c:"epgChannelId" "%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt" >nul
 if errorlevel 1 (
     echo ERROR: Channel EPG ID verification failed.
@@ -655,9 +657,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682030" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682031" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682030 application version verification failed.
+    echo ERROR: New 1682031 application version verification failed.
     pause
     exit /b 1
 )
@@ -807,9 +809,39 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"configuration.smallestScreenWidthDp ^< 600" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+findstr /c:"configuration.smallestScreenWidthDp" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
 if errorlevel 1 (
-    echo ERROR: Phone-only related-slider suppression verification failed.
+    echo ERROR: Mobile-layout detection verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"UI_MODE_TYPE_TELEVISION" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Smart TV/box layout protection verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"FEATURE_TOUCHSCREEN" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Smartbox touchscreen separation verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:numColumns=\"2\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Mobile portrait episode-grid verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:numColumns=\"3\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Landscape and Smart TV/box episode-grid verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"seriesRelatedSection" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Smart TV/box related-Series section verification failed.
     pause
     exit /b 1
 )
@@ -914,7 +946,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-EPISODE-LOCK-1682030.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-ALL-SCREEN-LOCK-1682031.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -937,7 +969,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-LANDSCAPE-EPISODE-LOCK-1682030.apk shown above.
+echo Install only KS-SERIES-ALL-SCREEN-LOCK-1682031.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -948,6 +980,8 @@ echo Series now includes Search, Sort, My Series, full details, season tabs, ric
 echo Long titles and descriptions stay inside their cards and shrink only when needed.
 echo Continue, Next, Season, Trailer, and My Series buttons have full vertical clearance.
 echo Mobile landscape uses a shorter fixed Continue panel above the episode grid.
+echo Mobile portrait remains a protected two-column episode grid.
+echo Smart TV/box remains a three-column grid with remote navigation and related Series.
 echo The last selected season and episode are remembered; related shows remain available outside mobile landscape.
 echo PLAY MOVIE starts the verified fullscreen player with the same audio and Back behavior.
 echo Live TV, Movies, and Series playback now hide both Android system bars.
@@ -6315,23 +6349,26 @@ ZW1zLmlzRW1wdHkoKSkgVmlldy5HT05FIGVsc2UgVmlldy5WSVNJQkxFCidACiRuZXdSZWxhdGVk
 ID0gQCcKICAgIHByaXZhdGUgZnVuIGlzTW9iaWxlTGFuZHNjYXBlKCk6IEJvb2xlYW4gewogICAg
 ICAgIHZhbCBjb25maWd1cmF0aW9uID0gcmVzb3VyY2VzLmNvbmZpZ3VyYXRpb24KICAgICAgICB2
 YWwgZGV2aWNlVHlwZSA9IGNvbmZpZ3VyYXRpb24udWlNb2RlIGFuZCBhbmRyb2lkLmNvbnRlbnQu
-cmVzLkNvbmZpZ3VyYXRpb24uVUlfTU9ERV9UWVBFX01BU0sKICAgICAgICByZXR1cm4gY29uZmln
-dXJhdGlvbi5vcmllbnRhdGlvbiA9PSBhbmRyb2lkLmNvbnRlbnQucmVzLkNvbmZpZ3VyYXRpb24u
-T1JJRU5UQVRJT05fTEFORFNDQVBFICYmCiAgICAgICAgICAgIGRldmljZVR5cGUgIT0gYW5kcm9p
-ZC5jb250ZW50LnJlcy5Db25maWd1cmF0aW9uLlVJX01PREVfVFlQRV9URUxFVklTSU9OICYmCiAg
-ICAgICAgICAgIGNvbmZpZ3VyYXRpb24uc21hbGxlc3RTY3JlZW5XaWR0aERwIDwgNjAwCiAgICB9
-CgogICAgcHJpdmF0ZSBmdW4gcmVuZGVyUmVsYXRlZChpdGVtczogTGlzdDxMaWJyYXJ5SXRlbT4p
-IHsKICAgICAgICB2YWwgc2VjdGlvbiA9IGZpbmRWaWV3QnlJZDxWaWV3PihSLmlkLnNlcmllc1Jl
-bGF0ZWRTZWN0aW9uKQogICAgICAgIHZhbCByb3cgPSBmaW5kVmlld0J5SWQ8TGluZWFyTGF5b3V0
-PihSLmlkLnNlcmllc1JlbGF0ZWRSb3cpCiAgICAgICAgcm93LnJlbW92ZUFsbFZpZXdzKCkKICAg
-ICAgICBpZiAoaXNNb2JpbGVMYW5kc2NhcGUoKSkgewogICAgICAgICAgICBzZWN0aW9uLnZpc2li
-aWxpdHkgPSBWaWV3LkdPTkUKICAgICAgICAgICAgZmluZFZpZXdCeUlkPFZpZXc+KFIuaWQuc2Vy
-aWVzRXBpc29kZVBhbmUpPy5icmluZ1RvRnJvbnQoKQogICAgICAgICAgICByZXR1cm4KICAgICAg
-ICB9CiAgICAgICAgc2VjdGlvbi52aXNpYmlsaXR5ID0gaWYgKGl0ZW1zLmlzRW1wdHkoKSkgVmll
-dy5HT05FIGVsc2UgVmlldy5WSVNJQkxFCidAClJlcGxhY2UtUmVxdWlyZWQgJGFjdGl2aXR5ICRv
-bGRSZWxhdGVkICRuZXdSZWxhdGVkICdtb2JpbGUgbGFuZHNjYXBlIHJlbGF0ZWQgc2xpZGVyIHN1
-cHByZXNzaW9uJwoKV3JpdGUtSG9zdCAnTW9iaWxlIGxhbmRzY2FwZSBTZXJpZXMgY29udHJvbHMg
-YW5kIGVwaXNvZGUgZ3JpZCBhcmUgbm93IGlzb2xhdGVkLicK
+cmVzLkNvbmZpZ3VyYXRpb24uVUlfTU9ERV9UWVBFX01BU0sKICAgICAgICB2YWwgaGFzVG91Y2hz
+Y3JlZW4gPSBwYWNrYWdlTWFuYWdlci5oYXNTeXN0ZW1GZWF0dXJlKGFuZHJvaWQuY29udGVudC5w
+bS5QYWNrYWdlTWFuYWdlci5GRUFUVVJFX1RPVUNIU0NSRUVOKQogICAgICAgIHJldHVybiBjb25m
+aWd1cmF0aW9uLm9yaWVudGF0aW9uID09IGFuZHJvaWQuY29udGVudC5yZXMuQ29uZmlndXJhdGlv
+bi5PUklFTlRBVElPTl9MQU5EU0NBUEUgJiYKICAgICAgICAgICAgZGV2aWNlVHlwZSAhPSBhbmRy
+b2lkLmNvbnRlbnQucmVzLkNvbmZpZ3VyYXRpb24uVUlfTU9ERV9UWVBFX1RFTEVWSVNJT04gJiYK
+ICAgICAgICAgICAgaGFzVG91Y2hzY3JlZW4gJiYKICAgICAgICAgICAgY29uZmlndXJhdGlvbi5z
+bWFsbGVzdFNjcmVlbldpZHRoRHAgPCA2MDAKICAgIH0KCiAgICBwcml2YXRlIGZ1biByZW5kZXJS
+ZWxhdGVkKGl0ZW1zOiBMaXN0PExpYnJhcnlJdGVtPikgewogICAgICAgIHZhbCBzZWN0aW9uID0g
+ZmluZFZpZXdCeUlkPFZpZXc+KFIuaWQuc2VyaWVzUmVsYXRlZFNlY3Rpb24pCiAgICAgICAgdmFs
+IHJvdyA9IGZpbmRWaWV3QnlJZDxMaW5lYXJMYXlvdXQ+KFIuaWQuc2VyaWVzUmVsYXRlZFJvdykK
+ICAgICAgICByb3cucmVtb3ZlQWxsVmlld3MoKQogICAgICAgIGlmIChpc01vYmlsZUxhbmRzY2Fw
+ZSgpKSB7CiAgICAgICAgICAgIHNlY3Rpb24udmlzaWJpbGl0eSA9IFZpZXcuR09ORQogICAgICAg
+ICAgICBmaW5kVmlld0J5SWQ8Vmlldz4oUi5pZC5zZXJpZXNFcGlzb2RlUGFuZSk/LmJyaW5nVG9G
+cm9udCgpCiAgICAgICAgICAgIHJldHVybgogICAgICAgIH0KICAgICAgICBzZWN0aW9uLnZpc2li
+aWxpdHkgPSBpZiAoaXRlbXMuaXNFbXB0eSgpKSBWaWV3LkdPTkUgZWxzZSBWaWV3LlZJU0lCTEUK
+J0AKUmVwbGFjZS1SZXF1aXJlZCAkYWN0aXZpdHkgJG9sZFJlbGF0ZWQgJG5ld1JlbGF0ZWQgJ3Bo
+b25lLW9ubHkgbGFuZHNjYXBlIHJlbGF0ZWQgc2xpZGVyIHN1cHByZXNzaW9uJwoKV3JpdGUtSG9z
+dCAnTW9iaWxlIHBvcnRyYWl0LCBtb2JpbGUgbGFuZHNjYXBlLCBhbmQgU21hcnQgVFYvYm94IFNl
+cmllcyBsYXlvdXRzIGFyZSBpc29sYXRlZC4nCg==
 :::END EPISODELOCKPATCH
 
 :::BEGIN SERIESLANDLOCKLAYOUT
