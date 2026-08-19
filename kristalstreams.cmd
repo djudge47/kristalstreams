@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Choose Episode Fix 1682032
+title KS Series Episode Overlap Fix 1682033
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksserieschooseepisodefix-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-CHOOSE-EPISODE-FIX-1682032.apk"
-set "LOG=%TEMP%\ks-series-choose-episode-fix-1682032-build.txt"
+set "WORK=C:\ksseriesepisodeoverlapfix-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-EPISODE-OVERLAP-FIX-1682033.apk"
+set "LOG=%TEMP%\ks-series-episode-overlap-fix-1682033-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES CHOOSE EPISODE FIX
-echo   FRESH APK: KS-SERIES-CHOOSE-EPISODE-FIX-1682032.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES EPISODE OVERLAP FIX
+echo   FRESH APK: KS-SERIES-EPISODE-OVERLAP-FIX-1682033.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -47,6 +47,8 @@ echo Uses a stable 76dp landscape control panel so episodes always begin below i
 echo Shortens the prompt to Choose an episode so it cannot overflow.
 echo Verifies the two-column mobile portrait layout remains protected.
 echo Verifies the three-column Smart TV/box layout and related-Series section remain available.
+echo Expands the full portrait episode grid before More Like This begins.
+echo Prevents episode cards and related-Series cards from sharing the same screen space.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -59,7 +61,7 @@ if not exist "%SOURCE%\gradlew.bat" (
     exit /b 1
 )
 
-echo [1/15] Creating a brand-new working copy...
+echo [1/16] Creating a brand-new working copy...
 mkdir "%WORK%" >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Could not create:
@@ -76,7 +78,7 @@ if %RC% GEQ 8 (
     exit /b %RC%
 )
 
-echo [2/15] Installing verified 1682020 baseline and complete Series upgrade...
+echo [2/16] Installing verified 1682020 baseline and complete Series upgrade...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt',(B 'MODELS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\XtreamClient.kt',(B 'XTREAM')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\GuideActivity.kt',(B 'GUIDE')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt',(B 'ADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\UiContrastProvider.kt',(B 'UICONTEXT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt',(B 'IMMERSIVE')); [IO.File]::WriteAllBytes('%WORK%\app\build.gradle.kts',(B 'GRADLE')); [IO.File]::WriteAllBytes('%WORK%\REFERENCE-EPG-AUDIT.txt',(B 'AUDIT')); [IO.File]::WriteAllBytes('%WORK%\apply-ui-contrast.ps1',(B 'UIPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\LibraryActivity.kt',(B 'LIBRARY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MediaGridAdapter.kt',(B 'MEDIAADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieDetailsActivity.kt',(B 'MOVIEDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_details.xml',(B 'MOVIELAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_details.xml',(B 'MOVIELAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_details_panel.xml',(B 'MOVIEPANEL')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_fact.xml',(B 'MOVIEFACT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\values\movie_styles.xml',(B 'MOVIESTYLES')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlist.kt',(B 'WATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlistActivity.kt',(B 'WATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\ContinueWatching.kt',(B 'CONTINUEWATCHING')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlayerActivity.kt',(B 'PLAYER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_library.xml',(B 'LIBRARYLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_library.xml',(B 'LIBRARYLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_player.xml',(B 'PLAYERLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt',(B 'SERIESDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpisodeListAdapter.kt',(B 'EPISODEADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlist.kt',(B 'SERIESWATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlistActivity.kt',(B 'SERIESWATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesHistory.kt',(B 'SERIESHISTORY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_details.xml',(B 'SERIESLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_details.xml',(B 'SERIESLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\row_episode_modern.xml',(B 'EPISODEROW')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUTLAND'))"
 if errorlevel 1 (
@@ -93,7 +95,7 @@ if errorlevel 1 (
 )
 del /q "%WORK%\apply-ui-contrast.ps1" >nul 2>&1
 
-echo [3/15] Applying final Series Details layout measurements...
+echo [3/16] Applying final Series Details layout measurements...
 set "LAYOUTPS=%TEMP%\ks-series-layout-fix-1682022.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'LAYOUTPATCH'; $b=':::END '+'LAYOUTPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%LAYOUTPS%',[Convert]::FromBase64String($x))"
@@ -110,7 +112,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [4/15] Constraining all Series text inside its box...
+echo [4/16] Constraining all Series text inside its box...
 set "TEXTFITPS=%TEMP%\ks-series-text-fit-1682023.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'TEXTFITPATCH'; $b=':::END '+'TEXTFITPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing text-fit patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing text-fit patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%TEXTFITPS%',[Convert]::FromBase64String($x))"
@@ -127,7 +129,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [5/15] Restoring full red-button visibility and bottom clearance...
+echo [5/16] Restoring full red-button visibility and bottom clearance...
 set "BUTTONPS=%TEMP%\ks-series-button-clearance-1682024.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'BUTTONPATCH'; $b=':::END '+'BUTTONPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing button-clearance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing button-clearance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%BUTTONPS%',[Convert]::FromBase64String($x))"
@@ -144,7 +146,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [6/15] Adding extra space beneath the red episode button...
+echo [6/16] Adding extra space beneath the red episode button...
 set "PADDINGPS=%TEMP%\ks-series-button-padding-1682025.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'PADDINGPATCH'; $b=':::END '+'PADDINGPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing bottom-padding patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing bottom-padding patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%PADDINGPS%',[Convert]::FromBase64String($x))"
@@ -161,7 +163,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [7/15] Rebalancing the red-button panel and Season box...
+echo [7/16] Rebalancing the red-button panel and Season box...
 set "REBALANCEPS=%TEMP%\ks-series-layout-rebalance-1682026.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'REBALANCEPATCH'; $b=':::END '+'REBALANCEPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout-rebalance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout-rebalance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%REBALANCEPS%',[Convert]::FromBase64String($x))"
@@ -178,7 +180,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [8/15] Moving Season 1 above the fold...
+echo [8/16] Moving Season 1 above the fold...
 set "ABOVEFOLDPS=%TEMP%\ks-series-season-above-fold-1682027.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'ABOVEFOLDPATCH'; $b=':::END '+'ABOVEFOLDPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing above-fold patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing above-fold patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%ABOVEFOLDPS%',[Convert]::FromBase64String($x))"
@@ -195,7 +197,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [9/15] Installing the compact episode-card grid...
+echo [9/16] Installing the compact episode-card grid...
 set "GRIDPS=%TEMP%\ks-series-compact-episodes-1682028.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%GRIDPS%',(B 'GRIDPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\row_episode_modern.xml',(B 'COMPACTEPISODEROW'))"
@@ -212,7 +214,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [10/15] Locking the landscape poster inside its details pane...
+echo [10/16] Locking the landscape poster inside its details pane...
 set "POSTERLOCKPS=%TEMP%\ks-series-choose-episode-fix-1682032.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'POSTERLOCKPATCH'; $b=':::END '+'POSTERLOCKPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing poster-lock patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing poster-lock patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%POSTERLOCKPS%',[Convert]::FromBase64String($x))"
@@ -229,7 +231,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [11/15] Stabilizing Choose Episode controls on every screen...
+echo [11/16] Stabilizing Choose Episode controls on every screen...
 set "EPISODELOCKPS=%TEMP%\ks-series-choose-episode-fix-1682032.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%EPISODELOCKPS%',(B 'EPISODELOCKPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_details.xml',(B 'SERIESLANDLOCKLAYOUT'))"
@@ -247,15 +249,33 @@ if not "%RC%"=="0" (
     exit /b %RC%
 )
 
+echo [12/16] Separating portrait episodes from More Like This...
+set "OVERLAPPS=%TEMP%\ks-series-episode-overlap-fix-1682033.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682032').Replace('1.6.8-series-complete','1.6.8-series-choose-episode-fix'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'OVERLAPPATCHPS1'; $b=':::END '+'OVERLAPPATCHPS1'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing episode-overlap patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing episode-overlap patch end'}; [IO.File]::WriteAllText('%OVERLAPPS%',$raw.Substring($s,$e-$s).TrimStart([char]13,[char]10),[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682032 application version.
+    echo ERROR: Could not extract the Series episode-overlap correction.
+    pause
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%OVERLAPPS%" -ProjectRoot "%WORK%"
+set "RC=%ERRORLEVEL%"
+del /q "%OVERLAPPS%" >nul 2>&1
+if not "%RC%"=="0" (
+    echo ERROR: The Series episode-overlap correction could not be applied safely.
+    pause
+    exit /b %RC%
+)
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682033').Replace('1.6.8-series-complete','1.6.8-series-episode-overlap-fix'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+if errorlevel 1 (
+    echo ERROR: Could not set the new 1682033 application version.
     pause
     exit /b 1
 )
 
-echo [12/15] Verifying mobile portrait, mobile landscape, and Smart TV/box layouts...
+echo [13/16] Verifying mobile portrait, mobile landscape, and Smart TV/box layouts...
 findstr /c:"epgChannelId" "%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt" >nul
 if errorlevel 1 (
     echo ERROR: Channel EPG ID verification failed.
@@ -658,9 +678,33 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682032" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682033" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682032 application version verification failed.
+    echo ERROR: New 1682033 application version verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"seriesPortraitScroll" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Portrait Series page-scroll verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:nestedScrollingEnabled=\"false\"" "%WORK%\app\src\main\res\layout\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Portrait episode-grid boundary verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"private fun isMobilePortrait()" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Mobile portrait detection verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"val gridHeight = (rows * 166.dp)" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Full portrait episode-grid height verification failed.
     pause
     exit /b 1
 )
@@ -878,7 +922,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [13/15] Preparing Windows Android build tools...
+echo [14/16] Preparing Windows Android build tools...
 set "ANDROID_SDK=%LOCALAPPDATA%\Android\Sdk"
 if not exist "%ANDROID_SDK%\platforms" (
     echo ERROR: Android SDK not found:
@@ -917,7 +961,7 @@ exit /b 1
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo.
-echo [14/15] Building corrected Series APK...
+echo [15/16] Building corrected Series APK...
 echo Gradle progress will appear below.
 echo.
 
@@ -958,7 +1002,7 @@ if not exist "%BUILT%" (
 )
 
 echo.
-echo [15/15] Copying finished APK...
+echo [16/16] Copying finished APK...
 copy /Y "%BUILT%" "%FINAL%" >nul
 if errorlevel 1 (
     echo ERROR: Could not copy APK to Downloads.
@@ -971,7 +1015,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-CHOOSE-EPISODE-FIX-1682032.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-EPISODE-OVERLAP-FIX-1682033.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -994,7 +1038,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-CHOOSE-EPISODE-FIX-1682032.apk shown above.
+echo Install only KS-SERIES-EPISODE-OVERLAP-FIX-1682033.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -1021,6 +1065,90 @@ echo.
 explorer /select,"%FINAL%"
 pause
 exit /b 0
+
+:::BEGIN OVERLAPPATCHPS1
+param(
+    [Parameter(Mandatory = $true)][string]$ProjectRoot
+)
+
+$ErrorActionPreference = 'Stop'
+
+function Replace-Required {
+    param([string]$Path, [string]$Old, [string]$New, [string]$Label)
+    $content = [IO.File]::ReadAllText($Path)
+    if (-not $content.Contains($Old)) { throw "Could not find expected $Label in $Path" }
+    [IO.File]::WriteAllText($Path, $content.Replace($Old, $New), [Text.UTF8Encoding]::new($false))
+}
+
+$portrait = Join-Path $ProjectRoot 'app\src\main\res\layout\activity_series_details.xml'
+$activity = Join-Path $ProjectRoot 'app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt'
+
+$oldStart = @'
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+'@
+$newStart = @'
+    <ScrollView android:id="@+id/seriesPortraitScroll" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:clipChildren="true" android:clipToPadding="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:clipChildren="true" android:clipToPadding="true">
+'@
+Replace-Required $portrait $oldStart $newStart 'portrait page scroll container'
+
+$oldEnd = @'
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
+'@
+$newEnd = @'
+        </LinearLayout>
+    </LinearLayout>
+    </ScrollView>
+</FrameLayout>
+'@
+Replace-Required $portrait $oldEnd $newEnd 'portrait page scroll closing boundary'
+
+$oldGrid = '<GridView android:id="@+id/episodeList" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:numColumns="2" android:horizontalSpacing="8dp" android:verticalSpacing="8dp" android:stretchMode="columnWidth" android:gravity="center" android:choiceMode="singleChoice" android:padding="8dp" android:clipToPadding="false" android:background="@android:color/transparent"/>'
+$newGrid = '<GridView android:id="@+id/episodeList" android:layout_width="match_parent" android:layout_height="wrap_content" android:numColumns="2" android:horizontalSpacing="8dp" android:verticalSpacing="8dp" android:stretchMode="columnWidth" android:gravity="center" android:choiceMode="singleChoice" android:padding="8dp" android:clipChildren="true" android:clipToPadding="true" android:nestedScrollingEnabled="false" android:background="@android:color/transparent"/>'
+Replace-Required $portrait $oldGrid $newGrid 'bounded portrait episode grid'
+
+$oldRelated = '<LinearLayout android:id="@+id/seriesRelatedSection" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:layout_marginEnd="10dp" android:orientation="vertical" android:visibility="gone">'
+$newRelated = '<LinearLayout android:id="@+id/seriesRelatedSection" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:layout_marginTop="16dp" android:layout_marginEnd="10dp" android:layout_marginBottom="12dp" android:orientation="vertical" android:clipChildren="true" android:clipToPadding="true" android:visibility="gone">'
+Replace-Required $portrait $oldRelated $newRelated 'related-Series separation'
+
+$oldAdapter = @'
+        list.adapter = EpisodeListAdapter(this, visibleEpisodes, saved)
+        list.visibility = View.VISIBLE
+'@
+$newAdapter = @'
+        list.adapter = EpisodeListAdapter(this, visibleEpisodes, saved)
+        if (isMobilePortrait()) {
+            val rows = (visibleEpisodes.size + 1) / 2
+            val gridHeight = (rows * 166.dp) + (maxOf(0, rows - 1) * 8.dp) + 16.dp
+            list.layoutParams = list.layoutParams.apply { height = gridHeight }
+            list.isScrollContainer = false
+        }
+        list.visibility = View.VISIBLE
+'@
+Replace-Required $activity $oldAdapter $newAdapter 'portrait episode-grid height calculation'
+
+$oldMobileLandscape = @'
+    private fun isMobileLandscape(): Boolean {
+'@
+$newMobileLandscape = @'
+    private fun isMobilePortrait(): Boolean {
+        val configuration = resources.configuration
+        val deviceType = configuration.uiMode and android.content.res.Configuration.UI_MODE_TYPE_MASK
+        val hasTouchscreen = packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_TOUCHSCREEN)
+        return configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT &&
+            deviceType != android.content.res.Configuration.UI_MODE_TYPE_TELEVISION &&
+            hasTouchscreen &&
+            configuration.smallestScreenWidthDp < 600
+    }
+
+    private fun isMobileLandscape(): Boolean {
+'@
+Replace-Required $activity $oldMobileLandscape $newMobileLandscape 'mobile portrait detection'
+
+Write-Host 'Portrait episodes now expand completely and More Like This begins below the final row.'
+:::END OVERLAPPATCHPS1
 
 :::BEGIN MODELS
 cGFja2FnZSBjb20ua3Jpc3RhbHN0cmVhbXMucGxheWVyCgpkYXRhIGNsYXNzIFh0cmVhbUNyZWRl
