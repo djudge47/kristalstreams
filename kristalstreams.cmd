@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Landscape Poster Lock 1682029
+title KS Series Landscape Episode Lock 1682030
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksserieslandscapeposterlock-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-POSTER-LOCK-1682029.apk"
-set "LOG=%TEMP%\ks-series-landscape-poster-lock-1682029-build.txt"
+set "WORK=C:\ksserieslandscapeepisodelock-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-EPISODE-LOCK-1682030.apk"
+set "LOG=%TEMP%\ks-series-landscape-episode-lock-1682030-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE POSTER LOCK
-echo   FRESH APK: KS-SERIES-LANDSCAPE-POSTER-LOCK-1682029.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE EPISODE LOCK
+echo   FRESH APK: KS-SERIES-LANDSCAPE-EPISODE-LOCK-1682030.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -38,10 +38,12 @@ echo Allows two-line episode titles and descriptions.
 echo Automatically fits long Series text inside every control and card.
 echo Keeps every red Series Details button completely visible.
 echo Adds extra bottom padding beneath the Choose-an-episode red button.
-echo Restores the full Season box directly beneath the red button.
+echo Keeps the Season selector above the compact Continue and Next panel.
 echo Moves Season 1 above the Continue and Next panel so it opens above the fold.
 echo Shows episodes as smaller two-column portrait and three-column landscape cards.
 echo Locks the mobile-landscape poster inside its left details pane after loading.
+echo Keeps the related-series slider out of the mobile landscape episode pane.
+echo Uses a shorter fixed Continue panel so episodes always begin below it.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -54,7 +56,7 @@ if not exist "%SOURCE%\gradlew.bat" (
     exit /b 1
 )
 
-echo [1/14] Creating a brand-new working copy...
+echo [1/15] Creating a brand-new working copy...
 mkdir "%WORK%" >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Could not create:
@@ -71,7 +73,7 @@ if %RC% GEQ 8 (
     exit /b %RC%
 )
 
-echo [2/14] Installing verified 1682020 baseline and complete Series upgrade...
+echo [2/15] Installing verified 1682020 baseline and complete Series upgrade...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt',(B 'MODELS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\XtreamClient.kt',(B 'XTREAM')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\GuideActivity.kt',(B 'GUIDE')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt',(B 'ADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\UiContrastProvider.kt',(B 'UICONTEXT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt',(B 'IMMERSIVE')); [IO.File]::WriteAllBytes('%WORK%\app\build.gradle.kts',(B 'GRADLE')); [IO.File]::WriteAllBytes('%WORK%\REFERENCE-EPG-AUDIT.txt',(B 'AUDIT')); [IO.File]::WriteAllBytes('%WORK%\apply-ui-contrast.ps1',(B 'UIPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\LibraryActivity.kt',(B 'LIBRARY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MediaGridAdapter.kt',(B 'MEDIAADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieDetailsActivity.kt',(B 'MOVIEDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_details.xml',(B 'MOVIELAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_details.xml',(B 'MOVIELAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_details_panel.xml',(B 'MOVIEPANEL')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_fact.xml',(B 'MOVIEFACT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\values\movie_styles.xml',(B 'MOVIESTYLES')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlist.kt',(B 'WATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlistActivity.kt',(B 'WATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\ContinueWatching.kt',(B 'CONTINUEWATCHING')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlayerActivity.kt',(B 'PLAYER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_library.xml',(B 'LIBRARYLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_library.xml',(B 'LIBRARYLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_player.xml',(B 'PLAYERLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt',(B 'SERIESDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpisodeListAdapter.kt',(B 'EPISODEADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlist.kt',(B 'SERIESWATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlistActivity.kt',(B 'SERIESWATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesHistory.kt',(B 'SERIESHISTORY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_details.xml',(B 'SERIESLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_details.xml',(B 'SERIESLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\row_episode_modern.xml',(B 'EPISODEROW')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUTLAND'))"
 if errorlevel 1 (
@@ -88,7 +90,7 @@ if errorlevel 1 (
 )
 del /q "%WORK%\apply-ui-contrast.ps1" >nul 2>&1
 
-echo [3/14] Applying final Series Details layout measurements...
+echo [3/15] Applying final Series Details layout measurements...
 set "LAYOUTPS=%TEMP%\ks-series-layout-fix-1682022.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'LAYOUTPATCH'; $b=':::END '+'LAYOUTPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%LAYOUTPS%',[Convert]::FromBase64String($x))"
@@ -105,7 +107,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [4/14] Constraining all Series text inside its box...
+echo [4/15] Constraining all Series text inside its box...
 set "TEXTFITPS=%TEMP%\ks-series-text-fit-1682023.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'TEXTFITPATCH'; $b=':::END '+'TEXTFITPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing text-fit patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing text-fit patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%TEXTFITPS%',[Convert]::FromBase64String($x))"
@@ -122,7 +124,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [5/14] Restoring full red-button visibility and bottom clearance...
+echo [5/15] Restoring full red-button visibility and bottom clearance...
 set "BUTTONPS=%TEMP%\ks-series-button-clearance-1682024.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'BUTTONPATCH'; $b=':::END '+'BUTTONPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing button-clearance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing button-clearance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%BUTTONPS%',[Convert]::FromBase64String($x))"
@@ -139,7 +141,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [6/14] Adding extra space beneath the red episode button...
+echo [6/15] Adding extra space beneath the red episode button...
 set "PADDINGPS=%TEMP%\ks-series-button-padding-1682025.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'PADDINGPATCH'; $b=':::END '+'PADDINGPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing bottom-padding patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing bottom-padding patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%PADDINGPS%',[Convert]::FromBase64String($x))"
@@ -156,7 +158,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [7/14] Rebalancing the red-button panel and Season box...
+echo [7/15] Rebalancing the red-button panel and Season box...
 set "REBALANCEPS=%TEMP%\ks-series-layout-rebalance-1682026.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'REBALANCEPATCH'; $b=':::END '+'REBALANCEPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout-rebalance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout-rebalance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%REBALANCEPS%',[Convert]::FromBase64String($x))"
@@ -173,7 +175,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [8/14] Moving Season 1 above the fold...
+echo [8/15] Moving Season 1 above the fold...
 set "ABOVEFOLDPS=%TEMP%\ks-series-season-above-fold-1682027.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'ABOVEFOLDPATCH'; $b=':::END '+'ABOVEFOLDPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing above-fold patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing above-fold patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%ABOVEFOLDPS%',[Convert]::FromBase64String($x))"
@@ -190,7 +192,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [9/14] Installing the compact episode-card grid...
+echo [9/15] Installing the compact episode-card grid...
 set "GRIDPS=%TEMP%\ks-series-compact-episodes-1682028.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%GRIDPS%',(B 'GRIDPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\row_episode_modern.xml',(B 'COMPACTEPISODEROW'))"
@@ -207,8 +209,8 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [10/14] Locking the landscape poster inside its details pane...
-set "POSTERLOCKPS=%TEMP%\ks-series-landscape-poster-lock-1682029.ps1"
+echo [10/15] Locking the landscape poster inside its details pane...
+set "POSTERLOCKPS=%TEMP%\ks-series-landscape-episode-lock-1682030.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'POSTERLOCKPATCH'; $b=':::END '+'POSTERLOCKPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing poster-lock patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing poster-lock patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%POSTERLOCKPS%',[Convert]::FromBase64String($x))"
 if errorlevel 1 (
@@ -224,15 +226,33 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
+echo [11/15] Isolating the mobile landscape controls and episode grid...
+set "EPISODELOCKPS=%TEMP%\ks-series-landscape-episode-lock-1682030.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682029').Replace('1.6.8-series-complete','1.6.8-series-landscape-poster-lock'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%EPISODELOCKPS%',(B 'EPISODELOCKPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_details.xml',(B 'SERIESLANDLOCKLAYOUT'))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682029 application version.
+    echo ERROR: Could not extract the landscape episode-lock files.
+    pause
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%EPISODELOCKPS%" -ProjectRoot "%WORK%"
+set "RC=%ERRORLEVEL%"
+del /q "%EPISODELOCKPS%" >nul 2>&1
+if not "%RC%"=="0" (
+    echo ERROR: The landscape episode-lock correction could not be applied safely.
+    pause
+    exit /b %RC%
+)
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682030').Replace('1.6.8-series-complete','1.6.8-series-landscape-episode-lock'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+if errorlevel 1 (
+    echo ERROR: Could not set the new 1682030 application version.
     pause
     exit /b 1
 )
 
-echo [11/14] Verifying the protected landscape layout...
+echo [12/15] Verifying the protected landscape layout...
 findstr /c:"epgChannelId" "%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt" >nul
 if errorlevel 1 (
     echo ERROR: Channel EPG ID verification failed.
@@ -635,9 +655,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682029" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682030" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682029 application version verification failed.
+    echo ERROR: New 1682030 application version verification failed.
     pause
     exit /b 1
 )
@@ -751,14 +771,57 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"android:elevation=\"2dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+findstr /c:"android:elevation=\"12dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
 if errorlevel 1 (
-    echo ERROR: Protected episode-pane layering verification failed.
+    echo ERROR: Fixed episode-pane foreground verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:id=\"@+id/seriesEpisodePane\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Landscape episode-pane ID verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:layout_height=\"64dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Compact landscape Continue-panel verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:visibility=\"invisible\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Stable landscape control-space verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:clipToPadding=\"true\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Landscape episode clipping verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"private fun isMobileLandscape()" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Mobile landscape detection verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"configuration.smallestScreenWidthDp ^< 600" "%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt" >nul
+if errorlevel 1 (
+    echo ERROR: Phone-only related-slider suppression verification failed.
+    pause
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$p='%WORK%\app\src\main\res\layout-land\activity_series_details.xml'; $x=[IO.File]::ReadAllText($p); if($x.IndexOf('seriesContinuePanel') -gt $x.IndexOf('episodeList')){throw 'Episodes are not below the compact Continue panel'}"
+if errorlevel 1 (
+    echo ERROR: Landscape episode-boundary ordering verification failed.
     pause
     exit /b 1
 )
 
-echo [12/14] Preparing Windows Android build tools...
+echo [13/15] Preparing Windows Android build tools...
 set "ANDROID_SDK=%LOCALAPPDATA%\Android\Sdk"
 if not exist "%ANDROID_SDK%\platforms" (
     echo ERROR: Android SDK not found:
@@ -797,7 +860,7 @@ exit /b 1
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo.
-echo [13/14] Building corrected Series APK...
+echo [14/15] Building corrected Series APK...
 echo Gradle progress will appear below.
 echo.
 
@@ -838,7 +901,7 @@ if not exist "%BUILT%" (
 )
 
 echo.
-echo [14/14] Copying finished APK...
+echo [15/15] Copying finished APK...
 copy /Y "%BUILT%" "%FINAL%" >nul
 if errorlevel 1 (
     echo ERROR: Could not copy APK to Downloads.
@@ -851,7 +914,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-POSTER-LOCK-1682029.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-EPISODE-LOCK-1682030.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -874,7 +937,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-LANDSCAPE-POSTER-LOCK-1682029.apk shown above.
+echo Install only KS-SERIES-LANDSCAPE-EPISODE-LOCK-1682030.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -884,8 +947,8 @@ echo Audio and subtitle choices appear with the playback controls when tracks ar
 echo Series now includes Search, Sort, My Series, full details, season tabs, richer episode cards, Resume, and Next Episode.
 echo Long titles and descriptions stay inside their cards and shrink only when needed.
 echo Continue, Next, Season, Trailer, and My Series buttons have full vertical clearance.
-echo The red episode button now has a dedicated 17dp bottom inset.
-echo The last selected season and episode are remembered, and related shows are displayed when supplied.
+echo Mobile landscape uses a shorter fixed Continue panel above the episode grid.
+echo The last selected season and episode are remembered; related shows remain available outside mobile landscape.
 echo PLAY MOVIE starts the verified fullscreen player with the same audio and Back behavior.
 echo Live TV, Movies, and Series playback now hide both Android system bars.
 echo Video fills the display without side bars or zoom-cropping.
@@ -6212,3 +6275,366 @@ Y2tncm91bmQ9IkBkcmF3YWJsZS9iZ19vZmZpY2lhbF9wYW5lbCI+JyAncHJvdGVjdGVkIGxhbmRz
 Y2FwZSBlcGlzb2RlIHBhbmUnCgpXcml0ZS1Ib3N0ICdMYW5kc2NhcGUgc2VyaWVzIHBvc3RlciBp
 cyBsb2NrZWQgaW5zaWRlIHRoZSBsZWZ0IGRldGFpbHMgcGFuZS4nCg==
 :::END POSTERLOCKPATCH
+
+:::BEGIN EPISODELOCKPATCH
+cGFyYW0oCiAgICBbUGFyYW1ldGVyKE1hbmRhdG9yeSA9ICR0cnVlKV1bc3RyaW5nXSRQcm9qZWN0
+Um9vdAopCgokRXJyb3JBY3Rpb25QcmVmZXJlbmNlID0gJ1N0b3AnCgpmdW5jdGlvbiBSZXBsYWNl
+LVJlcXVpcmVkIHsKICAgIHBhcmFtKFtzdHJpbmddJFBhdGgsIFtzdHJpbmddJE9sZCwgW3N0cmlu
+Z10kTmV3LCBbc3RyaW5nXSRMYWJlbCkKICAgICRPbGQgPSAkT2xkLlJlcGxhY2UoImByYG4iLCAi
+YG4iKQogICAgJE5ldyA9ICROZXcuUmVwbGFjZSgiYHJgbiIsICJgbiIpCiAgICAkY29udGVudCA9
+IFtJTy5GaWxlXTo6UmVhZEFsbFRleHQoJFBhdGgpCiAgICBpZiAoLW5vdCAkY29udGVudC5Db250
+YWlucygkT2xkKSkgeyB0aHJvdyAiQ291bGQgbm90IGZpbmQgZXhwZWN0ZWQgJExhYmVsIGluICRQ
+YXRoIiB9CiAgICBbSU8uRmlsZV06OldyaXRlQWxsVGV4dCgkUGF0aCwgJGNvbnRlbnQuUmVwbGFj
+ZSgkT2xkLCAkTmV3KSwgW1RleHQuVVRGOEVuY29kaW5nXTo6bmV3KCRmYWxzZSkpCn0KCiRhY3Rp
+dml0eSA9IEpvaW4tUGF0aCAkUHJvamVjdFJvb3QgJ2FwcFxzcmNcbWFpblxqYXZhXGNvbVxrcmlz
+dGFsc3RyZWFtc1xwbGF5ZXJcU2VyaWVzRGV0YWlsc0FjdGl2aXR5Lmt0JwoKJG9sZEZvcmVncm91
+bmQgPSBAJwogICAgICAgIFJlbW90ZUltYWdlTG9hZGVyLmxvYWQoYmFja2Ryb3AsIGZpbmRWaWV3
+QnlJZChSLmlkLnNlcmllc0JhY2tkcm9wKSwgUi5kcmF3YWJsZS5vZmZpY2lhbF9kYXNoYm9hcmRf
+YmcsIGNyb3AgPSBiYWNrZHJvcC5pc05vdEJsYW5rKCkpCiAgICAgICAgZmluZFZpZXdCeUlkPEJ1
+dHRvbj4oUi5pZC5zZXJpZXNUcmFpbGVyKS52aXNpYmlsaXR5CidACiRuZXdGb3JlZ3JvdW5kID0g
+QCcKICAgICAgICBSZW1vdGVJbWFnZUxvYWRlci5sb2FkKGJhY2tkcm9wLCBmaW5kVmlld0J5SWQo
+Ui5pZC5zZXJpZXNCYWNrZHJvcCksIFIuZHJhd2FibGUub2ZmaWNpYWxfZGFzaGJvYXJkX2JnLCBj
+cm9wID0gYmFja2Ryb3AuaXNOb3RCbGFuaygpKQogICAgICAgIGZpbmRWaWV3QnlJZDxWaWV3PihS
+LmlkLnNlcmllc0VwaXNvZGVQYW5lKT8uYnJpbmdUb0Zyb250KCkKICAgICAgICBmaW5kVmlld0J5
+SWQ8QnV0dG9uPihSLmlkLnNlcmllc1RyYWlsZXIpLnZpc2liaWxpdHkKJ0AKUmVwbGFjZS1SZXF1
+aXJlZCAkYWN0aXZpdHkgJG9sZEZvcmVncm91bmQgJG5ld0ZvcmVncm91bmQgJ2VwaXNvZGUgcGFu
+ZSBmb3JlZ3JvdW5kIGxvY2snCgokb2xkUGFuZWxWaXNpYmlsaXR5ID0gQCcKICAgICAgICBwYW5l
+bC52aXNpYmlsaXR5ID0gaWYgKGxhdGVzdCAhPSBudWxsIHx8IG5leHQgIT0gbnVsbCkgVmlldy5W
+SVNJQkxFIGVsc2UgVmlldy5HT05FCidACiRuZXdQYW5lbFZpc2liaWxpdHkgPSBAJwogICAgICAg
+IHBhbmVsLnZpc2liaWxpdHkgPSBpZiAobGF0ZXN0ICE9IG51bGwgfHwgbmV4dCAhPSBudWxsKSBW
+aWV3LlZJU0lCTEUgZWxzZSBpZiAoaXNNb2JpbGVMYW5kc2NhcGUoKSkgVmlldy5JTlZJU0lCTEUg
+ZWxzZSBWaWV3LkdPTkUKICAgICAgICBmaW5kVmlld0J5SWQ8Vmlldz4oUi5pZC5zZXJpZXNFcGlz
+b2RlUGFuZSk/LmJyaW5nVG9Gcm9udCgpCidAClJlcGxhY2UtUmVxdWlyZWQgJGFjdGl2aXR5ICRv
+bGRQYW5lbFZpc2liaWxpdHkgJG5ld1BhbmVsVmlzaWJpbGl0eSAnc3RhYmxlIENvbnRpbnVlIHBh
+bmVsIHZpc2liaWxpdHknCgokb2xkUmVsYXRlZCA9IEAnCiAgICBwcml2YXRlIGZ1biByZW5kZXJS
+ZWxhdGVkKGl0ZW1zOiBMaXN0PExpYnJhcnlJdGVtPikgewogICAgICAgIHZhbCBzZWN0aW9uID0g
+ZmluZFZpZXdCeUlkPFZpZXc+KFIuaWQuc2VyaWVzUmVsYXRlZFNlY3Rpb24pCiAgICAgICAgdmFs
+IHJvdyA9IGZpbmRWaWV3QnlJZDxMaW5lYXJMYXlvdXQ+KFIuaWQuc2VyaWVzUmVsYXRlZFJvdykK
+ICAgICAgICByb3cucmVtb3ZlQWxsVmlld3MoKTsgc2VjdGlvbi52aXNpYmlsaXR5ID0gaWYgKGl0
+ZW1zLmlzRW1wdHkoKSkgVmlldy5HT05FIGVsc2UgVmlldy5WSVNJQkxFCidACiRuZXdSZWxhdGVk
+ID0gQCcKICAgIHByaXZhdGUgZnVuIGlzTW9iaWxlTGFuZHNjYXBlKCk6IEJvb2xlYW4gewogICAg
+ICAgIHZhbCBjb25maWd1cmF0aW9uID0gcmVzb3VyY2VzLmNvbmZpZ3VyYXRpb24KICAgICAgICB2
+YWwgZGV2aWNlVHlwZSA9IGNvbmZpZ3VyYXRpb24udWlNb2RlIGFuZCBhbmRyb2lkLmNvbnRlbnQu
+cmVzLkNvbmZpZ3VyYXRpb24uVUlfTU9ERV9UWVBFX01BU0sKICAgICAgICByZXR1cm4gY29uZmln
+dXJhdGlvbi5vcmllbnRhdGlvbiA9PSBhbmRyb2lkLmNvbnRlbnQucmVzLkNvbmZpZ3VyYXRpb24u
+T1JJRU5UQVRJT05fTEFORFNDQVBFICYmCiAgICAgICAgICAgIGRldmljZVR5cGUgIT0gYW5kcm9p
+ZC5jb250ZW50LnJlcy5Db25maWd1cmF0aW9uLlVJX01PREVfVFlQRV9URUxFVklTSU9OICYmCiAg
+ICAgICAgICAgIGNvbmZpZ3VyYXRpb24uc21hbGxlc3RTY3JlZW5XaWR0aERwIDwgNjAwCiAgICB9
+CgogICAgcHJpdmF0ZSBmdW4gcmVuZGVyUmVsYXRlZChpdGVtczogTGlzdDxMaWJyYXJ5SXRlbT4p
+IHsKICAgICAgICB2YWwgc2VjdGlvbiA9IGZpbmRWaWV3QnlJZDxWaWV3PihSLmlkLnNlcmllc1Jl
+bGF0ZWRTZWN0aW9uKQogICAgICAgIHZhbCByb3cgPSBmaW5kVmlld0J5SWQ8TGluZWFyTGF5b3V0
+PihSLmlkLnNlcmllc1JlbGF0ZWRSb3cpCiAgICAgICAgcm93LnJlbW92ZUFsbFZpZXdzKCkKICAg
+ICAgICBpZiAoaXNNb2JpbGVMYW5kc2NhcGUoKSkgewogICAgICAgICAgICBzZWN0aW9uLnZpc2li
+aWxpdHkgPSBWaWV3LkdPTkUKICAgICAgICAgICAgZmluZFZpZXdCeUlkPFZpZXc+KFIuaWQuc2Vy
+aWVzRXBpc29kZVBhbmUpPy5icmluZ1RvRnJvbnQoKQogICAgICAgICAgICByZXR1cm4KICAgICAg
+ICB9CiAgICAgICAgc2VjdGlvbi52aXNpYmlsaXR5ID0gaWYgKGl0ZW1zLmlzRW1wdHkoKSkgVmll
+dy5HT05FIGVsc2UgVmlldy5WSVNJQkxFCidAClJlcGxhY2UtUmVxdWlyZWQgJGFjdGl2aXR5ICRv
+bGRSZWxhdGVkICRuZXdSZWxhdGVkICdtb2JpbGUgbGFuZHNjYXBlIHJlbGF0ZWQgc2xpZGVyIHN1
+cHByZXNzaW9uJwoKV3JpdGUtSG9zdCAnTW9iaWxlIGxhbmRzY2FwZSBTZXJpZXMgY29udHJvbHMg
+YW5kIGVwaXNvZGUgZ3JpZCBhcmUgbm93IGlzb2xhdGVkLicK
+:::END EPISODELOCKPATCH
+
+:::BEGIN SERIESLANDLOCKLAYOUT
+PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPEZyYW1lTGF5b3V0IHhtbG5z
+OmFuZHJvaWQ9Imh0dHA6Ly9zY2hlbWFzLmFuZHJvaWQuY29tL2Fway9yZXMvYW5kcm9pZCIKICAg
+IGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiCiAgICBhbmRyb2lkOmxheW91dF9o
+ZWlnaHQ9Im1hdGNoX3BhcmVudCIKICAgIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0cnVlIgogICAg
+YW5kcm9pZDpjbGlwVG9QYWRkaW5nPSJ0cnVlIgogICAgYW5kcm9pZDpiYWNrZ3JvdW5kPSJAZHJh
+d2FibGUvb2ZmaWNpYWxfZGFzaGJvYXJkX2JnIj4KCiAgICA8SW1hZ2VWaWV3CiAgICAgICAgYW5k
+cm9pZDppZD0iQCtpZC9zZXJpZXNCYWNrZHJvcCIKICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0
+aD0ibWF0Y2hfcGFyZW50IgogICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0ibWF0Y2hfcGFy
+ZW50IgogICAgICAgIGFuZHJvaWQ6c2NhbGVUeXBlPSJjZW50ZXJDcm9wIgogICAgICAgIGFuZHJv
+aWQ6YWxwaGE9IjAuMTMiCiAgICAgICAgYW5kcm9pZDpjb250ZW50RGVzY3JpcHRpb249IlNlcmll
+cyBiYWNrZHJvcCIgLz4KCiAgICA8TGluZWFyTGF5b3V0CiAgICAgICAgYW5kcm9pZDpsYXlvdXRf
+d2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICBhbmRyb2lkOmxheW91dF9oZWlnaHQ9Im1hdGNo
+X3BhcmVudCIKICAgICAgICBhbmRyb2lkOm9yaWVudGF0aW9uPSJ2ZXJ0aWNhbCIKICAgICAgICBh
+bmRyb2lkOmNsaXBDaGlsZHJlbj0idHJ1ZSIKICAgICAgICBhbmRyb2lkOmNsaXBUb1BhZGRpbmc9
+InRydWUiPgoKICAgICAgICA8TGluZWFyTGF5b3V0CiAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0
+X3dpZHRoPSJtYXRjaF9wYXJlbnQiCiAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0i
+NjBkcCIKICAgICAgICAgICAgYW5kcm9pZDpncmF2aXR5PSJjZW50ZXJfdmVydGljYWwiCiAgICAg
+ICAgICAgIGFuZHJvaWQ6cGFkZGluZ1N0YXJ0PSIxMGRwIgogICAgICAgICAgICBhbmRyb2lkOnBh
+ZGRpbmdFbmQ9IjEwZHAiCiAgICAgICAgICAgIGFuZHJvaWQ6YmFja2dyb3VuZD0iQGRyYXdhYmxl
+L2JnX29mZmljaWFsX2hlYWRlciI+CgogICAgICAgICAgICA8QnV0dG9uCiAgICAgICAgICAgICAg
+ICBhbmRyb2lkOmlkPSJAK2lkL3Nlcmllc0JhY2siCiAgICAgICAgICAgICAgICBhbmRyb2lkOmxh
+eW91dF93aWR0aD0iNzJkcCIKICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0i
+NDBkcCIKICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dD0iQkFDSyIKICAgICAgICAgICAgICAg
+IGFuZHJvaWQ6dGV4dENvbG9yPSJAY29sb3Iva3Nfd2hpdGUiCiAgICAgICAgICAgICAgICBhbmRy
+b2lkOnRleHRTdHlsZT0iYm9sZCIKICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFNpemU9IjEw
+c3AiCiAgICAgICAgICAgICAgICBhbmRyb2lkOmJhY2tncm91bmQ9IkBkcmF3YWJsZS9iZ19idXR0
+b24iIC8+CgogICAgICAgICAgICA8SW1hZ2VWaWV3CiAgICAgICAgICAgICAgICBhbmRyb2lkOmxh
+eW91dF93aWR0aD0iMTkwZHAiCiAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF9oZWlnaHQ9
+IjQ2ZHAiCiAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF9tYXJnaW5TdGFydD0iMTBkcCIK
+ICAgICAgICAgICAgICAgIGFuZHJvaWQ6c3JjPSJAZHJhd2FibGUva3NfYmFubmVyIgogICAgICAg
+ICAgICAgICAgYW5kcm9pZDpzY2FsZVR5cGU9ImZpdFN0YXJ0IgogICAgICAgICAgICAgICAgYW5k
+cm9pZDpjb250ZW50RGVzY3JpcHRpb249IktyaXN0YWwgU3RyZWFtcyIgLz4KCiAgICAgICAgICAg
+IDxUZXh0VmlldwogICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9IjBkcCIKICAg
+ICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0id3JhcF9jb250ZW50IgogICAgICAg
+ICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2VpZ2h0PSIxIgogICAgICAgICAgICAgICAgYW5kcm9p
+ZDpsYXlvdXRfbWFyZ2luU3RhcnQ9IjEwZHAiCiAgICAgICAgICAgICAgICBhbmRyb2lkOm1heExp
+bmVzPSIxIgogICAgICAgICAgICAgICAgYW5kcm9pZDplbGxpcHNpemU9ImVuZCIKICAgICAgICAg
+ICAgICAgIGFuZHJvaWQ6dGV4dD0iU0VSSUVTIERFVEFJTFMgIOKAoiAgU0VBU09OUyAmYW1wOyBF
+UElTT0RFUyIKICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dENvbG9yPSJAY29sb3Iva3Nfd2hp
+dGUiCiAgICAgICAgICAgICAgICBhbmRyb2lkOnRleHRTdHlsZT0iYm9sZCIKICAgICAgICAgICAg
+ICAgIGFuZHJvaWQ6dGV4dFNpemU9IjE2c3AiIC8+CiAgICAgICAgPC9MaW5lYXJMYXlvdXQ+Cgog
+ICAgICAgIDxMaW5lYXJMYXlvdXQKICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1h
+dGNoX3BhcmVudCIKICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSIwZHAiCiAgICAg
+ICAgICAgIGFuZHJvaWQ6bGF5b3V0X3dlaWdodD0iMSIKICAgICAgICAgICAgYW5kcm9pZDpvcmll
+bnRhdGlvbj0iaG9yaXpvbnRhbCIKICAgICAgICAgICAgYW5kcm9pZDpwYWRkaW5nPSI4ZHAiCiAg
+ICAgICAgICAgIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0cnVlIgogICAgICAgICAgICBhbmRyb2lk
+OmNsaXBUb1BhZGRpbmc9InRydWUiPgoKICAgICAgICAgICAgPFNjcm9sbFZpZXcKICAgICAgICAg
+ICAgICAgIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSIyODBkcCIKICAgICAgICAgICAgICAgIGFuZHJv
+aWQ6bGF5b3V0X2hlaWdodD0ibWF0Y2hfcGFyZW50IgogICAgICAgICAgICAgICAgYW5kcm9pZDpm
+aWxsVmlld3BvcnQ9InRydWUiCiAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBDaGlsZHJlbj0i
+dHJ1ZSIKICAgICAgICAgICAgICAgIGFuZHJvaWQ6Y2xpcFRvUGFkZGluZz0idHJ1ZSIKICAgICAg
+ICAgICAgICAgIGFuZHJvaWQ6b3ZlclNjcm9sbE1vZGU9Im5ldmVyIgogICAgICAgICAgICAgICAg
+YW5kcm9pZDpiYWNrZ3JvdW5kPSJAZHJhd2FibGUvYmdfbW92aWVfZGV0YWlsc19wYW5lbCI+Cgog
+ICAgICAgICAgICAgICAgPExpbmVhckxheW91dAogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6
+bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDps
+YXlvdXRfaGVpZ2h0PSJ3cmFwX2NvbnRlbnQiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpv
+cmllbnRhdGlvbj0idmVydGljYWwiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpncmF2aXR5
+PSJjZW50ZXJfaG9yaXpvbnRhbCIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBDaGls
+ZHJlbj0idHJ1ZSIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBUb1BhZGRpbmc9InRy
+dWUiPgoKICAgICAgICAgICAgICAgICAgICA8SW1hZ2VWaWV3CiAgICAgICAgICAgICAgICAgICAg
+ICAgIGFuZHJvaWQ6aWQ9IkAraWQvc2VyaWVzSGVhZGVySWNvbiIKICAgICAgICAgICAgICAgICAg
+ICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9IjE4MGRwIgogICAgICAgICAgICAgICAgICAgICAg
+ICBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjI1MGRwIgogICAgICAgICAgICAgICAgICAgICAgICBh
+bmRyb2lkOm1heFdpZHRoPSIxODBkcCIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpt
+YXhIZWlnaHQ9IjI1MGRwIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmFkanVzdFZp
+ZXdCb3VuZHM9ImZhbHNlIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNyb3BUb1Bh
+ZGRpbmc9InRydWUiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6c2NhbGVUeXBlPSJj
+ZW50ZXJDcm9wIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmJhY2tncm91bmQ9IkBk
+cmF3YWJsZS9iZ19wb3N0ZXJfZnJhbWUiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6
+Y29udGVudERlc2NyaXB0aW9uPSJTZXJpZXMgYXJ0d29yayIgLz4KCiAgICAgICAgICAgICAgICAg
+ICAgPFRleHRWaWV3CiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6aWQ9IkAraWQvc2Vy
+aWVzVGl0bGUiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJt
+YXRjaF9wYXJlbnQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdo
+dD0id3JhcF9jb250ZW50IgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF9t
+YXJnaW5Ub3A9IjEyZHAiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bWF4TGluZXM9
+IjMiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6ZWxsaXBzaXplPSJlbmQiCiAgICAg
+ICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dD0iU2VyaWVzIgogICAgICAgICAgICAgICAg
+ICAgICAgICBhbmRyb2lkOnRleHRDb2xvcj0iQGNvbG9yL2tzX3doaXRlIgogICAgICAgICAgICAg
+ICAgICAgICAgICBhbmRyb2lkOnRleHRTdHlsZT0iYm9sZCIKICAgICAgICAgICAgICAgICAgICAg
+ICAgYW5kcm9pZDp0ZXh0U2l6ZT0iMjVzcCIgLz4KCiAgICAgICAgICAgICAgICAgICAgPFRleHRW
+aWV3CiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6aWQ9IkAraWQvc2VyaWVzTWV0YSIK
+ICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVu
+dCIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSJ3cmFwX2Nv
+bnRlbnQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X21hcmdpblRvcD0i
+NmRwIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnRleHQ9IlNFQVNPTlMgJmFtcDsg
+RVBJU09ERVMiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dENvbG9yPSJAY29s
+b3Iva3NfbXV0ZWQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFN0eWxlPSJi
+b2xkIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnRleHRTaXplPSIxMXNwIiAvPgoK
+ICAgICAgICAgICAgICAgICAgICA8VGV4dFZpZXcKICAgICAgICAgICAgICAgICAgICAgICAgYW5k
+cm9pZDppZD0iQCtpZC9zZXJpZXNEZXNjcmlwdGlvbiIKICAgICAgICAgICAgICAgICAgICAgICAg
+YW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAgICAgICAgICAgICAg
+ICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSJ3cmFwX2NvbnRlbnQiCiAgICAgICAgICAgICAgICAg
+ICAgICAgIGFuZHJvaWQ6bGF5b3V0X21hcmdpblRvcD0iMTBkcCIKICAgICAgICAgICAgICAgICAg
+ICAgICAgYW5kcm9pZDp0ZXh0Q29sb3I9IkBjb2xvci9rc193aGl0ZSIKICAgICAgICAgICAgICAg
+ICAgICAgICAgYW5kcm9pZDp0ZXh0U2l6ZT0iMTNzcCIKICAgICAgICAgICAgICAgICAgICAgICAg
+YW5kcm9pZDpsaW5lU3BhY2luZ0V4dHJhPSIzZHAiIC8+CgogICAgICAgICAgICAgICAgICAgIDxU
+ZXh0VmlldyBhbmRyb2lkOmlkPSJAK2lkL3Nlcmllc0dlbnJlIiBzdHlsZT0iQHN0eWxlL01vdmll
+RmFjdCIgLz4KICAgICAgICAgICAgICAgICAgICA8VGV4dFZpZXcgYW5kcm9pZDppZD0iQCtpZC9z
+ZXJpZXNDYXN0IiBzdHlsZT0iQHN0eWxlL01vdmllRmFjdCIgLz4KICAgICAgICAgICAgICAgICAg
+ICA8VGV4dFZpZXcgYW5kcm9pZDppZD0iQCtpZC9zZXJpZXNEaXJlY3RvciIgc3R5bGU9IkBzdHls
+ZS9Nb3ZpZUZhY3QiIC8+CiAgICAgICAgICAgICAgICAgICAgPFRleHRWaWV3IGFuZHJvaWQ6aWQ9
+IkAraWQvc2VyaWVzUmVsZWFzZWQiIHN0eWxlPSJAc3R5bGUvTW92aWVGYWN0IiAvPgogICAgICAg
+ICAgICAgICAgICAgIDxUZXh0VmlldyBhbmRyb2lkOmlkPSJAK2lkL3Nlcmllc0xhc3RBaXIiIHN0
+eWxlPSJAc3R5bGUvTW92aWVGYWN0IiAvPgoKICAgICAgICAgICAgICAgICAgICA8TGluZWFyTGF5
+b3V0CiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9w
+YXJlbnQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iNDhk
+cCIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfbWFyZ2luVG9wPSIxMGRw
+IgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOm9yaWVudGF0aW9uPSJob3Jpem9udGFs
+IgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnBhZGRpbmdUb3A9IjNkcCIKICAgICAg
+ICAgICAgICAgICAgICAgICAgYW5kcm9pZDpwYWRkaW5nQm90dG9tPSIzZHAiCiAgICAgICAgICAg
+ICAgICAgICAgICAgIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0cnVlIgogICAgICAgICAgICAgICAg
+ICAgICAgICBhbmRyb2lkOmNsaXBUb1BhZGRpbmc9InRydWUiPgoKICAgICAgICAgICAgICAgICAg
+ICAgICAgPEJ1dHRvbgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtp
+ZC9zZXJpZXNUcmFpbGVyIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlv
+dXRfd2lkdGg9IjBkcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0
+X2hlaWdodD0ibWF0Y2hfcGFyZW50IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9p
+ZDpsYXlvdXRfd2VpZ2h0PSIxIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDps
+YXlvdXRfbWFyZ2luRW5kPSI0ZHAiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lk
+OnRleHQ9IlRSQUlMRVIiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnRleHRD
+b2xvcj0iQGNvbG9yL2tzX3doaXRlIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9p
+ZDp0ZXh0U3R5bGU9ImJvbGQiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnRl
+eHRTaXplPSI5c3AiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmdyYXZpdHk9
+ImNlbnRlciIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZz0iMGRw
+IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDptaW5IZWlnaHQ9IjBkcCIKICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6aW5jbHVkZUZvbnRQYWRkaW5nPSJmYWxz
+ZSIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6YmFja2dyb3VuZD0iQGRyYXdh
+YmxlL2JnX2J1dHRvbiIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dmlzaWJp
+bGl0eT0iZ29uZSIgLz4KCiAgICAgICAgICAgICAgICAgICAgICAgIDxCdXR0b24KICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6aWQ9IkAraWQvc2VyaWVzV2F0Y2hsaXN0IgogICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9IjBkcCIKICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0ibWF0Y2hfcGFyZW50
+IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2VpZ2h0PSIxIgog
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfbWFyZ2luU3RhcnQ9IjRk
+cCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dD0iTVkgU0VSSUVTIgog
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0Q29sb3I9IkBjb2xvci9rc193
+aGl0ZSIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFN0eWxlPSJib2xk
+IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0U2l6ZT0iOXNwIgogICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpncmF2aXR5PSJjZW50ZXIiCiAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnBhZGRpbmc9IjBkcCIKICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgIGFuZHJvaWQ6bWluSGVpZ2h0PSIwZHAiCiAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICBhbmRyb2lkOmluY2x1ZGVGb250UGFkZGluZz0iZmFsc2UiCiAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICBhbmRyb2lkOmJhY2tncm91bmQ9IkBkcmF3YWJsZS9iZ19idXR0b24iIC8+
+CiAgICAgICAgICAgICAgICAgICAgPC9MaW5lYXJMYXlvdXQ+CgogICAgICAgICAgICAgICAgICAg
+IDxMaW5lYXJMYXlvdXQKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9z
+ZXJpZXNSZWxhdGVkU2VjdGlvbiIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlv
+dXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDps
+YXlvdXRfaGVpZ2h0PSJ3cmFwX2NvbnRlbnQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJv
+aWQ6bGF5b3V0X21hcmdpblRvcD0iMTRkcCIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9p
+ZDpvcmllbnRhdGlvbj0idmVydGljYWwiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6
+Y2xpcENoaWxkcmVuPSJ0cnVlIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBU
+b1BhZGRpbmc9InRydWUiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dmlzaWJpbGl0
+eT0iZ29uZSI+CgogICAgICAgICAgICAgICAgICAgICAgICA8VGV4dFZpZXcKICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJ3cmFwX2NvbnRlbnQiCiAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IndyYXBfY29udGVu
+dCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dD0iTU9SRSBMSUtFIFRI
+SVMiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnRleHRDb2xvcj0iQGNvbG9y
+L2tzX3JlZCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFN0eWxlPSJi
+b2xkIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0U2l6ZT0iMTBzcCIg
+Lz4KCiAgICAgICAgICAgICAgICAgICAgICAgIDxIb3Jpem9udGFsU2Nyb2xsVmlldwogICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIK
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iMjQyZHAi
+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF9tYXJnaW5Ub3A9IjZk
+cCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6ZmlsbFZpZXdwb3J0PSJmYWxz
+ZSIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0cnVl
+IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpjbGlwVG9QYWRkaW5nPSJ0cnVl
+Ij4KCiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8TGluZWFyTGF5b3V0CiAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9zZXJpZXNSZWxhdGVkUm93Igog
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJ3cmFw
+X2NvbnRlbnQiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRf
+aGVpZ2h0PSJtYXRjaF9wYXJlbnQiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5k
+cm9pZDpvcmllbnRhdGlvbj0iaG9yaXpvbnRhbCIgLz4KICAgICAgICAgICAgICAgICAgICAgICAg
+PC9Ib3Jpem9udGFsU2Nyb2xsVmlldz4KICAgICAgICAgICAgICAgICAgICA8L0xpbmVhckxheW91
+dD4KICAgICAgICAgICAgICAgIDwvTGluZWFyTGF5b3V0PgogICAgICAgICAgICA8L1Njcm9sbFZp
+ZXc+CgogICAgICAgICAgICA8TGluZWFyTGF5b3V0CiAgICAgICAgICAgICAgICBhbmRyb2lkOmlk
+PSJAK2lkL3Nlcmllc0VwaXNvZGVQYW5lIgogICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRf
+d2lkdGg9IjBkcCIKICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0ibWF0Y2hf
+cGFyZW50IgogICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2VpZ2h0PSIxIgogICAgICAg
+ICAgICAgICAgYW5kcm9pZDpsYXlvdXRfbWFyZ2luU3RhcnQ9IjhkcCIKICAgICAgICAgICAgICAg
+IGFuZHJvaWQ6b3JpZW50YXRpb249InZlcnRpY2FsIgogICAgICAgICAgICAgICAgYW5kcm9pZDpw
+YWRkaW5nPSI2ZHAiCiAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBDaGlsZHJlbj0idHJ1ZSIK
+ICAgICAgICAgICAgICAgIGFuZHJvaWQ6Y2xpcFRvUGFkZGluZz0idHJ1ZSIKICAgICAgICAgICAg
+ICAgIGFuZHJvaWQ6ZWxldmF0aW9uPSIxMmRwIgogICAgICAgICAgICAgICAgYW5kcm9pZDp0cmFu
+c2xhdGlvblo9IjhkcCIKICAgICAgICAgICAgICAgIGFuZHJvaWQ6YmFja2dyb3VuZD0iQGRyYXdh
+YmxlL2JnX29mZmljaWFsX3BhbmVsIj4KCiAgICAgICAgICAgICAgICA8SG9yaXpvbnRhbFNjcm9s
+bFZpZXcKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0aD0ibWF0Y2hfcGFy
+ZW50IgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iNDhkcCIKICAg
+ICAgICAgICAgICAgICAgICBhbmRyb2lkOmZpbGxWaWV3cG9ydD0iZmFsc2UiCiAgICAgICAgICAg
+ICAgICAgICAgYW5kcm9pZDpjbGlwQ2hpbGRyZW49InRydWUiCiAgICAgICAgICAgICAgICAgICAg
+YW5kcm9pZDpjbGlwVG9QYWRkaW5nPSJ0cnVlIj4KCiAgICAgICAgICAgICAgICAgICAgPExpbmVh
+ckxheW91dAogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmlkPSJAK2lkL3Nlcmllc1Nl
+YXNvbkJhciIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9Indy
+YXBfY29udGVudCIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0
+PSJtYXRjaF9wYXJlbnQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6b3JpZW50YXRp
+b249Imhvcml6b250YWwiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Z3Jhdml0eT0i
+Y2VudGVyX3ZlcnRpY2FsIiAvPgogICAgICAgICAgICAgICAgPC9Ib3Jpem9udGFsU2Nyb2xsVmll
+dz4KCiAgICAgICAgICAgICAgICA8TGluZWFyTGF5b3V0CiAgICAgICAgICAgICAgICAgICAgYW5k
+cm9pZDppZD0iQCtpZC9zZXJpZXNDb250aW51ZVBhbmVsIgogICAgICAgICAgICAgICAgICAgIGFu
+ZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiCiAgICAgICAgICAgICAgICAgICAgYW5k
+cm9pZDpsYXlvdXRfaGVpZ2h0PSI2NGRwIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5
+b3V0X21hcmdpblRvcD0iMmRwIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6b3JpZW50YXRp
+b249InZlcnRpY2FsIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0
+cnVlIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Y2xpcFRvUGFkZGluZz0idHJ1ZSIKICAg
+ICAgICAgICAgICAgICAgICBhbmRyb2lkOmJhY2tncm91bmQ9IkBkcmF3YWJsZS9iZ19tb3ZpZV9k
+ZXRhaWxzX3BhbmVsIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dmlzaWJpbGl0eT0iaW52
+aXNpYmxlIj4KCiAgICAgICAgICAgICAgICAgICAgPFRleHRWaWV3CiAgICAgICAgICAgICAgICAg
+ICAgICAgIGFuZHJvaWQ6aWQ9IkAraWQvc2VyaWVzQ29udGludWVMYWJlbCIKICAgICAgICAgICAg
+ICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAg
+ICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSIyMGRwIgogICAgICAgICAgICAg
+ICAgICAgICAgICBhbmRyb2lkOmdyYXZpdHk9ImNlbnRlciIKICAgICAgICAgICAgICAgICAgICAg
+ICAgYW5kcm9pZDp0ZXh0QWxpZ25tZW50PSJjZW50ZXIiCiAgICAgICAgICAgICAgICAgICAgICAg
+IGFuZHJvaWQ6bWF4TGluZXM9IjEiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6ZWxs
+aXBzaXplPSJlbmQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ1N0YXJ0
+PSI2ZHAiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ0VuZD0iNmRwIgog
+ICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmluY2x1ZGVGb250UGFkZGluZz0iZmFsc2Ui
+CiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dENvbG9yPSJAY29sb3Iva3NfbXV0
+ZWQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFNpemU9IjEwc3AiIC8+Cgog
+ICAgICAgICAgICAgICAgICAgIDxMaW5lYXJMYXlvdXQKICAgICAgICAgICAgICAgICAgICAgICAg
+YW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAgICAgICAgICAgICAg
+ICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSI0MmRwIgogICAgICAgICAgICAgICAgICAgICAgICBh
+bmRyb2lkOm9yaWVudGF0aW9uPSJob3Jpem9udGFsIgogICAgICAgICAgICAgICAgICAgICAgICBh
+bmRyb2lkOmdyYXZpdHk9ImNlbnRlcl92ZXJ0aWNhbCIKICAgICAgICAgICAgICAgICAgICAgICAg
+YW5kcm9pZDpwYWRkaW5nVG9wPSIxZHAiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6
+cGFkZGluZ0JvdHRvbT0iM2RwIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBD
+aGlsZHJlbj0idHJ1ZSIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpjbGlwVG9QYWRk
+aW5nPSJ0cnVlIj4KCiAgICAgICAgICAgICAgICAgICAgICAgIDxCdXR0b24KICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgIGFuZHJvaWQ6aWQ9IkAraWQvc2VyaWVzQ29udGludWUiCiAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0aD0iMGRwIgogICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSJtYXRjaF9wYXJlbnQiCiAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93ZWlnaHQ9IjEiCiAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF9tYXJnaW5FbmQ9IjRkcCIKICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dD0iUkVTVU1FIgogICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0Q29sb3I9IkBjb2xvci9rc193aGl0ZSIKICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFN0eWxlPSJib2xkIgogICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0U2l6ZT0iMTBzcCIKICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgIGFuZHJvaWQ6Z3Jhdml0eT0iY2VudGVyIgogICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgYW5kcm9pZDp0ZXh0QWxpZ25tZW50PSJjZW50ZXIiCiAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICBhbmRyb2lkOm1heExpbmVzPSIyIgogICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgYW5kcm9pZDplbGxpcHNpemU9ImVuZCIKICAgICAgICAgICAgICAgICAgICAgICAgICAg
+IGFuZHJvaWQ6cGFkZGluZ1N0YXJ0PSI0ZHAiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBh
+bmRyb2lkOnBhZGRpbmdUb3A9IjBkcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJv
+aWQ6cGFkZGluZ0VuZD0iNGRwIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpw
+YWRkaW5nQm90dG9tPSIwZHAiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOm1p
+bkhlaWdodD0iMGRwIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppbmNsdWRl
+Rm9udFBhZGRpbmc9ImZhbHNlIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpi
+YWNrZ3JvdW5kPSJAZHJhd2FibGUvYmdfYnV0dG9uIiAvPgoKICAgICAgICAgICAgICAgICAgICAg
+ICAgPEJ1dHRvbgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9z
+ZXJpZXNOZXh0IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lk
+dGg9IjBkcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdo
+dD0ibWF0Y2hfcGFyZW50IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlv
+dXRfd2VpZ2h0PSIxIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRf
+bWFyZ2luU3RhcnQ9IjRkcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4
+dD0iTkVYVCBFUElTT0RFIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0
+Q29sb3I9IkBjb2xvci9rc193aGl0ZSIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJv
+aWQ6dGV4dFN0eWxlPSJib2xkIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0
+ZXh0U2l6ZT0iMTBzcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Z3Jhdml0
+eT0iY2VudGVyIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0QWxpZ25t
+ZW50PSJjZW50ZXIiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOm1heExpbmVz
+PSIyIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDplbGxpcHNpemU9ImVuZCIK
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ1N0YXJ0PSI0ZHAiCiAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnBhZGRpbmdUb3A9IjBkcCIKICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ0VuZD0iNGRwIgogICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgYW5kcm9pZDpwYWRkaW5nQm90dG9tPSIwZHAiCiAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICBhbmRyb2lkOm1pbkhlaWdodD0iMGRwIgogICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgYW5kcm9pZDppbmNsdWRlRm9udFBhZGRpbmc9ImZhbHNlIgogICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgYW5kcm9pZDpiYWNrZ3JvdW5kPSJAZHJhd2FibGUvYmdfYnV0dG9u
+IiAvPgogICAgICAgICAgICAgICAgICAgIDwvTGluZWFyTGF5b3V0PgogICAgICAgICAgICAgICAg
+PC9MaW5lYXJMYXlvdXQ+CgogICAgICAgICAgICAgICAgPFRleHRWaWV3CiAgICAgICAgICAgICAg
+ICAgICAgYW5kcm9pZDppZD0iQCtpZC9lcGlzb2RlQ291bnQiCiAgICAgICAgICAgICAgICAgICAg
+YW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAgICAgICAgICAgICBh
+bmRyb2lkOmxheW91dF9oZWlnaHQ9IjI2ZHAiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpn
+cmF2aXR5PSJjZW50ZXJfdmVydGljYWwiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDptYXhM
+aW5lcz0iMSIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmVsbGlwc2l6ZT0iZW5kIgogICAg
+ICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dD0iTG9hZGluZyBlcGlzb2Rlc+KApiIKICAgICAg
+ICAgICAgICAgICAgICBhbmRyb2lkOnRleHRDb2xvcj0iQGNvbG9yL2tzX3doaXRlIgogICAgICAg
+ICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFN0eWxlPSJib2xkIgogICAgICAgICAgICAgICAgICAg
+IGFuZHJvaWQ6dGV4dFNpemU9IjExc3AiIC8+CgogICAgICAgICAgICAgICAgPFByb2dyZXNzQmFy
+CiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9zZXJpZXNQcm9ncmVzcyIKICAg
+ICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0aD0iMzJkcCIKICAgICAgICAgICAg
+ICAgICAgICBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjMyZHAiCiAgICAgICAgICAgICAgICAgICAg
+YW5kcm9pZDpsYXlvdXRfZ3Jhdml0eT0iY2VudGVyX2hvcml6b250YWwiIC8+CgogICAgICAgICAg
+ICAgICAgPFRleHRWaWV3CiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9zZXJp
+ZXNFbXB0eSIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0aD0ibWF0Y2hf
+cGFyZW50IgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0id3JhcF9j
+b250ZW50IgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZz0iMTJkcCIKICAgICAg
+ICAgICAgICAgICAgICBhbmRyb2lkOmdyYXZpdHk9ImNlbnRlciIKICAgICAgICAgICAgICAgICAg
+ICBhbmRyb2lkOnRleHRDb2xvcj0iQGNvbG9yL2tzX211dGVkIgogICAgICAgICAgICAgICAgICAg
+IGFuZHJvaWQ6dmlzaWJpbGl0eT0iZ29uZSIgLz4KCiAgICAgICAgICAgICAgICA8R3JpZFZpZXcK
+ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmlkPSJAK2lkL2VwaXNvZGVMaXN0IgogICAgICAg
+ICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiCiAgICAgICAg
+ICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSIwZHAiCiAgICAgICAgICAgICAgICAg
+ICAgYW5kcm9pZDpsYXlvdXRfd2VpZ2h0PSIxIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6
+bGF5b3V0X21hcmdpblRvcD0iMmRwIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bnVtQ29s
+dW1ucz0iMyIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmhvcml6b250YWxTcGFjaW5nPSI2
+ZHAiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp2ZXJ0aWNhbFNwYWNpbmc9IjZkcCIKICAg
+ICAgICAgICAgICAgICAgICBhbmRyb2lkOnN0cmV0Y2hNb2RlPSJjb2x1bW5XaWR0aCIKICAgICAg
+ICAgICAgICAgICAgICBhbmRyb2lkOmdyYXZpdHk9ImNlbnRlciIKICAgICAgICAgICAgICAgICAg
+ICBhbmRyb2lkOmNob2ljZU1vZGU9InNpbmdsZUNob2ljZSIKICAgICAgICAgICAgICAgICAgICBh
+bmRyb2lkOnBhZGRpbmc9IjRkcCIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBDaGls
+ZHJlbj0idHJ1ZSIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBUb1BhZGRpbmc9InRy
+dWUiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpiYWNrZ3JvdW5kPSJAYW5kcm9pZDpjb2xv
+ci90cmFuc3BhcmVudCIgLz4KICAgICAgICAgICAgPC9MaW5lYXJMYXlvdXQ+CiAgICAgICAgPC9M
+aW5lYXJMYXlvdXQ+CiAgICA8L0xpbmVhckxheW91dD4KPC9GcmFtZUxheW91dD4K
+:::END SERIESLANDLOCKLAYOUT
