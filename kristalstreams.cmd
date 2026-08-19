@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Compact Episodes 1682028
+title KS Series Landscape Poster Lock 1682029
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksseriescompactepisodes-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-COMPACT-EPISODES-1682028.apk"
-set "LOG=%TEMP%\ks-series-compact-episodes-1682028-build.txt"
+set "WORK=C:\ksserieslandscapeposterlock-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-POSTER-LOCK-1682029.apk"
+set "LOG=%TEMP%\ks-series-landscape-poster-lock-1682029-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES COMPACT EPISODES
-echo   FRESH APK: KS-SERIES-COMPACT-EPISODES-1682028.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE POSTER LOCK
+echo   FRESH APK: KS-SERIES-LANDSCAPE-POSTER-LOCK-1682029.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -41,6 +41,7 @@ echo Adds extra bottom padding beneath the Choose-an-episode red button.
 echo Restores the full Season box directly beneath the red button.
 echo Moves Season 1 above the Continue and Next panel so it opens above the fold.
 echo Shows episodes as smaller two-column portrait and three-column landscape cards.
+echo Locks the mobile-landscape poster inside its left details pane after loading.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -53,7 +54,7 @@ if not exist "%SOURCE%\gradlew.bat" (
     exit /b 1
 )
 
-echo [1/13] Creating a brand-new working copy...
+echo [1/14] Creating a brand-new working copy...
 mkdir "%WORK%" >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Could not create:
@@ -70,7 +71,7 @@ if %RC% GEQ 8 (
     exit /b %RC%
 )
 
-echo [2/13] Installing verified 1682020 baseline and complete Series upgrade...
+echo [2/14] Installing verified 1682020 baseline and complete Series upgrade...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt',(B 'MODELS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\XtreamClient.kt',(B 'XTREAM')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\GuideActivity.kt',(B 'GUIDE')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt',(B 'ADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\UiContrastProvider.kt',(B 'UICONTEXT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt',(B 'IMMERSIVE')); [IO.File]::WriteAllBytes('%WORK%\app\build.gradle.kts',(B 'GRADLE')); [IO.File]::WriteAllBytes('%WORK%\REFERENCE-EPG-AUDIT.txt',(B 'AUDIT')); [IO.File]::WriteAllBytes('%WORK%\apply-ui-contrast.ps1',(B 'UIPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\LibraryActivity.kt',(B 'LIBRARY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MediaGridAdapter.kt',(B 'MEDIAADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieDetailsActivity.kt',(B 'MOVIEDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_details.xml',(B 'MOVIELAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_details.xml',(B 'MOVIELAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_details_panel.xml',(B 'MOVIEPANEL')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_fact.xml',(B 'MOVIEFACT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\values\movie_styles.xml',(B 'MOVIESTYLES')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlist.kt',(B 'WATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlistActivity.kt',(B 'WATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\ContinueWatching.kt',(B 'CONTINUEWATCHING')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlayerActivity.kt',(B 'PLAYER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_library.xml',(B 'LIBRARYLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_library.xml',(B 'LIBRARYLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_player.xml',(B 'PLAYERLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt',(B 'SERIESDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpisodeListAdapter.kt',(B 'EPISODEADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlist.kt',(B 'SERIESWATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlistActivity.kt',(B 'SERIESWATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesHistory.kt',(B 'SERIESHISTORY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_details.xml',(B 'SERIESLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_details.xml',(B 'SERIESLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\row_episode_modern.xml',(B 'EPISODEROW')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUTLAND'))"
 if errorlevel 1 (
@@ -87,7 +88,7 @@ if errorlevel 1 (
 )
 del /q "%WORK%\apply-ui-contrast.ps1" >nul 2>&1
 
-echo [3/13] Applying final Series Details layout measurements...
+echo [3/14] Applying final Series Details layout measurements...
 set "LAYOUTPS=%TEMP%\ks-series-layout-fix-1682022.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'LAYOUTPATCH'; $b=':::END '+'LAYOUTPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%LAYOUTPS%',[Convert]::FromBase64String($x))"
@@ -104,7 +105,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [4/13] Constraining all Series text inside its box...
+echo [4/14] Constraining all Series text inside its box...
 set "TEXTFITPS=%TEMP%\ks-series-text-fit-1682023.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'TEXTFITPATCH'; $b=':::END '+'TEXTFITPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing text-fit patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing text-fit patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%TEXTFITPS%',[Convert]::FromBase64String($x))"
@@ -121,7 +122,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [5/13] Restoring full red-button visibility and bottom clearance...
+echo [5/14] Restoring full red-button visibility and bottom clearance...
 set "BUTTONPS=%TEMP%\ks-series-button-clearance-1682024.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'BUTTONPATCH'; $b=':::END '+'BUTTONPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing button-clearance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing button-clearance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%BUTTONPS%',[Convert]::FromBase64String($x))"
@@ -138,7 +139,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [6/13] Adding extra space beneath the red episode button...
+echo [6/14] Adding extra space beneath the red episode button...
 set "PADDINGPS=%TEMP%\ks-series-button-padding-1682025.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'PADDINGPATCH'; $b=':::END '+'PADDINGPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing bottom-padding patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing bottom-padding patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%PADDINGPS%',[Convert]::FromBase64String($x))"
@@ -155,7 +156,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [7/13] Rebalancing the red-button panel and Season box...
+echo [7/14] Rebalancing the red-button panel and Season box...
 set "REBALANCEPS=%TEMP%\ks-series-layout-rebalance-1682026.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'REBALANCEPATCH'; $b=':::END '+'REBALANCEPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout-rebalance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout-rebalance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%REBALANCEPS%',[Convert]::FromBase64String($x))"
@@ -172,7 +173,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [8/13] Moving Season 1 above the fold...
+echo [8/14] Moving Season 1 above the fold...
 set "ABOVEFOLDPS=%TEMP%\ks-series-season-above-fold-1682027.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'ABOVEFOLDPATCH'; $b=':::END '+'ABOVEFOLDPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing above-fold patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing above-fold patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%ABOVEFOLDPS%',[Convert]::FromBase64String($x))"
@@ -189,7 +190,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [9/13] Installing the compact episode-card grid...
+echo [9/14] Installing the compact episode-card grid...
 set "GRIDPS=%TEMP%\ks-series-compact-episodes-1682028.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%GRIDPS%',(B 'GRIDPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\row_episode_modern.xml',(B 'COMPACTEPISODEROW'))"
@@ -206,15 +207,32 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
+echo [10/14] Locking the landscape poster inside its details pane...
+set "POSTERLOCKPS=%TEMP%\ks-series-landscape-poster-lock-1682029.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682028').Replace('1.6.8-series-complete','1.6.8-series-compact-episodes'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'POSTERLOCKPATCH'; $b=':::END '+'POSTERLOCKPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing poster-lock patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing poster-lock patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%POSTERLOCKPS%',[Convert]::FromBase64String($x))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682028 application version.
+    echo ERROR: Could not extract the landscape poster-lock correction.
+    pause
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%POSTERLOCKPS%" -ProjectRoot "%WORK%"
+set "RC=%ERRORLEVEL%"
+del /q "%POSTERLOCKPS%" >nul 2>&1
+if not "%RC%"=="0" (
+    echo ERROR: The landscape poster-lock correction could not be applied safely.
+    pause
+    exit /b %RC%
+)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682029').Replace('1.6.8-series-complete','1.6.8-series-landscape-poster-lock'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+if errorlevel 1 (
+    echo ERROR: Could not set the new 1682029 application version.
     pause
     exit /b 1
 )
 
-echo [10/13] Verifying the compact episode grid...
+echo [11/14] Verifying the protected landscape layout...
 findstr /c:"epgChannelId" "%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt" >nul
 if errorlevel 1 (
     echo ERROR: Channel EPG ID verification failed.
@@ -617,9 +635,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682028" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682029" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682028 application version verification failed.
+    echo ERROR: New 1682029 application version verification failed.
     pause
     exit /b 1
 )
@@ -721,8 +739,26 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+findstr /c:"android:layout_width=\"280dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Bounded landscape details-pane verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:maxWidth=\"180dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Bounded landscape poster verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:elevation=\"2dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Protected episode-pane layering verification failed.
+    pause
+    exit /b 1
+)
 
-echo [11/13] Preparing Windows Android build tools...
+echo [12/14] Preparing Windows Android build tools...
 set "ANDROID_SDK=%LOCALAPPDATA%\Android\Sdk"
 if not exist "%ANDROID_SDK%\platforms" (
     echo ERROR: Android SDK not found:
@@ -761,7 +797,7 @@ exit /b 1
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo.
-echo [12/13] Building corrected Series APK...
+echo [13/14] Building corrected Series APK...
 echo Gradle progress will appear below.
 echo.
 
@@ -802,7 +838,7 @@ if not exist "%BUILT%" (
 )
 
 echo.
-echo [13/13] Copying finished APK...
+echo [14/14] Copying finished APK...
 copy /Y "%BUILT%" "%FINAL%" >nul
 if errorlevel 1 (
     echo ERROR: Could not copy APK to Downloads.
@@ -815,7 +851,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-COMPACT-EPISODES-1682028.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-POSTER-LOCK-1682029.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -824,7 +860,7 @@ cls
 echo.
 echo ==========================================================
 echo.
-echo       KS SERIES COMPACT-EPISODES BUILD SUCCESSFUL
+echo       KS SERIES LANDSCAPE POSTER-LOCK BUILD SUCCESSFUL
 echo.
 echo ==========================================================
 echo.
@@ -838,7 +874,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-COMPACT-EPISODES-1682028.apk shown above.
+echo Install only KS-SERIES-LANDSCAPE-POSTER-LOCK-1682029.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -6116,3 +6152,63 @@ dF9tYXJnaW5Ub3A9IjJkcCIKICAgICAgICBhbmRyb2lkOm1heD0iMTAwIgogICAgICAgIGFuZHJv
 aWQ6cHJvZ3Jlc3NUaW50PSJAY29sb3Iva3NfcmVkIgogICAgICAgIGFuZHJvaWQ6dmlzaWJpbGl0
 eT0iZ29uZSIgLz4KPC9MaW5lYXJMYXlvdXQ+Cg==
 :::END COMPACTEPISODEROW
+
+:::BEGIN POSTERLOCKPATCH
+cGFyYW0oCiAgICBbUGFyYW1ldGVyKE1hbmRhdG9yeSA9ICR0cnVlKV1bc3RyaW5nXSRQcm9qZWN0
+Um9vdAopCgokRXJyb3JBY3Rpb25QcmVmZXJlbmNlID0gJ1N0b3AnCgpmdW5jdGlvbiBSZXBsYWNl
+LVJlcXVpcmVkIHsKICAgIHBhcmFtKFtzdHJpbmddJFBhdGgsIFtzdHJpbmddJE9sZCwgW3N0cmlu
+Z10kTmV3LCBbc3RyaW5nXSRMYWJlbCkKICAgICRjb250ZW50ID0gW0lPLkZpbGVdOjpSZWFkQWxs
+VGV4dCgkUGF0aCkKICAgIGlmICgtbm90ICRjb250ZW50LkNvbnRhaW5zKCRPbGQpKSB7IHRocm93
+ICJDb3VsZCBub3QgZmluZCBleHBlY3RlZCAkTGFiZWwgaW4gJFBhdGgiIH0KICAgIFtJTy5GaWxl
+XTo6V3JpdGVBbGxUZXh0KCRQYXRoLCAkY29udGVudC5SZXBsYWNlKCRPbGQsICROZXcpLCBbVGV4
+dC5VVEY4RW5jb2RpbmddOjpuZXcoJGZhbHNlKSkKfQoKJGxhbmRzY2FwZSA9IEpvaW4tUGF0aCAk
+UHJvamVjdFJvb3QgJ2FwcFxzcmNcbWFpblxyZXNcbGF5b3V0LWxhbmRcYWN0aXZpdHlfc2VyaWVz
+X2RldGFpbHMueG1sJwoKUmVwbGFjZS1SZXF1aXJlZCAkbGFuZHNjYXBlICc8TGluZWFyTGF5b3V0
+IGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdo
+dD0iMGRwIiBhbmRyb2lkOmxheW91dF93ZWlnaHQ9IjEiIGFuZHJvaWQ6b3JpZW50YXRpb249Imhv
+cml6b250YWwiIGFuZHJvaWQ6cGFkZGluZz0iMTJkcCI+JyAnPExpbmVhckxheW91dCBhbmRyb2lk
+OmxheW91dF93aWR0aD0ibWF0Y2hfcGFyZW50IiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjBkcCIg
+YW5kcm9pZDpsYXlvdXRfd2VpZ2h0PSIxIiBhbmRyb2lkOm9yaWVudGF0aW9uPSJob3Jpem9udGFs
+IiBhbmRyb2lkOnBhZGRpbmc9IjEyZHAiIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0cnVlIiBhbmRy
+b2lkOmNsaXBUb1BhZGRpbmc9InRydWUiPicgJ2xhbmRzY2FwZSBzcGxpdC1wYW5lIGNsaXBwaW5n
+JwoKUmVwbGFjZS1SZXF1aXJlZCAkbGFuZHNjYXBlICc8U2Nyb2xsVmlldyBhbmRyb2lkOmxheW91
+dF93aWR0aD0iMzIwZHAiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0ibWF0Y2hfcGFyZW50IiBhbmRy
+b2lkOmZpbGxWaWV3cG9ydD0idHJ1ZSIgYW5kcm9pZDpiYWNrZ3JvdW5kPSJAZHJhd2FibGUvYmdf
+bW92aWVfZGV0YWlsc19wYW5lbCI+JyAnPFNjcm9sbFZpZXcgYW5kcm9pZDpsYXlvdXRfd2lkdGg9
+IjI4MGRwIiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9Im1hdGNoX3BhcmVudCIgYW5kcm9pZDpmaWxs
+Vmlld3BvcnQ9InRydWUiIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0cnVlIiBhbmRyb2lkOmNsaXBU
+b1BhZGRpbmc9InRydWUiIGFuZHJvaWQ6b3ZlclNjcm9sbE1vZGU9Im5ldmVyIiBhbmRyb2lkOmJh
+Y2tncm91bmQ9IkBkcmF3YWJsZS9iZ19tb3ZpZV9kZXRhaWxzX3BhbmVsIj4nICdib3VuZGVkIGxh
+bmRzY2FwZSBkZXRhaWxzIHBhbmUnCgpSZXBsYWNlLVJlcXVpcmVkICRsYW5kc2NhcGUgJzxMaW5l
+YXJMYXlvdXQgYW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIgYW5kcm9pZDpsYXlv
+dXRfaGVpZ2h0PSJ3cmFwX2NvbnRlbnQiIGFuZHJvaWQ6b3JpZW50YXRpb249InZlcnRpY2FsIiBh
+bmRyb2lkOmdyYXZpdHk9ImNlbnRlcl9ob3Jpem9udGFsIj4nICc8TGluZWFyTGF5b3V0IGFuZHJv
+aWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0id3Jh
+cF9jb250ZW50IiBhbmRyb2lkOm9yaWVudGF0aW9uPSJ2ZXJ0aWNhbCIgYW5kcm9pZDpncmF2aXR5
+PSJjZW50ZXJfaG9yaXpvbnRhbCIgYW5kcm9pZDpjbGlwQ2hpbGRyZW49InRydWUiIGFuZHJvaWQ6
+Y2xpcFRvUGFkZGluZz0idHJ1ZSI+JyAnbGFuZHNjYXBlIHBvc3RlciBjb250YWluZXIgY2xpcHBp
+bmcnCgpSZXBsYWNlLVJlcXVpcmVkICRsYW5kc2NhcGUgJzxJbWFnZVZpZXcgYW5kcm9pZDppZD0i
+QCtpZC9zZXJpZXNIZWFkZXJJY29uIiBhbmRyb2lkOmxheW91dF93aWR0aD0iMjEwZHAiIGFuZHJv
+aWQ6bGF5b3V0X2hlaWdodD0iMzAwZHAiIGFuZHJvaWQ6c2NhbGVUeXBlPSJjZW50ZXJDcm9wIiBh
+bmRyb2lkOmJhY2tncm91bmQ9IkBkcmF3YWJsZS9iZ19wb3N0ZXJfZnJhbWUiIGFuZHJvaWQ6Y29u
+dGVudERlc2NyaXB0aW9uPSJTZXJpZXMgYXJ0d29yayIvPicgJzxJbWFnZVZpZXcgYW5kcm9pZDpp
+ZD0iQCtpZC9zZXJpZXNIZWFkZXJJY29uIiBhbmRyb2lkOmxheW91dF93aWR0aD0iMTgwZHAiIGFu
+ZHJvaWQ6bGF5b3V0X2hlaWdodD0iMjUwZHAiIGFuZHJvaWQ6bWF4V2lkdGg9IjE4MGRwIiBhbmRy
+b2lkOm1heEhlaWdodD0iMjUwZHAiIGFuZHJvaWQ6YWRqdXN0Vmlld0JvdW5kcz0iZmFsc2UiIGFu
+ZHJvaWQ6Y3JvcFRvUGFkZGluZz0idHJ1ZSIgYW5kcm9pZDpzY2FsZVR5cGU9ImNlbnRlckNyb3Ai
+IGFuZHJvaWQ6YmFja2dyb3VuZD0iQGRyYXdhYmxlL2JnX3Bvc3Rlcl9mcmFtZSIgYW5kcm9pZDpj
+b250ZW50RGVzY3JpcHRpb249IlNlcmllcyBhcnR3b3JrIi8+JyAnYm91bmRlZCBsYW5kc2NhcGUg
+c2VyaWVzIHBvc3RlcicKClJlcGxhY2UtUmVxdWlyZWQgJGxhbmRzY2FwZSAnPExpbmVhckxheW91
+dCBhbmRyb2lkOmxheW91dF93aWR0aD0iMGRwIiBhbmRyb2lkOmxheW91dF9oZWlnaHQ9Im1hdGNo
+X3BhcmVudCIgYW5kcm9pZDpsYXlvdXRfd2VpZ2h0PSIxIiBhbmRyb2lkOmxheW91dF9tYXJnaW5T
+dGFydD0iMTJkcCIgYW5kcm9pZDpvcmllbnRhdGlvbj0idmVydGljYWwiIGFuZHJvaWQ6cGFkZGlu
+Zz0iOGRwIiBhbmRyb2lkOmJhY2tncm91bmQ9IkBkcmF3YWJsZS9iZ19vZmZpY2lhbF9wYW5lbCI+
+JyAnPExpbmVhckxheW91dCBhbmRyb2lkOmxheW91dF93aWR0aD0iMGRwIiBhbmRyb2lkOmxheW91
+dF9oZWlnaHQ9Im1hdGNoX3BhcmVudCIgYW5kcm9pZDpsYXlvdXRfd2VpZ2h0PSIxIiBhbmRyb2lk
+OmxheW91dF9tYXJnaW5TdGFydD0iMTJkcCIgYW5kcm9pZDpvcmllbnRhdGlvbj0idmVydGljYWwi
+IGFuZHJvaWQ6cGFkZGluZz0iOGRwIiBhbmRyb2lkOmNsaXBDaGlsZHJlbj0idHJ1ZSIgYW5kcm9p
+ZDpjbGlwVG9QYWRkaW5nPSJ0cnVlIiBhbmRyb2lkOmVsZXZhdGlvbj0iMmRwIiBhbmRyb2lkOmJh
+Y2tncm91bmQ9IkBkcmF3YWJsZS9iZ19vZmZpY2lhbF9wYW5lbCI+JyAncHJvdGVjdGVkIGxhbmRz
+Y2FwZSBlcGlzb2RlIHBhbmUnCgpXcml0ZS1Ib3N0ICdMYW5kc2NhcGUgc2VyaWVzIHBvc3RlciBp
+cyBsb2NrZWQgaW5zaWRlIHRoZSBsZWZ0IGRldGFpbHMgcGFuZS4nCg==
+:::END POSTERLOCKPATCH
