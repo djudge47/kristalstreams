@@ -251,7 +251,7 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"view.player?.volume = 1f" "%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt" >nul
+findstr /c:"player.volume = 1f" "%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt" >nul
 if errorlevel 1 (
     echo ERROR: Player audio restoration verification failed.
     pause
