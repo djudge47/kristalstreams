@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Landscape Spacing Verify 1682040
+title KS Series Landscape Full Controls 1682041
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksserieslandscapespacingverify-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-SPACING-VERIFY-1682040.apk"
-set "LOG=%TEMP%\ks-series-landscape-spacing-verify-1682040-build.txt"
+set "WORK=C:\ksserieslandscapefullcontrols-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-FULL-CONTROLS-1682041.apk"
+set "LOG=%TEMP%\ks-series-landscape-full-controls-1682041-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE SPACING VERIFY
-echo   FRESH APK: KS-SERIES-LANDSCAPE-SPACING-VERIFY-1682040.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE FULL CONTROLS
+echo   FRESH APK: KS-SERIES-LANDSCAPE-FULL-CONTROLS-1682041.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -43,14 +43,14 @@ echo Moves Season 1 above the Continue and Next panel so it opens above the fold
 echo Shows episodes as smaller two-column portrait and three-column landscape cards.
 echo Locks the mobile-landscape poster inside its left details pane after loading.
 echo Keeps the related-series slider out of the mobile landscape episode pane.
-echo Uses a compact 68dp mobile-landscape control panel so episodes always begin below it.
+echo Uses a full 88dp landscape control panel with a 54dp button row so episodes always begin below it.
 echo Shortens the prompt to Choose an episode so it cannot overflow.
 echo Verifies the two-column mobile portrait layout remains protected.
 echo Verifies the three-column Smart TV/box layout and related-Series section remain available.
 echo Expands the full portrait episode grid before More Like This begins.
 echo Prevents episode cards and related-Series cards from sharing the same screen space.
 echo Matches multiline Series source blocks regardless of Windows or Unix line endings.
-echo Adds breathing room between mobile-landscape controls, labels, and episode cards.
+echo Shows the complete landscape Resume and NEXT episode controls without vertical clipping.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -251,8 +251,8 @@ if not "%RC%"=="0" (
     exit /b %RC%
 )
 
-echo [12/16] Spacing every mobile-landscape Series control and episode card...
-set "OVERLAPPS=%TEMP%\ks-series-landscape-spacing-verify-1682040.ps1"
+echo [12/16] Installing full-height landscape Resume and Next controls...
+set "OVERLAPPS=%TEMP%\ks-series-landscape-full-controls-1682041.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'OVERLAPPATCHPS1'; $b=':::END '+'OVERLAPPATCHPS1'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing episode-overlap patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing episode-overlap patch end'}; [IO.File]::WriteAllText('%OVERLAPPS%',$raw.Substring($s,$e-$s).TrimStart([char]13,[char]10),[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
@@ -270,9 +270,9 @@ if not "%RC%"=="0" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682040').Replace('1.6.8-series-complete','1.6.8-series-landscape-spacing-verify'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682041').Replace('1.6.8-series-complete','1.6.8-series-landscape-full-controls'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682040 application version.
+    echo ERROR: Could not set the new 1682041 application version.
     pause
     exit /b 1
 )
@@ -680,9 +680,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682040" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682041" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682040 application version verification failed.
+    echo ERROR: New 1682041 application version verification failed.
     pause
     exit /b 1
 )
@@ -703,6 +703,12 @@ findstr /c:"android:nestedScrollingEnabled=\"false\"" "%WORK%\app\src\main\res\l
 
 if errorlevel 1 (
     echo ERROR: Portrait episode-grid boundary verification failed.
+    pause
+    exit /b 1
+)
+findstr /c:"android:layout_height=\"54dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+if errorlevel 1 (
+    echo ERROR: Full landscape Resume and Next button-row verification failed.
     pause
     exit /b 1
 )
@@ -858,7 +864,7 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"android:layout_height=\"76dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+findstr /c:"android:layout_height=\"88dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
 if errorlevel 1 (
     echo ERROR: Stable landscape Choose Episode-panel verification failed.
     pause
@@ -1043,7 +1049,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-SPACING-VERIFY-1682040.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-FULL-CONTROLS-1682041.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -1066,7 +1072,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-LANDSCAPE-SPACING-VERIFY-1682040.apk shown above.
+echo Install only KS-SERIES-LANDSCAPE-FULL-CONTROLS-1682041.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -1177,7 +1183,6 @@ $newLandscapeControls = @'
                 }
             }
             (panel.layoutParams as? LinearLayout.LayoutParams)?.let { params ->
-                params.height = 68.dp
                 params.topMargin = 6.dp
                 params.bottomMargin = 10.dp
                 panel.layoutParams = params
@@ -1192,11 +1197,6 @@ $newLandscapeControls = @'
             list.horizontalSpacing = 8.dp
             list.verticalSpacing = 10.dp
             list.setPadding(6.dp, 6.dp, 6.dp, 10.dp)
-            continueLabel.layoutParams = continueLabel.layoutParams.apply { height = 18.dp }
-            (continueButton.parent as? View)?.let { buttonRow ->
-                buttonRow.layoutParams = buttonRow.layoutParams.apply { height = 38.dp }
-                buttonRow.setPadding(buttonRow.paddingLeft, 0, buttonRow.paddingRight, 8.dp)
-            }
         }
 '@
 Replace-Required $activity $oldLandscapeControls $newLandscapeControls 'phone-landscape Choose Episode clearance'
@@ -6809,108 +6809,109 @@ Y2VudGVyX3ZlcnRpY2FsIiAvPgogICAgICAgICAgICAgICAgPC9Ib3Jpem9udGFsU2Nyb2xsVmll
 dz4KCiAgICAgICAgICAgICAgICA8TGluZWFyTGF5b3V0CiAgICAgICAgICAgICAgICAgICAgYW5k
 cm9pZDppZD0iQCtpZC9zZXJpZXNDb250aW51ZVBhbmVsIgogICAgICAgICAgICAgICAgICAgIGFu
 ZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiCiAgICAgICAgICAgICAgICAgICAgYW5k
-cm9pZDpsYXlvdXRfaGVpZ2h0PSI3NmRwIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5
-b3V0X21hcmdpblRvcD0iMmRwIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6b3JpZW50YXRp
-b249InZlcnRpY2FsIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0
-cnVlIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Y2xpcFRvUGFkZGluZz0idHJ1ZSIKICAg
-ICAgICAgICAgICAgICAgICBhbmRyb2lkOmJhY2tncm91bmQ9IkBkcmF3YWJsZS9iZ19tb3ZpZV9k
-ZXRhaWxzX3BhbmVsIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dmlzaWJpbGl0eT0iaW52
-aXNpYmxlIj4KCiAgICAgICAgICAgICAgICAgICAgPFRleHRWaWV3CiAgICAgICAgICAgICAgICAg
-ICAgICAgIGFuZHJvaWQ6aWQ9IkAraWQvc2VyaWVzQ29udGludWVMYWJlbCIKICAgICAgICAgICAg
-ICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAg
-ICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSIyNGRwIgogICAgICAgICAgICAg
-ICAgICAgICAgICBhbmRyb2lkOmdyYXZpdHk9ImNlbnRlciIKICAgICAgICAgICAgICAgICAgICAg
-ICAgYW5kcm9pZDp0ZXh0QWxpZ25tZW50PSJjZW50ZXIiCiAgICAgICAgICAgICAgICAgICAgICAg
-IGFuZHJvaWQ6bWF4TGluZXM9IjEiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6ZWxs
-aXBzaXplPSJlbmQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ1N0YXJ0
-PSI2ZHAiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ0VuZD0iNmRwIgog
-ICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmluY2x1ZGVGb250UGFkZGluZz0iZmFsc2Ui
-CiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dENvbG9yPSJAY29sb3Iva3NfbXV0
-ZWQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFNpemU9IjEwc3AiIC8+Cgog
-ICAgICAgICAgICAgICAgICAgIDxMaW5lYXJMYXlvdXQKICAgICAgICAgICAgICAgICAgICAgICAg
-YW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAgICAgICAgICAgICAg
-ICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSI1MGRwIgogICAgICAgICAgICAgICAgICAgICAgICBh
-bmRyb2lkOm9yaWVudGF0aW9uPSJob3Jpem9udGFsIgogICAgICAgICAgICAgICAgICAgICAgICBh
-bmRyb2lkOmdyYXZpdHk9ImNlbnRlcl92ZXJ0aWNhbCIKICAgICAgICAgICAgICAgICAgICAgICAg
-YW5kcm9pZDpwYWRkaW5nVG9wPSIxZHAiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6
-cGFkZGluZ0JvdHRvbT0iN2RwIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBD
-aGlsZHJlbj0idHJ1ZSIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpjbGlwVG9QYWRk
-aW5nPSJ0cnVlIj4KCiAgICAgICAgICAgICAgICAgICAgICAgIDxCdXR0b24KICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgIGFuZHJvaWQ6aWQ9IkAraWQvc2VyaWVzQ29udGludWUiCiAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0aD0iMGRwIgogICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSJtYXRjaF9wYXJlbnQiCiAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93ZWlnaHQ9IjEiCiAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF9tYXJnaW5FbmQ9IjRkcCIKICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dD0iUkVTVU1FIgogICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0Q29sb3I9IkBjb2xvci9rc193aGl0ZSIKICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFN0eWxlPSJib2xkIgogICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0U2l6ZT0iMTBzcCIKICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgIGFuZHJvaWQ6Z3Jhdml0eT0iY2VudGVyIgogICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgYW5kcm9pZDp0ZXh0QWxpZ25tZW50PSJjZW50ZXIiCiAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICBhbmRyb2lkOm1heExpbmVzPSIyIgogICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgYW5kcm9pZDplbGxpcHNpemU9ImVuZCIKICAgICAgICAgICAgICAgICAgICAgICAgICAg
-IGFuZHJvaWQ6cGFkZGluZ1N0YXJ0PSI0ZHAiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBh
-bmRyb2lkOnBhZGRpbmdUb3A9IjBkcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJv
-aWQ6cGFkZGluZ0VuZD0iNGRwIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpw
-YWRkaW5nQm90dG9tPSIwZHAiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOm1p
-bkhlaWdodD0iMGRwIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppbmNsdWRl
-Rm9udFBhZGRpbmc9ImZhbHNlIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpi
-YWNrZ3JvdW5kPSJAZHJhd2FibGUvYmdfYnV0dG9uIiAvPgoKICAgICAgICAgICAgICAgICAgICAg
-ICAgPEJ1dHRvbgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9z
-ZXJpZXNOZXh0IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lk
-dGg9IjBkcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdo
-dD0ibWF0Y2hfcGFyZW50IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlv
-dXRfd2VpZ2h0PSIxIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRf
-bWFyZ2luU3RhcnQ9IjRkcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4
-dD0iTkVYVCBFUElTT0RFIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0
-Q29sb3I9IkBjb2xvci9rc193aGl0ZSIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJv
-aWQ6dGV4dFN0eWxlPSJib2xkIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0
-ZXh0U2l6ZT0iMTBzcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Z3Jhdml0
-eT0iY2VudGVyIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0QWxpZ25t
-ZW50PSJjZW50ZXIiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOm1heExpbmVz
-PSIyIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDplbGxpcHNpemU9ImVuZCIK
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ1N0YXJ0PSI0ZHAiCiAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnBhZGRpbmdUb3A9IjBkcCIKICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ0VuZD0iNGRwIgogICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgYW5kcm9pZDpwYWRkaW5nQm90dG9tPSIwZHAiCiAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICBhbmRyb2lkOm1pbkhlaWdodD0iMGRwIgogICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgYW5kcm9pZDppbmNsdWRlRm9udFBhZGRpbmc9ImZhbHNlIgogICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgYW5kcm9pZDpiYWNrZ3JvdW5kPSJAZHJhd2FibGUvYmdfYnV0dG9u
-IiAvPgogICAgICAgICAgICAgICAgICAgIDwvTGluZWFyTGF5b3V0PgogICAgICAgICAgICAgICAg
-PC9MaW5lYXJMYXlvdXQ+CgogICAgICAgICAgICAgICAgPFRleHRWaWV3CiAgICAgICAgICAgICAg
-ICAgICAgYW5kcm9pZDppZD0iQCtpZC9lcGlzb2RlQ291bnQiCiAgICAgICAgICAgICAgICAgICAg
-YW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAgICAgICAgICAgICBh
-bmRyb2lkOmxheW91dF9oZWlnaHQ9IjI2ZHAiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpn
-cmF2aXR5PSJjZW50ZXJfdmVydGljYWwiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDptYXhM
-aW5lcz0iMSIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmVsbGlwc2l6ZT0iZW5kIgogICAg
-ICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dD0iTG9hZGluZyBlcGlzb2Rlc+KApiIKICAgICAg
-ICAgICAgICAgICAgICBhbmRyb2lkOnRleHRDb2xvcj0iQGNvbG9yL2tzX3doaXRlIgogICAgICAg
-ICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFN0eWxlPSJib2xkIgogICAgICAgICAgICAgICAgICAg
-IGFuZHJvaWQ6dGV4dFNpemU9IjExc3AiIC8+CgogICAgICAgICAgICAgICAgPFByb2dyZXNzQmFy
-CiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9zZXJpZXNQcm9ncmVzcyIKICAg
-ICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0aD0iMzJkcCIKICAgICAgICAgICAg
-ICAgICAgICBhbmRyb2lkOmxheW91dF9oZWlnaHQ9IjMyZHAiCiAgICAgICAgICAgICAgICAgICAg
-YW5kcm9pZDpsYXlvdXRfZ3Jhdml0eT0iY2VudGVyX2hvcml6b250YWwiIC8+CgogICAgICAgICAg
-ICAgICAgPFRleHRWaWV3CiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9zZXJp
-ZXNFbXB0eSIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0aD0ibWF0Y2hf
-cGFyZW50IgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0id3JhcF9j
-b250ZW50IgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZz0iMTJkcCIKICAgICAg
-ICAgICAgICAgICAgICBhbmRyb2lkOmdyYXZpdHk9ImNlbnRlciIKICAgICAgICAgICAgICAgICAg
-ICBhbmRyb2lkOnRleHRDb2xvcj0iQGNvbG9yL2tzX211dGVkIgogICAgICAgICAgICAgICAgICAg
-IGFuZHJvaWQ6dmlzaWJpbGl0eT0iZ29uZSIgLz4KCiAgICAgICAgICAgICAgICA8R3JpZFZpZXcK
-ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmlkPSJAK2lkL2VwaXNvZGVMaXN0IgogICAgICAg
-ICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiCiAgICAgICAg
-ICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSIwZHAiCiAgICAgICAgICAgICAgICAg
-ICAgYW5kcm9pZDpsYXlvdXRfd2VpZ2h0PSIxIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6
-bGF5b3V0X21hcmdpblRvcD0iMmRwIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bnVtQ29s
-dW1ucz0iMyIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmhvcml6b250YWxTcGFjaW5nPSI2
-ZHAiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp2ZXJ0aWNhbFNwYWNpbmc9IjZkcCIKICAg
-ICAgICAgICAgICAgICAgICBhbmRyb2lkOnN0cmV0Y2hNb2RlPSJjb2x1bW5XaWR0aCIKICAgICAg
-ICAgICAgICAgICAgICBhbmRyb2lkOmdyYXZpdHk9ImNlbnRlciIKICAgICAgICAgICAgICAgICAg
-ICBhbmRyb2lkOmNob2ljZU1vZGU9InNpbmdsZUNob2ljZSIKICAgICAgICAgICAgICAgICAgICBh
-bmRyb2lkOnBhZGRpbmc9IjRkcCIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBDaGls
-ZHJlbj0idHJ1ZSIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBUb1BhZGRpbmc9InRy
-dWUiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpiYWNrZ3JvdW5kPSJAYW5kcm9pZDpjb2xv
-ci90cmFuc3BhcmVudCIgLz4KICAgICAgICAgICAgPC9MaW5lYXJMYXlvdXQ+CiAgICAgICAgPC9M
-aW5lYXJMYXlvdXQ+CiAgICA8L0xpbmVhckxheW91dD4KPC9GcmFtZUxheW91dD4K
+cm9pZDpsYXlvdXRfaGVpZ2h0PSI4OGRwIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5
+b3V0X21hcmdpblRvcD0iMmRwIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X21h
+cmdpbkJvdHRvbT0iOGRwIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6b3JpZW50YXRpb249
+InZlcnRpY2FsIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Y2xpcENoaWxkcmVuPSJ0cnVl
+IgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Y2xpcFRvUGFkZGluZz0idHJ1ZSIKICAgICAg
+ICAgICAgICAgICAgICBhbmRyb2lkOmJhY2tncm91bmQ9IkBkcmF3YWJsZS9iZ19tb3ZpZV9kZXRh
+aWxzX3BhbmVsIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dmlzaWJpbGl0eT0iaW52aXNp
+YmxlIj4KCiAgICAgICAgICAgICAgICAgICAgPFRleHRWaWV3CiAgICAgICAgICAgICAgICAgICAg
+ICAgIGFuZHJvaWQ6aWQ9IkAraWQvc2VyaWVzQ29udGludWVMYWJlbCIKICAgICAgICAgICAgICAg
+ICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAgICAg
+ICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSIyMmRwIgogICAgICAgICAgICAgICAg
+ICAgICAgICBhbmRyb2lkOmdyYXZpdHk9ImNlbnRlciIKICAgICAgICAgICAgICAgICAgICAgICAg
+YW5kcm9pZDp0ZXh0QWxpZ25tZW50PSJjZW50ZXIiCiAgICAgICAgICAgICAgICAgICAgICAgIGFu
+ZHJvaWQ6bWF4TGluZXM9IjEiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6ZWxsaXBz
+aXplPSJlbmQiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ1N0YXJ0PSI2
+ZHAiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ0VuZD0iNmRwIgogICAg
+ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmluY2x1ZGVGb250UGFkZGluZz0iZmFsc2UiCiAg
+ICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dENvbG9yPSJAY29sb3Iva3NfbXV0ZWQi
+CiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFNpemU9IjEwc3AiIC8+CgogICAg
+ICAgICAgICAgICAgICAgIDxMaW5lYXJMYXlvdXQKICAgICAgICAgICAgICAgICAgICAgICAgYW5k
+cm9pZDpsYXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAgICAgICAgICAgICAgICAg
+YW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSI1NGRwIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRy
+b2lkOm9yaWVudGF0aW9uPSJob3Jpem9udGFsIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRy
+b2lkOmdyYXZpdHk9ImNlbnRlcl92ZXJ0aWNhbCIKICAgICAgICAgICAgICAgICAgICAgICAgYW5k
+cm9pZDpwYWRkaW5nVG9wPSIyZHAiCiAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFk
+ZGluZ0JvdHRvbT0iOGRwIgogICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBDaGls
+ZHJlbj0idHJ1ZSIKICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpjbGlwVG9QYWRkaW5n
+PSJ0cnVlIj4KCiAgICAgICAgICAgICAgICAgICAgICAgIDxCdXR0b24KICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgIGFuZHJvaWQ6aWQ9IkAraWQvc2VyaWVzQ29udGludWUiCiAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0aD0iMGRwIgogICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSJtYXRjaF9wYXJlbnQiCiAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93ZWlnaHQ9IjEiCiAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF9tYXJnaW5FbmQ9IjRkcCIKICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dD0iUkVTVU1FIgogICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0Q29sb3I9IkBjb2xvci9rc193aGl0ZSIKICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dFN0eWxlPSJib2xkIgogICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0U2l6ZT0iMTBzcCIKICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgIGFuZHJvaWQ6Z3Jhdml0eT0iY2VudGVyIgogICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgYW5kcm9pZDp0ZXh0QWxpZ25tZW50PSJjZW50ZXIiCiAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICBhbmRyb2lkOm1heExpbmVzPSIyIgogICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgYW5kcm9pZDplbGxpcHNpemU9ImVuZCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFu
+ZHJvaWQ6cGFkZGluZ1N0YXJ0PSI0ZHAiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRy
+b2lkOnBhZGRpbmdUb3A9IjBkcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6
+cGFkZGluZ0VuZD0iNGRwIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpwYWRk
+aW5nQm90dG9tPSIwZHAiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOm1pbkhl
+aWdodD0iMGRwIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppbmNsdWRlRm9u
+dFBhZGRpbmc9ImZhbHNlIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpiYWNr
+Z3JvdW5kPSJAZHJhd2FibGUvYmdfcm93IiAvPgoKICAgICAgICAgICAgICAgICAgICAgICAgPEJ1
+dHRvbgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9zZXJpZXNO
+ZXh0IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2lkdGg9IjBk
+cCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0ibWF0
+Y2hfcGFyZW50IgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfd2Vp
+Z2h0PSIxIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpsYXlvdXRfbWFyZ2lu
+U3RhcnQ9IjRkcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4dD0iTkVY
+VCBFUElTT0RFIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0Q29sb3I9
+IkBjb2xvci9rc193aGl0ZSIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6dGV4
+dFN0eWxlPSJib2xkIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0U2l6
+ZT0iMTBzcCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6Z3Jhdml0eT0iY2Vu
+dGVyIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDp0ZXh0QWxpZ25tZW50PSJj
+ZW50ZXIiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOm1heExpbmVzPSIyIgog
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDplbGxpcHNpemU9ImVuZCIKICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ1N0YXJ0PSI0ZHAiCiAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnBhZGRpbmdUb3A9IjBkcCIKICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZ0VuZD0iNGRwIgogICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgYW5kcm9pZDpwYWRkaW5nQm90dG9tPSIwZHAiCiAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICBhbmRyb2lkOm1pbkhlaWdodD0iMGRwIgogICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgYW5kcm9pZDppbmNsdWRlRm9udFBhZGRpbmc9ImZhbHNlIgogICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgYW5kcm9pZDpiYWNrZ3JvdW5kPSJAZHJhd2FibGUvYmdfcm93IiAvPgogICAg
+ICAgICAgICAgICAgICAgIDwvTGluZWFyTGF5b3V0PgogICAgICAgICAgICAgICAgPC9MaW5lYXJM
+YXlvdXQ+CgogICAgICAgICAgICAgICAgPFRleHRWaWV3CiAgICAgICAgICAgICAgICAgICAgYW5k
+cm9pZDppZD0iQCtpZC9lcGlzb2RlQ291bnQiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDps
+YXlvdXRfd2lkdGg9Im1hdGNoX3BhcmVudCIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxh
+eW91dF9oZWlnaHQ9IjI2ZHAiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDpncmF2aXR5PSJj
+ZW50ZXJfdmVydGljYWwiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDptYXhMaW5lcz0iMSIK
+ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmVsbGlwc2l6ZT0iZW5kIgogICAgICAgICAgICAg
+ICAgICAgIGFuZHJvaWQ6dGV4dD0iTG9hZGluZyBlcGlzb2Rlc+KApiIKICAgICAgICAgICAgICAg
+ICAgICBhbmRyb2lkOnRleHRDb2xvcj0iQGNvbG9yL2tzX3doaXRlIgogICAgICAgICAgICAgICAg
+ICAgIGFuZHJvaWQ6dGV4dFN0eWxlPSJib2xkIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6
+dGV4dFNpemU9IjExc3AiIC8+CgogICAgICAgICAgICAgICAgPFByb2dyZXNzQmFyCiAgICAgICAg
+ICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9zZXJpZXNQcm9ncmVzcyIKICAgICAgICAgICAg
+ICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0aD0iMzJkcCIKICAgICAgICAgICAgICAgICAgICBh
+bmRyb2lkOmxheW91dF9oZWlnaHQ9IjMyZHAiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDps
+YXlvdXRfZ3Jhdml0eT0iY2VudGVyX2hvcml6b250YWwiIC8+CgogICAgICAgICAgICAgICAgPFRl
+eHRWaWV3CiAgICAgICAgICAgICAgICAgICAgYW5kcm9pZDppZD0iQCtpZC9zZXJpZXNFbXB0eSIK
+ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmxheW91dF93aWR0aD0ibWF0Y2hfcGFyZW50Igog
+ICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0id3JhcF9jb250ZW50Igog
+ICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6cGFkZGluZz0iMTJkcCIKICAgICAgICAgICAgICAg
+ICAgICBhbmRyb2lkOmdyYXZpdHk9ImNlbnRlciIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lk
+OnRleHRDb2xvcj0iQGNvbG9yL2tzX211dGVkIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6
+dmlzaWJpbGl0eT0iZ29uZSIgLz4KCiAgICAgICAgICAgICAgICA8R3JpZFZpZXcKICAgICAgICAg
+ICAgICAgICAgICBhbmRyb2lkOmlkPSJAK2lkL2VwaXNvZGVMaXN0IgogICAgICAgICAgICAgICAg
+ICAgIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiCiAgICAgICAgICAgICAgICAg
+ICAgYW5kcm9pZDpsYXlvdXRfaGVpZ2h0PSIwZHAiCiAgICAgICAgICAgICAgICAgICAgYW5kcm9p
+ZDpsYXlvdXRfd2VpZ2h0PSIxIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bGF5b3V0X21h
+cmdpblRvcD0iMmRwIgogICAgICAgICAgICAgICAgICAgIGFuZHJvaWQ6bnVtQ29sdW1ucz0iMyIK
+ICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmhvcml6b250YWxTcGFjaW5nPSI2ZHAiCiAgICAg
+ICAgICAgICAgICAgICAgYW5kcm9pZDp2ZXJ0aWNhbFNwYWNpbmc9IjZkcCIKICAgICAgICAgICAg
+ICAgICAgICBhbmRyb2lkOnN0cmV0Y2hNb2RlPSJjb2x1bW5XaWR0aCIKICAgICAgICAgICAgICAg
+ICAgICBhbmRyb2lkOmdyYXZpdHk9ImNlbnRlciIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lk
+OmNob2ljZU1vZGU9InNpbmdsZUNob2ljZSIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOnBh
+ZGRpbmc9IjRkcCIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBDaGlsZHJlbj0idHJ1
+ZSIKICAgICAgICAgICAgICAgICAgICBhbmRyb2lkOmNsaXBUb1BhZGRpbmc9InRydWUiCiAgICAg
+ICAgICAgICAgICAgICAgYW5kcm9pZDpiYWNrZ3JvdW5kPSJAYW5kcm9pZDpjb2xvci90cmFuc3Bh
+cmVudCIgLz4KICAgICAgICAgICAgPC9MaW5lYXJMYXlvdXQ+CiAgICAgICAgPC9MaW5lYXJMYXlv
+dXQ+CiAgICA8L0xpbmVhckxheW91dD4KPC9GcmFtZUxheW91dD4K
 :::END SERIESLANDLOCKLAYOUT
