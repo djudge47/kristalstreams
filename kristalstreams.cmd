@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Layout Rebalance 1682026
+title KS Series Season Above Fold 1682027
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksserieslayoutrebalance-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LAYOUT-REBALANCE-1682026.apk"
-set "LOG=%TEMP%\ks-series-layout-rebalance-1682026-build.txt"
+set "WORK=C:\ksseriesseasonabovefold-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-SEASON-ABOVE-FOLD-1682027.apk"
+set "LOG=%TEMP%\ks-series-season-above-fold-1682027-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LAYOUT REBALANCE
-echo   FRESH APK: KS-SERIES-LAYOUT-REBALANCE-1682026.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES SEASON ABOVE FOLD
+echo   FRESH APK: KS-SERIES-SEASON-ABOVE-FOLD-1682027.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -39,6 +39,7 @@ echo Automatically fits long Series text inside every control and card.
 echo Keeps every red Series Details button completely visible.
 echo Adds extra bottom padding beneath the Choose-an-episode red button.
 echo Restores the full Season box directly beneath the red button.
+echo Moves Season 1 above the Continue and Next panel so it opens above the fold.
 echo The working TV Guide and details panel are unchanged.
 echo Original R2 remains untouched.
 echo.
@@ -51,7 +52,7 @@ if not exist "%SOURCE%\gradlew.bat" (
     exit /b 1
 )
 
-echo [1/11] Creating a brand-new working copy...
+echo [1/12] Creating a brand-new working copy...
 mkdir "%WORK%" >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Could not create:
@@ -68,7 +69,7 @@ if %RC% GEQ 8 (
     exit /b %RC%
 )
 
-echo [2/11] Installing verified 1682020 baseline and complete Series upgrade...
+echo [2/12] Installing verified 1682020 baseline and complete Series upgrade...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; function B([string]$n){$a=':::BEGIN '+$n;$b=':::END '+$n;$s=$raw.IndexOf($a);if($s -lt 0){throw 'Missing '+$a};$s+=$a.Length;$e=$raw.IndexOf($b,$s);if($e -lt 0){throw 'Missing '+$b};$x=$raw.Substring($s,$e-$s)-replace '\s','';[Convert]::FromBase64String($x)}; [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt',(B 'MODELS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\XtreamClient.kt',(B 'XTREAM')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\GuideActivity.kt',(B 'GUIDE')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpgGuideAdapter.kt',(B 'ADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\UiContrastProvider.kt',(B 'UICONTEXT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlaybackImmersiveProvider.kt',(B 'IMMERSIVE')); [IO.File]::WriteAllBytes('%WORK%\app\build.gradle.kts',(B 'GRADLE')); [IO.File]::WriteAllBytes('%WORK%\REFERENCE-EPG-AUDIT.txt',(B 'AUDIT')); [IO.File]::WriteAllBytes('%WORK%\apply-ui-contrast.ps1',(B 'UIPATCH')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\LibraryActivity.kt',(B 'LIBRARY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MediaGridAdapter.kt',(B 'MEDIAADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieDetailsActivity.kt',(B 'MOVIEDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_details.xml',(B 'MOVIELAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_details.xml',(B 'MOVIELAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_details_panel.xml',(B 'MOVIEPANEL')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\drawable\bg_movie_fact.xml',(B 'MOVIEFACT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\values\movie_styles.xml',(B 'MOVIESTYLES')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlist.kt',(B 'WATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\MovieWatchlistActivity.kt',(B 'WATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\ContinueWatching.kt',(B 'CONTINUEWATCHING')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\PlayerActivity.kt',(B 'PLAYER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_library.xml',(B 'LIBRARYLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_library.xml',(B 'LIBRARYLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_movie_watchlist.xml',(B 'WATCHLISTLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_player.xml',(B 'PLAYERLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt',(B 'SERIESDETAILS')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\EpisodeListAdapter.kt',(B 'EPISODEADAPTER')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlist.kt',(B 'SERIESWATCHLIST')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesWatchlistActivity.kt',(B 'SERIESWATCHLISTACTIVITY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\java\com\kristalstreams\player\SeriesHistory.kt',(B 'SERIESHISTORY')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_details.xml',(B 'SERIESLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_details.xml',(B 'SERIESLAYOUTLAND')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\row_episode_modern.xml',(B 'EPISODEROW')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUT')); [IO.File]::WriteAllBytes('%WORK%\app\src\main\res\layout-land\activity_series_watchlist.xml',(B 'SERIESWATCHLISTLAYOUTLAND'))"
 if errorlevel 1 (
@@ -85,7 +86,7 @@ if errorlevel 1 (
 )
 del /q "%WORK%\apply-ui-contrast.ps1" >nul 2>&1
 
-echo [3/11] Applying final Series Details layout measurements...
+echo [3/12] Applying final Series Details layout measurements...
 set "LAYOUTPS=%TEMP%\ks-series-layout-fix-1682022.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'LAYOUTPATCH'; $b=':::END '+'LAYOUTPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%LAYOUTPS%',[Convert]::FromBase64String($x))"
@@ -102,7 +103,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [4/11] Constraining all Series text inside its box...
+echo [4/12] Constraining all Series text inside its box...
 set "TEXTFITPS=%TEMP%\ks-series-text-fit-1682023.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'TEXTFITPATCH'; $b=':::END '+'TEXTFITPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing text-fit patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing text-fit patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%TEXTFITPS%',[Convert]::FromBase64String($x))"
@@ -119,7 +120,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [5/11] Restoring full red-button visibility and bottom clearance...
+echo [5/12] Restoring full red-button visibility and bottom clearance...
 set "BUTTONPS=%TEMP%\ks-series-button-clearance-1682024.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'BUTTONPATCH'; $b=':::END '+'BUTTONPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing button-clearance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing button-clearance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%BUTTONPS%',[Convert]::FromBase64String($x))"
@@ -136,7 +137,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [6/11] Adding extra space beneath the red episode button...
+echo [6/12] Adding extra space beneath the red episode button...
 set "PADDINGPS=%TEMP%\ks-series-button-padding-1682025.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'PADDINGPATCH'; $b=':::END '+'PADDINGPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing bottom-padding patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing bottom-padding patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%PADDINGPS%',[Convert]::FromBase64String($x))"
@@ -153,7 +154,7 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
-echo [7/11] Rebalancing the red-button panel and Season box...
+echo [7/12] Rebalancing the red-button panel and Season box...
 set "REBALANCEPS=%TEMP%\ks-series-layout-rebalance-1682026.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'REBALANCEPATCH'; $b=':::END '+'REBALANCEPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing layout-rebalance patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing layout-rebalance patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%REBALANCEPS%',[Convert]::FromBase64String($x))"
@@ -170,15 +171,32 @@ if not "%RC%"=="0" (
     pause
     exit /b %RC%
 )
+echo [8/12] Moving Season 1 above the fold...
+set "ABOVEFOLDPS=%TEMP%\ks-series-season-above-fold-1682027.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682026').Replace('1.6.8-series-complete','1.6.8-series-layout-rebalance'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'ABOVEFOLDPATCH'; $b=':::END '+'ABOVEFOLDPATCH'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing above-fold patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing above-fold patch end'}; $x=$raw.Substring($s,$e-$s)-replace '\s',''; [IO.File]::WriteAllBytes('%ABOVEFOLDPS%',[Convert]::FromBase64String($x))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682026 application version.
+    echo ERROR: Could not extract the Season above-fold correction.
+    pause
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ABOVEFOLDPS%" -ProjectRoot "%WORK%"
+set "RC=%ERRORLEVEL%"
+del /q "%ABOVEFOLDPS%" >nul 2>&1
+if not "%RC%"=="0" (
+    echo ERROR: The Season above-fold correction could not be applied safely.
+    pause
+    exit /b %RC%
+)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682027').Replace('1.6.8-series-complete','1.6.8-series-season-above-fold'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+if errorlevel 1 (
+    echo ERROR: Could not set the new 1682027 application version.
     pause
     exit /b 1
 )
 
-echo [8/11] Verifying the balanced Series controls...
+echo [9/12] Verifying Season 1 opens above the fold...
 findstr /c:"epgChannelId" "%WORK%\app\src\main\java\com\kristalstreams\player\Models.kt" >nul
 if errorlevel 1 (
     echo ERROR: Channel EPG ID verification failed.
@@ -581,9 +599,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682026" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682027" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682026 application version verification failed.
+    echo ERROR: New 1682027 application version verification failed.
     pause
     exit /b 1
 )
@@ -642,8 +660,15 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$files=@('%WORK%\app\src\main\res\layout\activity_series_details.xml','%WORK%\app\src\main\res\layout-land\activity_series_details.xml'); foreach($p in $files){$x=[IO.File]::ReadAllText($p); if($x.IndexOf('seriesSeasonBar') -gt $x.IndexOf('seriesContinuePanel')){throw 'Season selector is still below the Continue panel in '+$p}}"
+if errorlevel 1 (
+    echo ERROR: Season 1 above-fold ordering verification failed.
+    pause
+    exit /b 1
+)
 
-echo [9/11] Preparing Windows Android build tools...
+echo [10/12] Preparing Windows Android build tools...
 set "ANDROID_SDK=%LOCALAPPDATA%\Android\Sdk"
 if not exist "%ANDROID_SDK%\platforms" (
     echo ERROR: Android SDK not found:
@@ -682,7 +707,7 @@ exit /b 1
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo.
-echo [10/11] Building corrected Series APK...
+echo [11/12] Building corrected Series APK...
 echo Gradle progress will appear below.
 echo.
 
@@ -723,7 +748,7 @@ if not exist "%BUILT%" (
 )
 
 echo.
-echo [11/11] Copying finished APK...
+echo [12/12] Copying finished APK...
 copy /Y "%BUILT%" "%FINAL%" >nul
 if errorlevel 1 (
     echo ERROR: Could not copy APK to Downloads.
@@ -736,7 +761,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-LAYOUT-REBALANCE-1682026.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-SEASON-ABOVE-FOLD-1682027.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -745,7 +770,7 @@ cls
 echo.
 echo ==========================================================
 echo.
-echo       KS SERIES LAYOUT-REBALANCE BUILD SUCCESSFUL
+echo       KS SERIES SEASON-ABOVE-FOLD BUILD SUCCESSFUL
 echo.
 echo ==========================================================
 echo.
@@ -759,7 +784,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-LAYOUT-REBALANCE-1682026.apk shown above.
+echo Install only KS-SERIES-SEASON-ABOVE-FOLD-1682027.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -5868,3 +5893,43 @@ eScgJ1NlYXNvbiBidXR0b24gaGVpZ2h0JwoKV3JpdGUtSG9zdCAnU2VyaWVzIGNvbnRyb2xzIHJl
 YmFsYW5jZWQ6IHJlZC1idXR0b24gY2xlYXJhbmNlIHByZXNlcnZlZCBhbmQgU2Vhc29uIGJveCBy
 ZXN0b3JlZC4nCg==
 :::END REBALANCEPATCH
+
+:::BEGIN ABOVEFOLDPATCH
+cGFyYW0oCiAgICBbUGFyYW1ldGVyKE1hbmRhdG9yeSA9ICR0cnVlKV1bc3RyaW5nXSRQcm9qZWN0
+Um9vdAopCgokRXJyb3JBY3Rpb25QcmVmZXJlbmNlID0gJ1N0b3AnCgpmdW5jdGlvbiBNb3ZlLVNl
+YXNvbkJlZm9yZUNvbnRpbnVlIHsKICAgIHBhcmFtKFtzdHJpbmddJFBhdGgsIFtzdHJpbmddJFNl
+YXNvblN0YXJ0LCBbc3RyaW5nXSRMYWJlbCkKCiAgICAkY29udGVudCA9IFtJTy5GaWxlXTo6UmVh
+ZEFsbFRleHQoJFBhdGgpCiAgICAkc2Vhc29uQXQgPSAkY29udGVudC5JbmRleE9mKCRTZWFzb25T
+dGFydCwgW1N0cmluZ0NvbXBhcmlzb25dOjpPcmRpbmFsKQogICAgaWYgKCRzZWFzb25BdCAtbHQg
+MCkgeyB0aHJvdyAiQ291bGQgbm90IGZpbmQgdGhlICRMYWJlbCBTZWFzb24gc2VsZWN0b3IgaW4g
+JFBhdGgiIH0KCiAgICAkc2Vhc29uRW5kVGFnID0gJzwvSG9yaXpvbnRhbFNjcm9sbFZpZXc+Jwog
+ICAgJHNlYXNvbkVuZCA9ICRjb250ZW50LkluZGV4T2YoJHNlYXNvbkVuZFRhZywgJHNlYXNvbkF0
+LCBbU3RyaW5nQ29tcGFyaXNvbl06Ok9yZGluYWwpCiAgICBpZiAoJHNlYXNvbkVuZCAtbHQgMCkg
+eyB0aHJvdyAiQ291bGQgbm90IGZpbmQgdGhlIGVuZCBvZiB0aGUgJExhYmVsIFNlYXNvbiBzZWxl
+Y3RvciBpbiAkUGF0aCIgfQogICAgJHNlYXNvbkVuZCArPSAkc2Vhc29uRW5kVGFnLkxlbmd0aAoK
+ICAgICRzZWFzb25CbG9jayA9ICRjb250ZW50LlN1YnN0cmluZygkc2Vhc29uQXQsICRzZWFzb25F
+bmQgLSAkc2Vhc29uQXQpCiAgICAkd2l0aG91dFNlYXNvbiA9ICRjb250ZW50LlJlbW92ZSgkc2Vh
+c29uQXQsICRzZWFzb25FbmQgLSAkc2Vhc29uQXQpCgogICAgJGNvbnRpbnVlTWFya2VyID0gJzxM
+aW5lYXJMYXlvdXQgYW5kcm9pZDppZD0iQCtpZC9zZXJpZXNDb250aW51ZVBhbmVsIicKICAgICRj
+b250aW51ZUF0ID0gJHdpdGhvdXRTZWFzb24uSW5kZXhPZigkY29udGludWVNYXJrZXIsIFtTdHJp
+bmdDb21wYXJpc29uXTo6T3JkaW5hbCkKICAgIGlmICgkY29udGludWVBdCAtbHQgMCkgeyB0aHJv
+dyAiQ291bGQgbm90IGZpbmQgdGhlICRMYWJlbCBDb250aW51ZSBwYW5lbCBpbiAkUGF0aCIgfQoK
+ICAgICR1cGRhdGVkID0gJHdpdGhvdXRTZWFzb24uSW5zZXJ0KCRjb250aW51ZUF0LCAkc2Vhc29u
+QmxvY2sgKyBbRW52aXJvbm1lbnRdOjpOZXdMaW5lKQogICAgaWYgKCR1cGRhdGVkLkluZGV4T2Yo
+J3Nlcmllc1NlYXNvbkJhcicsIFtTdHJpbmdDb21wYXJpc29uXTo6T3JkaW5hbCkgLWd0ICR1cGRh
+dGVkLkluZGV4T2YoJ3Nlcmllc0NvbnRpbnVlUGFuZWwnLCBbU3RyaW5nQ29tcGFyaXNvbl06Ok9y
+ZGluYWwpKSB7CiAgICAgICAgdGhyb3cgIlRoZSAkTGFiZWwgU2Vhc29uIHNlbGVjdG9yIGRpZCBu
+b3QgbW92ZSBhYm92ZSB0aGUgQ29udGludWUgcGFuZWwiCiAgICB9CgogICAgW0lPLkZpbGVdOjpX
+cml0ZUFsbFRleHQoJFBhdGgsICR1cGRhdGVkLCBbVGV4dC5VVEY4RW5jb2RpbmddOjpuZXcoJGZh
+bHNlKSkKfQoKJHBvcnRyYWl0ID0gSm9pbi1QYXRoICRQcm9qZWN0Um9vdCAnYXBwXHNyY1xtYWlu
+XHJlc1xsYXlvdXRcYWN0aXZpdHlfc2VyaWVzX2RldGFpbHMueG1sJwokbGFuZHNjYXBlID0gSm9p
+bi1QYXRoICRQcm9qZWN0Um9vdCAnYXBwXHNyY1xtYWluXHJlc1xsYXlvdXQtbGFuZFxhY3Rpdml0
+eV9zZXJpZXNfZGV0YWlscy54bWwnCgpNb3ZlLVNlYXNvbkJlZm9yZUNvbnRpbnVlICRwb3J0cmFp
+dCAnPEhvcml6b250YWxTY3JvbGxWaWV3IGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJl
+bnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iNTZkcCIgYW5kcm9pZDpsYXlvdXRfbWFyZ2luU3Rh
+cnQ9IjEwZHAiJyAncG9ydHJhaXQnCk1vdmUtU2Vhc29uQmVmb3JlQ29udGludWUgJGxhbmRzY2Fw
+ZSAnPEhvcml6b250YWxTY3JvbGxWaWV3IGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJl
+bnQiIGFuZHJvaWQ6bGF5b3V0X2hlaWdodD0iNTZkcCIgYW5kcm9pZDpsYXlvdXRfbWFyZ2luVG9w
+PSI2ZHAiJyAnbGFuZHNjYXBlJwoKV3JpdGUtSG9zdCAnU2Vhc29uIDEgbm93IGFwcGVhcnMgYWJv
+dmUgdGhlIGZvbGQgYmVmb3JlIHRoZSBDb250aW51ZSBhbmQgTmV4dCBjb250cm9scy4nCg==
+:::END ABOVEFOLDPATCH
