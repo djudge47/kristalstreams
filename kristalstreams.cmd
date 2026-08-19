@@ -18,14 +18,31 @@ echo Centers Continue, Next, and season text.
 echo Enlarges the Continue and Next control panel.
 echo Enlarges episode cards so titles and descriptions fit.
 echo Preserves the complete working Series build and protected R2 source.
+echo Source recovery: enabled.
 echo.
 
 set "SOURCE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$roots=@(); $preferred='C:\KristalStreams168-R2-WORKING'; if(Test-Path $preferred){$roots+=Get-Item $preferred}; $roots+=@(Get-ChildItem C:\ -Directory -Filter 'ksseriescomplete-*' -ErrorAction SilentlyContinue); $roots ^| Where-Object {(Test-Path (Join-Path $_.FullName 'gradlew.bat')) -and (Test-Path (Join-Path $_.FullName 'app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt'))} ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1 -ExpandProperty FullName"`) do set "SOURCE=%%D"
 
 if not defined SOURCE (
-    echo ERROR: The completed Series working source was not found.
-    echo Run KS-SERIES-COMPLETE-1682021.cmd once, then run this file again.
+    echo Completed 1682021 Series source was not found.
+    echo Restoring it automatically now...
+    set "BOOTSTRAP=%TEMP%\KS-SERIES-COMPLETE-1682021-AUTO.cmd"
+    del /q "!BOOTSTRAP!" >nul 2>&1
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/djudge47/kristalstreams/6bf5da406eb1266a5d1956ce4ca31b9f5980d407/kristalstreams.cmd' -OutFile '!BOOTSTRAP!'"
+    if errorlevel 1 (
+        echo ERROR: Could not restore the completed 1682021 Series builder.
+        pause
+        exit /b 1
+    )
+    call "!BOOTSTRAP!"
+    del /q "!BOOTSTRAP!" >nul 2>&1
+    set "SOURCE="
+    for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "Get-ChildItem C:\ -Directory -Filter 'ksseriescomplete-*' -ErrorAction SilentlyContinue ^| Where-Object {(Test-Path (Join-Path $_.FullName 'gradlew.bat')) -and (Test-Path (Join-Path $_.FullName 'app\src\main\java\com\kristalstreams\player\SeriesDetailsActivity.kt'))} ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1 -ExpandProperty FullName"`) do set "SOURCE=%%D"
+)
+if not defined SOURCE (
+    echo ERROR: Automatic 1682021 source recovery did not complete.
+    echo The protected R2 source may be missing from C:\KristalStreams168RC1R2.
     pause
     exit /b 1
 )
