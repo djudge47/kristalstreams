@@ -1,18 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title KS Series Landscape Full Controls 1682041
+title KS Series Landscape Button Verify 1682042
 
 set "SOURCE=C:\KristalStreams168RC1R2\KristalStreams-1.6.8-RC1-R2-LEGACY-DEMO-FIX"
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
-set "WORK=C:\ksserieslandscapefullcontrols-!STAMP!"
-set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-FULL-CONTROLS-1682041.apk"
-set "LOG=%TEMP%\ks-series-landscape-full-controls-1682041-build.txt"
+set "WORK=C:\ksserieslandscapebuttonverify-!STAMP!"
+set "FINAL=%USERPROFILE%\Downloads\KS-SERIES-LANDSCAPE-BUTTON-VERIFY-1682042.apk"
+set "LOG=%TEMP%\ks-series-landscape-button-verify-1682042-build.txt"
 set "JAVASAVE=%USERPROFILE%\.kristalstreams-java-home.txt"
 
 echo.
 echo ==========================================================
-echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE FULL CONTROLS
-echo   FRESH APK: KS-SERIES-LANDSCAPE-FULL-CONTROLS-1682041.apk
+echo   KRISTAL STREAMS 1.6.8 RC1 R2 - SERIES LANDSCAPE BUTTON VERIFY
+echo   FRESH APK: KS-SERIES-LANDSCAPE-BUTTON-VERIFY-1682042.apk
 echo ==========================================================
 echo.
 echo Baseline: known-good R2
@@ -252,7 +252,7 @@ if not "%RC%"=="0" (
 )
 
 echo [12/16] Installing full-height landscape Resume and Next controls...
-set "OVERLAPPS=%TEMP%\ks-series-landscape-full-controls-1682041.ps1"
+set "OVERLAPPS=%TEMP%\ks-series-landscape-button-verify-1682042.ps1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
  "$raw=Get-Content -LiteralPath '%~f0' -Raw; $a=':::BEGIN '+'OVERLAPPATCHPS1'; $b=':::END '+'OVERLAPPATCHPS1'; $s=$raw.IndexOf($a); if($s -lt 0){throw 'Missing episode-overlap patch'}; $s+=$a.Length; $e=$raw.IndexOf($b,$s); if($e -lt 0){throw 'Missing episode-overlap patch end'}; [IO.File]::WriteAllText('%OVERLAPPS%',$raw.Substring($s,$e-$s).TrimStart([char]13,[char]10),[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
@@ -270,9 +270,9 @@ if not "%RC%"=="0" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
- "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682041').Replace('1.6.8-series-complete','1.6.8-series-landscape-full-controls'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
+ "$p='%WORK%\app\build.gradle.kts'; $c=[IO.File]::ReadAllText($p); if(-not $c.Contains('versionCode = 1682021')){throw 'Expected 1682021 version code was not found'}; $c=$c.Replace('versionCode = 1682021','versionCode = 1682042').Replace('1.6.8-series-complete','1.6.8-series-landscape-button-verify'); [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))"
 if errorlevel 1 (
-    echo ERROR: Could not set the new 1682041 application version.
+    echo ERROR: Could not set the new 1682042 application version.
     pause
     exit /b 1
 )
@@ -680,9 +680,9 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"versionCode = 1682041" "%WORK%\app\build.gradle.kts" >nul
+findstr /c:"versionCode = 1682042" "%WORK%\app\build.gradle.kts" >nul
 if errorlevel 1 (
-    echo ERROR: New 1682041 application version verification failed.
+    echo ERROR: New 1682042 application version verification failed.
     pause
     exit /b 1
 )
@@ -876,13 +876,13 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-findstr /c:"android:layout_height=\"24dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+findstr /c:"android:layout_height=\"22dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
 if errorlevel 1 (
     echo ERROR: Landscape Choose Episode label-space verification failed.
     pause
     exit /b 1
 )
-findstr /c:"android:layout_height=\"50dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
+findstr /c:"android:layout_height=\"54dp\"" "%WORK%\app\src\main\res\layout-land\activity_series_details.xml" >nul
 if errorlevel 1 (
     echo ERROR: Landscape red-button row verification failed.
     pause
@@ -1049,7 +1049,7 @@ set "USBDRIVE="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "$d=Get-CimInstance Win32_LogicalDisk ^| Where-Object {$_.DriveType -eq 2 } ^| Select-Object -First 1 -ExpandProperty DeviceID; if($d){$d}"`) do set "USBDRIVE=%%D"
 
 if defined USBDRIVE (
-    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-FULL-CONTROLS-1682041.apk"
+    set "USBCOPY=!USBDRIVE!\KS-SERIES-LANDSCAPE-BUTTON-VERIFY-1682042.apk"
     copy /Y "%BUILT%" "!USBCOPY!" >nul
 )
 
@@ -1072,7 +1072,7 @@ if defined USBCOPY (
 )
 echo Original known-good R2: UNTOUCHED
 echo.
-echo Install only KS-SERIES-LANDSCAPE-FULL-CONTROLS-1682041.apk shown above.
+echo Install only KS-SERIES-LANDSCAPE-BUTTON-VERIFY-1682042.apk shown above.
 echo All regular Live TV channel logos now use a light background.
 echo All neutral black inside and behind the dashboard KS banner is transparent.
 echo The approved TV Guide grid, timing, and details remain unchanged.
@@ -1082,7 +1082,7 @@ echo Audio and subtitle choices appear with the playback controls when tracks ar
 echo Series now includes Search, Sort, My Series, full details, season tabs, richer episode cards, Resume, and Next Episode.
 echo Long titles and descriptions stay inside their cards and shrink only when needed.
 echo Continue, Next, Season, Trailer, and My Series buttons have full vertical clearance.
-echo Mobile landscape uses a bounded 76dp Choose Episode panel above the episode grid.
+echo Mobile landscape uses a full 88dp Choose Episode panel above the episode grid.
 echo The prompt is shortened and the red-button row has dedicated vertical space.
 echo Mobile portrait remains a protected two-column episode grid.
 echo Smart TV/box remains a three-column grid with remote navigation and related Series.
