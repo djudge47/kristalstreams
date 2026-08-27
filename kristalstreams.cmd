@@ -1,4 +1,3 @@
-kristalstreams-1682047-bootstrap.cmd: DOS batch file, ASCII text, with very long lines (843), with CRLF line terminators
 @echo off
 setlocal EnableExtensions
 title Kristal Streams Movies Complete Pass 1682047
