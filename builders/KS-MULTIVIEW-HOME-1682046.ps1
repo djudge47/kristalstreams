@@ -5,7 +5,7 @@ $app = Join-Path $root 'app'
 $src = Join-Path $app 'src\main'
 $java = Join-Path $src 'java\com\kristalstreams\player'
 $res = Join-Path $src 'res'
-$home = Join-Path $java 'HomeActivity.kt'
+$homeActivity = Join-Path $java 'HomeActivity.kt'
 $multi = Join-Path $java 'MultiViewActivity.kt'
 $manifest = Join-Path $src 'AndroidManifest.xml'
 $portrait = Join-Path $res 'layout\activity_home.xml'
@@ -22,7 +22,7 @@ Write-Host ' Existing Windows source + existing Gradle wrapper' -ForegroundColor
 Write-Host '============================================================' -ForegroundColor Cyan
 Write-Host ''
 
-foreach ($p in @($root,$gradlew,$home,$multi,$manifest,$portrait,$land,$gradle)) {
+foreach ($p in @($root,$gradlew,$homeActivity,$multi,$manifest,$portrait,$land,$gradle)) {
     if (-not (Test-Path $p)) { throw "Required working-source file not found: $p" }
 }
 
@@ -36,14 +36,14 @@ if ($gradleText -notmatch 'versionCode\s*=\s*1682045' -and $gradleText -notmatch
 
 $backup = Join-Path $root ('_multiview_home_backup_' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Path $backup -Force | Out-Null
-Copy-Item $home (Join-Path $backup 'HomeActivity.kt') -Force
+Copy-Item $homeActivity (Join-Path $backup 'HomeActivity.kt') -Force
 Copy-Item $portrait (Join-Path $backup 'activity_home.xml') -Force
 Copy-Item $land (Join-Path $backup 'activity_home-land.xml') -Force
 Copy-Item $gradle (Join-Path $backup 'build.gradle.kts') -Force
 Write-Host "Backup created: $backup" -ForegroundColor DarkGray
 
 # Wire MultiView into HomeActivity using stable ASCII anchors only.
-$homeText = [System.IO.File]::ReadAllText($home, [System.Text.Encoding]::UTF8)
+$homeText = [System.IO.File]::ReadAllText($homeActivity, [System.Text.Encoding]::UTF8)
 if ($homeText -notmatch 'val multiview =') {
     $anchor1 = '        val continuing = { launch(ContinueWatchingActivity::class.java) }'
     if (-not $homeText.Contains($anchor1)) { throw 'HomeActivity action anchor not found.' }
@@ -54,17 +54,17 @@ if ($homeText -notmatch 'multiviewCard') {
     if (-not $homeText.Contains($anchor2)) { throw 'HomeActivity card anchor not found.' }
     $homeText = $homeText.Replace($anchor2, $anchor2 + "`r`n        click(R.id.multiviewCard, multiview)")
 }
-[System.IO.File]::WriteAllText($home, $homeText, $utf8)
+[System.IO.File]::WriteAllText($homeActivity, $homeText, $utf8)
 
 function Add-MultiViewCardToLayout([string]$path) {
     [xml]$doc = Get-Content -LiteralPath $path -Raw
     $androidNs = 'http://schemas.android.com/apk/res/android'
 
-    $existing = $doc.SelectSingleNode('//*[@android:id="@+id/multiviewCard"]', (New-Object System.Xml.XmlNamespaceManager($doc.NameTable)))
-    if ($existing) { return }
-
     $mgr = New-Object System.Xml.XmlNamespaceManager($doc.NameTable)
     $mgr.AddNamespace('android', $androidNs)
+    $existing = $doc.SelectSingleNode('//*[@android:id="@+id/multiviewCard"]', $mgr)
+    if ($existing) { return }
+
     $searchNode = $doc.SelectSingleNode('//*[@android:id="@+id/searchCard"]', $mgr)
     if (-not $searchNode) { throw "searchCard not found in $path" }
     $parent = $searchNode.ParentNode
@@ -109,7 +109,7 @@ $gradleText = [regex]::Replace($gradleText, 'versionName\s*=\s*"[^"]*"', 'versio
 [System.IO.File]::WriteAllText($gradle, $gradleText, $utf8)
 
 # Verification before build.
-$verifyHome = [System.IO.File]::ReadAllText($home, [System.Text.Encoding]::UTF8)
+$verifyHome = [System.IO.File]::ReadAllText($homeActivity, [System.Text.Encoding]::UTF8)
 $verifyPortrait = [System.IO.File]::ReadAllText($portrait, [System.Text.Encoding]::UTF8)
 $verifyLand = [System.IO.File]::ReadAllText($land, [System.Text.Encoding]::UTF8)
 if ($verifyHome -notmatch 'MultiViewActivity' -or $verifyHome -notmatch 'multiviewCard') { throw 'HomeActivity MultiView verification failed.' }
