@@ -13,8 +13,8 @@ android {
         applicationId = "com.kristalstreams.player"
         minSdk = 23
         targetSdk = 35
-        versionCode = 29
-        versionName = "1.6.8-rc1-r4"
+        versionCode = 1682194
+        versionName = "1.6.8-red-black-1682194"
     }
 
     buildFeatures {
@@ -31,14 +31,11 @@ android {
     }
 }
 
-// The launcher asset stored in good-apk-assets is verified and safe to restore.
-// Other visual assets are restored by the GitHub Actions workflow from the
-// repository's full-source package before Gradle configures this module.
-val goodAssetsDir = rootProject.projectDir.parentFile.resolve("good-apk-assets")
+val redesignAssetsDir = rootProject.projectDir.parentFile.resolve("redesign/assets")
 val appResDir = project.projectDir.resolve("src/main/res")
 
-fun decodeGoodAsset(sourceName: String): ByteArray? {
-    val source = goodAssetsDir.resolve(sourceName)
+fun decodeRedesignAsset(sourceName: String): ByteArray? {
+    val source = redesignAssetsDir.resolve(sourceName)
     if (!source.isFile) return null
     return Base64.getMimeDecoder().decode(source.readText().trim())
 }
@@ -49,10 +46,10 @@ fun removeResourceCopies(baseName: String, folderPrefix: String) {
     }
 }
 
-fun restoreLauncher() {
-    val bytes = decodeGoodAsset("ic_launcher.png.b64") ?: return
+fun restoreKristalLauncher() {
+    val bytes = decodeRedesignAsset("ks_launcher.png.b64") ?: return
     require(bytes.size >= 8 && bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() && bytes[2] == 0x4E.toByte() && bytes[3] == 0x47.toByte()) {
-        "Verified launcher asset is not a PNG"
+        "Kristal launcher asset is not a PNG"
     }
     removeResourceCopies("ic_launcher", "mipmap")
     removeResourceCopies("ic_launcher_round", "mipmap")
@@ -61,10 +58,10 @@ fun restoreLauncher() {
         dir.resolve("ic_launcher.png").writeBytes(bytes)
         dir.resolve("ic_launcher_round.png").writeBytes(bytes)
     }
-    println("Restored verified good APK launcher icon")
+    println("Restored Kristal redesign launcher icon")
 }
 
-restoreLauncher()
+restoreKristalLauncher()
 
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
