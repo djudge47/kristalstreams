@@ -1,0 +1,108 @@
+name: Build Kristal Streams Redesign APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ks-redesign-wiring
+    paths:
+      - 'android/redesign/**'
+      - 'android/overrides/**'
+      - 'android/r4-text-source/**'
+      - '.github/workflows/android-redesign-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-redesign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout redesign branch
+        uses: actions/checkout@v4
+        with:
+          ref: ks-redesign-wiring
+          fetch-depth: 0
+
+      - name: Restore canonical R4 Android project
+        run: |
+          set -euo pipefail
+          rm -rf android/player .android-import
+          mkdir -p android/player .android-import
+          cat android/r4-text-source/part-*.b64 | base64 --decode > /tmp/KristalStreams-R4-text.tar.gz
+          gzip -t /tmp/KristalStreams-R4-text.tar.gz
+          tar -xzf /tmp/KristalStreams-R4-text.tar.gz -C .android-import
+          SOURCE_APP="$(find .android-import -path '*/app/build.gradle.kts' -type f | head -n 1)"
+          test -n "$SOURCE_APP"
+          SOURCE_DIR="${SOURCE_APP%/app/build.gradle.kts}"
+          rsync -a "$SOURCE_DIR/" android/player/
+          echo "PROJECT_DIR=${GITHUB_WORKSPACE}/android/player" >> "$GITHUB_ENV"
+
+      - name: Apply stable player and Gradle overrides
+        run: |
+          set -euo pipefail
+          for file in build.gradle.kts settings.gradle.kts gradle.properties; do cp "android/overrides/$file" "android/player/$file"; done
+          cp android/overrides/app-build.gradle.kts android/player/app/build.gradle.kts
+          cp android/overrides/PlayerActivity.kt android/player/app/src/main/java/com/kristalstreams/player/PlayerActivity.kt
+          bash android/overrides/restore-good-assets.sh
+
+      - name: Apply Kristal red black redesign overlay
+        run: |
+          set -euo pipefail
+          test -d android/redesign/app/src/main
+          rsync -a android/redesign/app/src/main/ android/player/app/src/main/
+          echo 'Redesign overlay applied.'
+          find android/redesign -type f | sort
+
+      - name: Validate Phase 1 wiring
+        run: |
+          set -euo pipefail
+          test -f android/player/app/src/main/java/com/kristalstreams/player/HomeActivity.kt
+          test -f android/player/app/src/main/java/com/kristalstreams/player/ChannelsActivity.kt
+          test -f android/player/app/src/main/java/com/kristalstreams/player/GuideActivity.kt
+          test -f android/player/app/src/main/res/layout/activity_home.xml
+          test -f android/player/app/src/main/res/layout/activity_channels.xml
+          test -f android/player/app/src/main/res/layout/activity_guide.xml
+          test -f android/player/app/src/main/res/values/colors.xml
+          grep -q '#F20D19' android/player/app/src/main/res/values/colors.xml
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 35 platform
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build redesign debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle --no-daemon clean assembleDebug --stacktrace
+
+      - name: Publish redesign APK
+        run: |
+          set -euo pipefail
+          APK="$(find "$PROJECT_DIR/app/build/outputs/apk/debug" -name '*.apk' -type f | head -n 1)"
+          test -n "$APK"
+          mkdir -p out
+          cp "$APK" out/KristalStreams-RED-BLACK-PHASE1-debug.apk
+
+      - name: Upload redesign APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KristalStreams-Red-Black-Phase1-APK
+          path: out/KristalStreams-RED-BLACK-PHASE1-debug.apk
+          retention-days: 30
+          if-no-files-found: error
