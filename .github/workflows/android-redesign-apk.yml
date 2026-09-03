@@ -56,6 +56,54 @@ jobs:
           echo 'Redesign overlay applied.'
           find android/redesign -type f | sort
 
+      - name: Ensure redesign branding resources
+        run: |
+          set -euo pipefail
+          RES="android/player/app/src/main/res"
+          mkdir -p "$RES/drawable"
+          make_shape() {
+            local name="$1" color="$2" stroke="$3" radius="$4"
+            if ! find "$RES" -type f \( -name "$name.png" -o -name "$name.jpg" -o -name "$name.jpeg" -o -name "$name.webp" -o -name "$name.xml" \) | grep -q .; then
+              printf '%s\n' '<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">' "    <solid android:color=\"$color\" />" "    <stroke android:width=\"2dp\" android:color=\"$stroke\" />" "    <corners android:radius=\"$radius\" />" '</shape>' > "$RES/drawable/$name.xml"
+              echo "Created fallback drawable: $name"
+            fi
+          }
+          make_shape ks_banner "#080B12" "#F20D19" "12dp"
+          make_shape ks_badge "#F20D19" "#FFFFFF" "18dp"
+          make_shape official_dashboard_bg "#080B12" "#151A24" "0dp"
+          make_shape official_live_tv "#151A24" "#F20D19" "14dp"
+          make_shape official_live_tv_focused "#F20D19" "#FFFFFF" "14dp"
+          make_shape official_movies "#151A24" "#F20D19" "14dp"
+          make_shape official_movies_focused "#F20D19" "#FFFFFF" "14dp"
+          make_shape official_series "#151A24" "#F20D19" "14dp"
+          make_shape official_series_focused "#F20D19" "#FFFFFF" "14dp"
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root = Path('android/player/app/src/main')
+          res = root / 'res'
+          refs = set()
+          for p in list(res.rglob('*.xml')) + [root / 'AndroidManifest.xml']:
+              if not p.exists():
+                  continue
+              try:
+                  text = p.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
+              refs.update(re.findall(r'(?<!android:)@drawable/([A-Za-z0-9_]+)', text))
+          exts = ('.xml', '.png', '.jpg', '.jpeg', '.webp', '.gif')
+          created = []
+          for name in sorted(refs):
+              exists = any((d / f'{name}{e}').exists() for d in res.glob('drawable*') if d.is_dir() for e in exts)
+              if not exists:
+                  target = res / 'drawable' / f'{name}.xml'
+                  target.write_text('<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">\n    <solid android:color="#151A24" />\n    <stroke android:width="1dp" android:color="#F20D19" />\n    <corners android:radius="10dp" />\n</shape>\n', encoding='utf-8')
+                  created.append(name)
+          print(f'Resource references checked: {len(refs)}; fallbacks created: {len(created)}')
+          for name in created:
+              print(f'  + {name}')
+          PY
+
       - name: Validate Phase 1 wiring
         run: |
           set -euo pipefail
@@ -67,6 +115,7 @@ jobs:
           test -f android/player/app/src/main/res/layout/activity_guide.xml
           test -f android/player/app/src/main/res/values/colors.xml
           grep -q '#F20D19' android/player/app/src/main/res/values/colors.xml
+          find android/player/app/src/main/res -type f \( -name 'ks_banner.xml' -o -name 'ks_banner.png' -o -name 'ks_banner.jpg' -o -name 'ks_banner.webp' \) | grep -q .
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
