@@ -1,0 +1,16 @@
+<resources>
+    <!-- Kristal Streams brand system: black, Kristal red, white -->
+    <color name="ks_black">#050505</color>
+    <color name="ks_panel">#111111</color>
+    <color name="ks_surface">#171717</color>
+    <color name="ks_surface_2">#232323</color>
+    <color name="ks_red">#F20D19</color>
+    <color name="ks_red_dark">#A9000A</color>
+    <color name="ks_red_soft">#541017</color>
+    <color name="ks_white">#FFFFFF</color>
+    <color name="ks_muted">#D8D8D8</color>
+    <color name="ks_muted_2">#9C9C9C</color>
+    <color name="ks_line">#393939</color>
+    <color name="ks_guide_canvas">#0B0B0B</color>
+    <color name="ks_guide_past">#161616</color>
+</resources>
