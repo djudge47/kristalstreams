@@ -17,22 +17,22 @@ Write-Host ''
 
 Copy-Item -LiteralPath $source -Destination $work -Recurse -Force
 
-$gradle = Join-Path $work 'app\build.gradle.kts'
-$manifest = Join-Path $work 'app\src\main\AndroidManifest.xml'
-$home = Join-Path $work 'app\src\main\java\com\kristalstreams\player\HomeActivity.kt'
-$portrait = Join-Path $work 'app\src\main\res\layout\activity_home.xml'
-$landscape = Join-Path $work 'app\src\main\res\layout-land\activity_home.xml'
+$gradlePath = Join-Path $work 'app\build.gradle.kts'
+$manifestPath = Join-Path $work 'app\src\main\AndroidManifest.xml'
+$homePath = Join-Path $work 'app\src\main\java\com\kristalstreams\player\HomeActivity.kt'
+$portraitPath = Join-Path $work 'app\src\main\res\layout\activity_home.xml'
+$landscapePath = Join-Path $work 'app\src\main\res\layout-land\activity_home.xml'
 
-foreach ($p in @($gradle,$manifest,$home,$portrait,$landscape)) {
-    if (!(Test-Path $p)) { throw "Required rotating-source file missing: $p" }
+foreach ($requiredPath in @($gradlePath,$manifestPath,$homePath,$portraitPath,$landscapePath)) {
+    if (!(Test-Path $requiredPath)) { throw "Required rotating-source file missing: $requiredPath" }
 }
 
-$g = Get-Content -LiteralPath $gradle -Raw
+$g = Get-Content -LiteralPath $gradlePath -Raw
 if ($g -notmatch 'applicationId\s*=\s*"com\.kristalstreams\.player"') {
     throw 'STOP: applicationId is not com.kristalstreams.player'
 }
 
-$h = Get-Content -LiteralPath $home -Raw
+$h = Get-Content -LiteralPath $homePath -Raw
 if ($h -notmatch 'SCREEN_ORIENTATION_UNSPECIFIED') {
     throw 'STOP: known mobile auto-rotation logic is missing from HomeActivity'
 }
@@ -43,10 +43,10 @@ if ($h -notmatch 'R\.layout\.activity_home') {
 # Preserve the rotating architecture and only advance the build identity.
 $g = [regex]::Replace($g, 'versionCode\s*=\s*\d+', 'versionCode = 1682195', 1)
 $g = [regex]::Replace($g, 'versionName\s*=\s*"[^"]*"', 'versionName = "1.6.8-mobile-rotation-restore-1682195"', 1)
-Set-Content -LiteralPath $gradle -Value $g -Encoding UTF8
+Set-Content -LiteralPath $gradlePath -Value $g -Encoding UTF8
 
 # Keep package identity locked to the provider package.
-$g2 = Get-Content -LiteralPath $gradle -Raw
+$g2 = Get-Content -LiteralPath $gradlePath -Raw
 if ($g2 -notmatch 'applicationId\s*=\s*"com\.kristalstreams\.player"') {
     throw 'STOP: provider package identity changed unexpectedly'
 }
