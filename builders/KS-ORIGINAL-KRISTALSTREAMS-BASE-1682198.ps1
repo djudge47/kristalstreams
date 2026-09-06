@@ -26,7 +26,7 @@ $ksBuildToolsRoot = Join-Path $env:LOCALAPPDATA 'Android\Sdk\build-tools'
 if (!(Test-Path -LiteralPath $ksBuildToolsRoot)) { throw "Android SDK build-tools not found: $ksBuildToolsRoot" }
 
 $ksToolDir = Get-ChildItem -LiteralPath $ksBuildToolsRoot -Directory -ErrorAction SilentlyContinue |
-    Sort-Object { try { [version]$_.Name } catch { [version]'0.0' } } -Descending |
+    Sort-Object LastWriteTime -Descending |
     Where-Object {
         (Test-Path (Join-Path $_.FullName 'aapt.exe')) -and
         (Test-Path (Join-Path $_.FullName 'zipalign.exe')) -and
@@ -42,11 +42,14 @@ $ksApksigner = Join-Path $ksToolDir.FullName 'apksigner.bat'
 $ksBadging = @(& $ksAapt dump badging $ksSourceApk 2>$null)
 $ksPackageLine = ($ksBadging | Select-String '^package:').Line | Select-Object -First 1
 if (!$ksPackageLine) { throw 'Could not read package metadata from original kristalstreams.apk' }
+
 $ksSourcePackage = ([regex]::Match($ksPackageLine, "name='([^']+)'" )).Groups[1].Value
 $ksSourceVersion = ([regex]::Match($ksPackageLine, "versionCode='([^']+)'" )).Groups[1].Value
 $ksSourceVersionName = ([regex]::Match($ksPackageLine, "versionName='([^']*)'" )).Groups[1].Value
+
 if ($ksSourcePackage -ne $ksExpectedPackage) { throw "STOP: wrong APK. Expected $ksExpectedPackage but found $ksSourcePackage" }
 if ($ksSourceVersion -ne $ksExpectedSourceVersion) { throw "STOP: this is not the original 1681003 kristalstreams.apk. Found versionCode $ksSourceVersion" }
+
 Write-Host ('SOURCE VERIFIED: ' + $ksSourcePackage + '  versionCode=' + $ksSourceVersion + '  versionName=' + $ksSourceVersionName) -ForegroundColor Green
 
 $ksApktoolCandidates = @(
@@ -57,7 +60,8 @@ $ksApktoolCandidates = @(
 $ksApktool = $ksApktoolCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 if (!$ksApktool) {
     $ksApktool = Get-ChildItem 'C:\KS-FINAL-BASE-20260903-204457' -File -Filter 'apktool*.jar' -ErrorAction SilentlyContinue |
-        Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
 }
 if (!$ksApktool) { throw 'apktool.jar not found in the known Kristal Streams tool workspace' }
 
@@ -72,24 +76,36 @@ $ksYamlPath = Join-Path $ksDecoded 'apktool.yml'
 $ksManifestPath = Join-Path $ksDecoded 'AndroidManifest.xml'
 if (!(Test-Path -LiteralPath $ksYamlPath)) { throw 'apktool.yml missing after decode' }
 
-# IMPORTANT: use MatchEvaluator-style replacements. `$1` followed by 1682198 was
-# being interpreted by .NET as one giant capture-group number, which erased the value.
-$ksYamlText = Get-Content -LiteralPath $ksYamlPath -Raw
-if ($ksYamlText -notmatch '(?m)^\s*versionCode:\s*') { throw 'versionCode was not found in apktool.yml' }
-$ksYamlText = [regex]::Replace($ksYamlText, '(?m)^(\s*versionCode:\s*).+$', { param($m) $m.Groups[1].Value + "'$ksTargetVersion'" }, 1)
-if ($ksYamlText -match '(?m)^\s*versionName:\s*') {
-    $ksYamlText = [regex]::Replace($ksYamlText, '(?m)^(\s*versionName:\s*).+$', { param($m) $m.Groups[1].Value + "'$ksTargetVersionName'" }, 1)
+# Stamp apktool.yml line-by-line. This avoids PowerShell capture-group and quote parsing problems.
+$ksYamlLines = @(Get-Content -LiteralPath $ksYamlPath)
+$ksFoundVersionCode = $false
+$ksFoundVersionName = $false
+for ($ksI = 0; $ksI -lt $ksYamlLines.Count; $ksI++) {
+    $ksLine = [string]$ksYamlLines[$ksI]
+    if ($ksLine -match '^(\s*)versionCode:\s*.*$') {
+        $ksYamlLines[$ksI] = $matches[1] + 'versionCode: ' + $ksTargetVersion
+        $ksFoundVersionCode = $true
+        continue
+    }
+    if ($ksLine -match '^(\s*)versionName:\s*.*$') {
+        $ksYamlLines[$ksI] = $matches[1] + 'versionName: ' + $ksTargetVersionName
+        $ksFoundVersionName = $true
+    }
 }
-Set-Content -LiteralPath $ksYamlPath -Value $ksYamlText -Encoding UTF8
+if (!$ksFoundVersionCode) { throw 'versionCode was not found in apktool.yml' }
+if (!$ksFoundVersionName) { throw 'versionName was not found in apktool.yml' }
+Set-Content -LiteralPath $ksYamlPath -Value $ksYamlLines -Encoding UTF8
 
-# Also set the decoded manifest identity explicitly so apktool cannot fall back to a blank value.
+# Stamp the decoded manifest explicitly as a second guard.
 $ksManifestText = Get-Content -LiteralPath $ksManifestPath -Raw
 if ($ksManifestText -notmatch 'package="com\.kristalstreams\.player"') { throw 'STOP: decoded package identity is not com.kristalstreams.player' }
+
 if ($ksManifestText -match 'android:versionCode="[^"]*"') {
     $ksManifestText = [regex]::Replace($ksManifestText, 'android:versionCode="[^"]*"', ('android:versionCode="' + $ksTargetVersion + '"'), 1)
 } else {
     $ksManifestText = [regex]::Replace($ksManifestText, '<manifest\b', ('<manifest android:versionCode="' + $ksTargetVersion + '"'), 1)
 }
+
 if ($ksManifestText -match 'android:versionName="[^"]*"') {
     $ksManifestText = [regex]::Replace($ksManifestText, 'android:versionName="[^"]*"', ('android:versionName="' + $ksTargetVersionName + '"'), 1)
 } else {
@@ -97,12 +113,16 @@ if ($ksManifestText -match 'android:versionName="[^"]*"') {
 }
 Set-Content -LiteralPath $ksManifestPath -Value $ksManifestText -Encoding UTF8
 
-# Guard the source before build.
-$ksYamlCheck = Get-Content -LiteralPath $ksYamlPath -Raw
+# Verify the source before building using simple literal checks.
+$ksYamlCheckLines = @(Get-Content -LiteralPath $ksYamlPath)
+$ksYamlVersionLine = $ksYamlCheckLines | Where-Object { $_ -match '^\s*versionCode:\s*' } | Select-Object -First 1
+$ksYamlVersionNameLine = $ksYamlCheckLines | Where-Object { $_ -match '^\s*versionName:\s*' } | Select-Object -First 1
 $ksManifestCheck = Get-Content -LiteralPath $ksManifestPath -Raw
-if ($ksYamlCheck -notmatch ('(?m)^\s*versionCode:\s*[\'\"]?' + [regex]::Escape($ksTargetVersion) + '[\'\"]?\s*$')) { throw 'STOP: apktool.yml versionCode patch failed' }
-if ($ksManifestCheck -notmatch ('android:versionCode="' + [regex]::Escape($ksTargetVersion) + '"')) { throw 'STOP: AndroidManifest versionCode patch failed' }
-if ($ksManifestCheck -notmatch 'package="com\.kristalstreams\.player"') { throw 'STOP: package identity changed before build' }
+
+if (($ksYamlVersionLine -replace '^\s*versionCode:\s*','').Trim() -ne $ksTargetVersion) { throw 'STOP: apktool.yml versionCode patch failed' }
+if (($ksYamlVersionNameLine -replace '^\s*versionName:\s*','').Trim() -ne $ksTargetVersionName) { throw 'STOP: apktool.yml versionName patch failed' }
+if ($ksManifestCheck.IndexOf('android:versionCode="' + $ksTargetVersion + '"') -lt 0) { throw 'STOP: AndroidManifest versionCode patch failed' }
+if ($ksManifestCheck.IndexOf('package="com.kristalstreams.player"') -lt 0) { throw 'STOP: package identity changed before build' }
 
 # Do not change activity routing, screenOrientation, EPG, playback, login/provider code,
 # dashboard geometry, or resource qualifiers in this reset build.
@@ -119,6 +139,7 @@ if (!(Test-Path -LiteralPath $ksKeystore)) { throw "Debug keystore not found: $k
 Remove-Item -LiteralPath $ksFinal -Force -ErrorAction SilentlyContinue
 & $ksApksigner sign --ks $ksKeystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out $ksFinal $ksAligned
 if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $ksFinal)) { throw 'APK signing failed' }
+
 & $ksApksigner verify --verbose --print-certs $ksFinal | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'APK signature verification failed' }
 
@@ -126,9 +147,11 @@ Write-Host '[4/4] Verifying finished APK...' -ForegroundColor Cyan
 $ksFinalBadging = @(& $ksAapt dump badging $ksFinal 2>$null)
 $ksFinalPackageLine = ($ksFinalBadging | Select-String '^package:').Line | Select-Object -First 1
 if (!$ksFinalPackageLine) { throw 'Could not verify finished APK metadata' }
+
 $ksFinalPackage = ([regex]::Match($ksFinalPackageLine, "name='([^']+)'" )).Groups[1].Value
 $ksFinalVersion = ([regex]::Match($ksFinalPackageLine, "versionCode='([^']*)'" )).Groups[1].Value
 $ksFinalVersionName = ([regex]::Match($ksFinalPackageLine, "versionName='([^']*)'" )).Groups[1].Value
+
 if ($ksFinalPackage -ne $ksExpectedPackage) { throw "Finished APK package changed unexpectedly: $ksFinalPackage" }
 if ($ksFinalVersion -ne $ksTargetVersion) { throw "Finished APK versionCode is '$ksFinalVersion' instead of '$ksTargetVersion'" }
 if ((Get-Item -LiteralPath $ksFinal).Length -lt 8MB) { throw 'Finished APK is unexpectedly small - STOP' }
@@ -144,4 +167,5 @@ Write-Host '1682193 / 1682197 DONOR APP: NOT USED' -ForegroundColor Green
 Write-Host ('APK: ' + $ksFinal) -ForegroundColor Cyan
 Write-Host ('WORKSPACE: ' + $ksWork) -ForegroundColor DarkGray
 Write-Host ''
+
 explorer.exe /select,"$ksFinal"
