@@ -6,6 +6,9 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+const DISMISS_KEY = 'installPromptDismissed9506';
+const DISMISS_FOR_MS = 7 * 24 * 60 * 60 * 1000;
+
 const InstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -19,146 +22,88 @@ const InstallPrompt: React.FC = () => {
     setIsAndroid(isAndroidDevice);
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const hasBeenDismissed = localStorage.getItem('installPromptDismissed');
+    const dismissedAt = Number(localStorage.getItem(DISMISS_KEY));
+    const recentlyDismissed = Number.isFinite(dismissedAt) && dismissedAt > 0 && Date.now() - dismissedAt < DISMISS_FOR_MS;
 
-    if (!isStandalone && !hasBeenDismissed) {
-      if (isIOSDevice) {
-        setTimeout(() => setShowPrompt(true), 3000);
-      } else {
-        const handler = (e: Event) => {
-          e.preventDefault();
-          setDeferredPrompt(e as BeforeInstallPromptEvent);
-          setTimeout(() => setShowPrompt(true), 3000);
-        };
+    if (isStandalone || recentlyDismissed) return;
 
-        window.addEventListener('beforeinstallprompt', handler);
+    const handler = (event: Event) => {
+      event.preventDefault();
+      setDeferredPrompt(event as BeforeInstallPromptEvent);
+    };
 
-        // Android: show the prompt even if beforeinstallprompt never fires
-        // (so the APK download option is still reachable)
-        if (isAndroidDevice) {
-          setTimeout(() => setShowPrompt(true), 3000);
-        }
+    window.addEventListener('beforeinstallprompt', handler);
+    const timer = window.setTimeout(() => setShowPrompt(true), 3000);
 
-        return () => window.removeEventListener('beforeinstallprompt', handler);
-      }
-    }
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
   }, []);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
 
-    deferredPrompt.prompt();
-
+    await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
 
-    if (outcome === 'accepted') {
-      setShowPrompt(false);
-    }
-
+    if (outcome === 'accepted') setShowPrompt(false);
     setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('installPromptDismissed', 'true');
+    localStorage.setItem(DISMISS_KEY, Date.now().toString());
   };
 
   if (!showPrompt) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:bottom-4 md:w-96 z-50 animate-slide-up">
-      <div className="bg-dark-100 border border-gray-800 rounded-xl shadow-2xl p-5">
+    <div className="fixed bottom-4 left-4 right-4 z-50 animate-slide-up md:bottom-4 md:left-auto md:right-4 md:w-96">
+      <div className="rounded-xl border border-gray-800 bg-dark-100 p-5 shadow-2xl">
         <button
           onClick={handleDismiss}
-          className="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors"
+          className="absolute right-3 top-3 text-gray-400 transition-colors hover:text-white"
+          aria-label="Dismiss"
         >
           <X size={20} />
         </button>
 
-        <div className="flex items-start gap-4 mb-4">
-          <div className="bg-primary/20 p-3 rounded-lg">
+        <div className="mb-4 flex items-start gap-4">
+          <div className="rounded-lg bg-primary/20 p-3">
             <Smartphone className="text-primary" size={24} />
           </div>
           <div className="flex-1">
-            <h3 className="text-white font-semibold text-lg mb-1">
-              Install Kristal Streams
-            </h3>
-            <p className="text-gray-400 text-sm">
-              Get the full app experience with offline access and faster loading
-            </p>
+            <h3 className="mb-1 text-lg font-semibold text-white">Install Kristal Streams</h3>
+            <p className="text-sm text-gray-400">Get the full app experience with faster access from your device.</p>
           </div>
         </div>
 
-        <div className="space-y-2 mb-4">
-          <div className="flex items-center gap-2 text-sm text-gray-300">
-            <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-            <span>Works offline with cached content</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-300">
-            <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-            <span>Launch from home screen</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-300">
-            <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-            <span>Receive push notifications</span>
-          </div>
+        <div className="mb-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm text-gray-300"><div className="h-1.5 w-1.5 rounded-full bg-primary" /><span>Kristal Streams build 9506</span></div>
+          <div className="flex items-center gap-2 text-sm text-gray-300"><div className="h-1.5 w-1.5 rounded-full bg-primary" /><span>Android, Firestick, and Android TV</span></div>
+          <div className="flex items-center gap-2 text-sm text-gray-300"><div className="h-1.5 w-1.5 rounded-full bg-primary" /><span>Direct verified APK download</span></div>
         </div>
 
         {isIOS ? (
-          <div className="bg-dark-200 p-4 rounded-lg text-sm text-gray-300">
+          <div className="rounded-lg bg-dark-200 p-4 text-sm text-gray-300">
             <p className="mb-2 font-semibold text-white">To install on iOS:</p>
-            <ol className="space-y-1 list-decimal list-inside">
+            <ol className="list-inside list-decimal space-y-1">
               <li>Tap the Share button (square with arrow)</li>
               <li>Scroll down and tap "Add to Home Screen"</li>
               <li>Tap "Add" in the top right</li>
             </ol>
           </div>
-        ) : isAndroid ? (
+        ) : (
           <div className="space-y-2">
             <div className="flex gap-2">
-              <button
-                onClick={handleDismiss}
-                className="flex-1 px-4 py-2.5 bg-dark-200 hover:bg-dark-300 text-white rounded-lg transition-colors font-medium"
-              >
-                Not Now
-              </button>
+              <button onClick={handleDismiss} className="flex-1 rounded-lg bg-dark-200 px-4 py-2.5 font-medium text-white transition-colors hover:bg-dark-300">Not Now</button>
               {deferredPrompt && (
-                <button
-                  onClick={handleInstall}
-                  className="flex-1 px-4 py-2.5 bg-dark-200 hover:bg-dark-300 border border-gray-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
-                >
-                  Web App
-                </button>
+                <button onClick={() => void handleInstall()} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-dark-200 px-4 py-2.5 font-medium text-white transition-colors hover:bg-dark-300">Web App</button>
               )}
-              <a
-                href="/downloads/KristalStreams.apk"
-                download
-                onClick={handleDismiss}
-                className="flex-1 px-4 py-2.5 bg-primary hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
-              >
-                <Download size={18} />
-                Get APK
-              </a>
+              <a href="/downloads/KristalStreams.apk" download onClick={handleDismiss} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-medium text-white transition-colors hover:bg-red-700"><Download size={18} />Get APK</a>
             </div>
-            <p className="text-xs text-gray-500 text-center">
-              APK installs directly — allow "unknown sources" if prompted
-            </p>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <button
-              onClick={handleDismiss}
-              className="flex-1 px-4 py-2.5 bg-dark-200 hover:bg-dark-300 text-white rounded-lg transition-colors font-medium"
-            >
-              Not Now
-            </button>
-            <button
-              onClick={handleInstall}
-              className="flex-1 px-4 py-2.5 bg-primary hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
-            >
-              <Download size={18} />
-              Install
-            </button>
+            <p className="text-center text-xs text-gray-500">APK installs directly — allow "unknown sources" if prompted</p>
           </div>
         )}
       </div>
