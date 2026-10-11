@@ -7,11 +7,11 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const androidApk = {
-  name: 'Kristal Stream APK',
-  downloadUrl: '/downloads/KristalStream.apk',
-  fileName: 'KristalStream.apk',
-  version: '1.0.0',
-  size: '8.2 MB',
+  name: 'Kristal Streams APK',
+  downloadUrl: '/downloads/KristalStreams.apk',
+  fileName: 'KristalStreams.apk',
+  version: '9506',
+  size: '78.6 MB',
   requirements: 'Android 7.0+',
 };
 

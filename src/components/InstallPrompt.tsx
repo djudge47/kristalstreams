@@ -131,7 +131,7 @@ const InstallPrompt: React.FC = () => {
                 </button>
               )}
               <a
-                href="/downloads/KristalStream.apk"
+                href="/downloads/KristalStreams.apk"
                 download
                 onClick={handleDismiss}
                 className="flex-1 px-4 py-2.5 bg-primary hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
