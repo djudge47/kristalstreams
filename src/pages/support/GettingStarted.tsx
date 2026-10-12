@@ -1,3 +1,4 @@
+import SupportPage from './SupportPage';
 import React, { useEffect, useState } from 'react';
 import { getSupportArticles } from '../../lib/api';
 import { Link } from 'react-router-dom';
@@ -35,6 +36,10 @@ const GettingStarted: React.FC = () => {
     fetchArticles();
   }, []);
 
+  if (!loading && (error || articles.length === 0)) {
+    return <SupportPage title="Getting Started Guide" description="Start watching with the account and setup instructions supplied for your service." sections={[{"heading": "1. Check your activation details", "content": "Find the activation message or order information supplied by Kristal Streams. Keep your streaming username, password and server details private. A website login may be different from your player login."}, {"heading": "2. Set up your device", "content": "Use the setup guide for your device and the player or installer supplied by support. Confirm compatibility before installing. If the player asks for a server address, enter the supplied address exactly rather than guessing it."}, {"heading": "3. Load your content", "content": "After signing in, allow the channel list and guide to load. Try a live channel and an on-demand title. Use search or favorites to find your content, where supported."}, {"heading": "4. Get help if playback fails", "content": "Write down the device model, player version and exact error. Check another channel and confirm your subscription is active. Contact support if the issue continues."}]} relatedLinks={[{"title": "Smart TV Setup", "url": "/support/tv-setup"}, {"title": "Mobile Setup", "url": "/support/mobile-setup"}, {"title": "Computer Setup", "url": "/support/computer-setup"}, {"title": "Support Tickets", "url": "/client/support"}]} />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen py-32 bg-dark-300">
@@ -68,7 +73,7 @@ const GettingStarted: React.FC = () => {
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-2xl font-bold text-white mb-4">Error Loading Content</h2>
             <p className="text-gray-400 mb-8">{error}</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="bg-primary hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors duration-200"
             >

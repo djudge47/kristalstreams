@@ -1,12 +1,5 @@
 import React from 'react';
-
-export default function Billing() {
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Billing Support</h1>
-      <div className="prose max-w-none">
-        <p className="text-lg mb-4">Find answers to common billing questions and manage your subscription.</p>
-      </div>
-    </div>
-  );
+import SupportPage from './SupportPage';
+export default function HelpContent() {
+  return <SupportPage title="Account & Billing" description="Find your subscription details and resolve payment questions." sections={[{"heading": "Find your subscription", "content": "Sign in to the client area using the account associated with your purchase. Check your subscription or order details for the plan, connection allowance and expiration date. Your website account and streaming login may use different credentials."}, {"heading": "Payment completed but service is unavailable", "content": "Check your payment receipt and whether the subscription is active. Restart the player and try your streaming credentials again. If access is still unavailable, contact support with your order reference, payment date and account email. Avoid submitting another payment until the first transaction has been checked."}, {"heading": "Renewals and plan changes", "content": "Review the terms shown with your current order before renewing or changing plans. Ask support to confirm the effective date, total price, and whether the change affects your existing expiration date or connection allowance."}, {"heading": "Unexpected charges or refund questions", "content": "Contact support with the transaction date, amount and order reference. Refund eligibility and cancellation terms depend on the terms accepted at purchase. Never include a full card number, security code, password or API key in a support message."}]} relatedLinks={[{"title": "Support Tickets", "url": "/client/support"}, {"title": "Contact Support", "url": "/support"}]} />;
 }

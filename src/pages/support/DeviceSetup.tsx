@@ -1,3 +1,4 @@
+import SupportPage from './SupportPage';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Monitor, Clock, BarChart, ArrowRight } from 'lucide-react';
@@ -53,6 +54,10 @@ const DeviceSetup: React.FC = () => {
     }
   };
 
+  if (!loading && (error || guides.length === 0)) {
+    return <SupportPage title="Device Setup Guides" description="Choose a setup guide for the device you plan to use." sections={[{"heading": "Before installing", "content": "Identify the exact device model and operating system. Ask support which player or installer is approved for that model. Store availability and playback compatibility can vary."}, {"heading": "Android phone or Android TV", "content": "Use the approved Android installer and your supplied streaming login. When updating an existing installation, preserve its data and settings; do not uninstall or clear app data unless support specifically asks."}, {"heading": "Smart TVs and streaming devices", "content": "Check the device-specific guide before installing a player. If your TV has no compatible app, ask support about an approved external streaming device."}, {"heading": "Computers and other devices", "content": "Use the player or playback method supplied for your account. Confirm browser, console or Apple-device compatibility with support before relying on it."}]} relatedLinks={[{"title": "Smart TV Setup", "url": "/support/tv-setup"}, {"title": "Mobile Setup", "url": "/support/mobile-setup"}, {"title": "Computer Setup", "url": "/support/computer-setup"}, {"title": "Gaming Console Setup", "url": "/support/console-setup"}]} />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen py-32 bg-dark-300">
@@ -85,7 +90,7 @@ const DeviceSetup: React.FC = () => {
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-2xl font-bold text-white mb-4">Error Loading Guides</h2>
             <p className="text-gray-400 mb-8">{error}</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="bg-primary hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors duration-200"
             >
@@ -111,40 +116,40 @@ const DeviceSetup: React.FC = () => {
             <h2 className="text-2xl font-semibold text-white mb-6">Supported Platforms</h2>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
               <div className="flex flex-col items-center">
-                <img 
-                  src="https://raw.githubusercontent.com/google/material-design-icons/master/android/1x_web/ic_android_white_48dp.png" 
+                <img
+                  src="https://raw.githubusercontent.com/google/material-design-icons/master/android/1x_web/ic_android_white_48dp.png"
                   alt="Android"
                   className="h-12 mb-2 opacity-80 hover:opacity-100 transition-opacity"
                 />
                 <span className="text-gray-400">Android</span>
               </div>
               <div className="flex flex-col items-center">
-                <img 
-                  src="https://www.apple.com/ac/structured-data/images/knowledge_graph_logo.png" 
+                <img
+                  src="https://www.apple.com/ac/structured-data/images/knowledge_graph_logo.png"
                   alt="Apple"
                   className="h-12 mb-2 opacity-80 hover:opacity-100 transition-opacity"
                 />
                 <span className="text-gray-400">Apple</span>
               </div>
               <div className="flex flex-col items-center">
-                <img 
-                  src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Windows_logo_-_2012.svg" 
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Windows_logo_-_2012.svg"
                   alt="Windows"
                   className="h-12 mb-2 opacity-80 hover:opacity-100 transition-opacity"
                 />
                 <span className="text-gray-400">Windows</span>
               </div>
               <div className="flex flex-col items-center">
-                <img 
-                  src="https://upload.wikimedia.org/wikipedia/commons/1/1d/Amazon_Fire_TV_stick_logo.svg" 
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/1/1d/Amazon_Fire_TV_stick_logo.svg"
                   alt="Fire TV"
                   className="h-12 mb-2 opacity-80 hover:opacity-100 transition-opacity"
                 />
                 <span className="text-gray-400">Fire TV</span>
               </div>
               <div className="flex flex-col items-center">
-                <img 
-                  src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Roku_logo.svg" 
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Roku_logo.svg"
                   alt="Roku"
                   className="h-12 mb-2 opacity-80 hover:opacity-100 transition-opacity"
                 />

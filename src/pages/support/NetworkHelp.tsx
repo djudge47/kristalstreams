@@ -1,12 +1,5 @@
 import React from 'react';
-
-export default function NetworkHelp() {
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Network Help</h1>
-      <div className="prose max-w-none">
-        <p className="text-lg mb-4">Resolve network connectivity issues and optimize your streaming quality.</p>
-      </div>
-    </div>
-  );
+import SupportPage from './SupportPage';
+export default function HelpContent() {
+  return <SupportPage title="Network Help" description="Practical checks for unstable connections and interrupted playback." sections={[{"heading": "Check other internet activity", "content": "Open a normal website on the same device. If it also fails, check your router and internet connection before changing the player. Compare a second device on the same network."}, {"heading": "Improve the connection", "content": "Use Ethernet when available. For Wi-Fi, move closer to the router and reduce obstructions. A 5 GHz connection can help near the router; compare signal stability rather than choosing a band by name alone."}, {"heading": "Restart the network equipment", "content": "Restart the router using its normal restart procedure. Allow the connection to recover fully, then restart the viewing device and try again. Do not factory-reset the router."}, {"heading": "Test during the problem", "content": "Measure speed from the viewing device while the issue is occurring. Repeat at another time to identify congestion. Download speed alone does not reveal every problem; interruptions and latency changes can still affect live playback."}, {"heading": "When to ask for help", "content": "If all devices lose internet, contact your internet provider. If other websites work but multiple Kristal Streams channels fail, report the affected channels, time, device and error to support."}]} relatedLinks={[{"title": "Run Speed Test", "url": "/support/speed-test"}, {"title": "Connection Guide", "url": "/support/connection"}, {"title": "Support Tickets", "url": "/client/support"}]} />;
 }

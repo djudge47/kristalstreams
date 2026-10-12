@@ -12,7 +12,7 @@ interface SupportPageProps {
 const SupportPage: React.FC<SupportPageProps> = ({ title, description, sections, relatedLinks }) => {
   useEffect(() => { window.scrollTo(0, 0); }, []);
   return (
-    <div className="min-h-screen py-12 bg-dark-300">
+    <div className="min-h-screen py-32 bg-dark-300">
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto">
           <Link to="/support" className="text-gray-400 hover:text-white flex items-center mb-6">
@@ -31,7 +31,7 @@ const SupportPage: React.FC<SupportPageProps> = ({ title, description, sections,
           {relatedLinks && relatedLinks.length > 0 && (
             <div className="mt-8 bg-dark-100 rounded-xl p-6 border border-gray-800">
               <h3 className="text-lg font-semibold text-white mb-4">Related Topics</h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {relatedLinks.map(l => (
                   <Link key={l.url} to={l.url} className="text-gray-300 hover:text-primary transition-colors">{l.title}</Link>
                 ))}
