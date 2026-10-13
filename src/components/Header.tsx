@@ -57,11 +57,11 @@ const Header: React.FC = memo(() => {
   );
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-dark-200/95 backdrop-blur-sm' : 'bg-transparent'}`}>
-      <div className="container mx-auto px-4 pt-3 sm:px-6 lg:px-8">
+    <header className={`fixed top-0 left-0 right-0 z-50 bg-dark-200 border-b border-gray-800 lg:border-0 lg:bg-transparent transition-all duration-300 ${isScrolled ? 'bg-dark-200/95 backdrop-blur-sm' : 'bg-transparent'}`}>
+      <div className="container mx-auto px-4 pt-1 lg:pt-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-2">
-          <Link to="/" className="flex items-center text-xl font-bold text-primary">
-            <img src="/logo/ks-mark.png" alt="Kristal Streams" className="h-9 w-auto mr-2" />
+          <Link to="/" className="flex items-center min-w-0 text-lg lg:text-xl font-bold text-primary">
+            <img src="/logo/ks-mark.png" alt="Kristal Streams" className="h-8 lg:h-9 w-auto mr-2" />
             Kristal Streams
           </Link>
 
@@ -106,8 +106,8 @@ const Header: React.FC = memo(() => {
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
-            <Link to="/" className="text-gray-300 hover:text-white transition-colors duration-200 p-1" aria-label="Home"><Home size={22} /></Link>
-            <button onClick={() => setIsOpen(!isOpen)} className="text-gray-300 hover:text-white transition-colors duration-200">
+            
+            <button type="button" aria-label={isOpen ? "Close navigation" : "Open navigation"} aria-expanded={isOpen} aria-controls="mobile-navigation" onClick={() => setIsOpen(!isOpen)} className="flex items-center justify-center w-11 h-11 rounded-xl border border-gray-700 bg-dark-100 text-white hover:border-primary transition-colors duration-200">
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
@@ -115,14 +115,14 @@ const Header: React.FC = memo(() => {
       </div>
 
       {isOpen && (
-        <div className="lg:hidden bg-dark-200">
+        <div id="mobile-navigation" className="absolute top-full left-0 right-0 lg:hidden bg-dark-200 border-b border-gray-700 shadow-2xl overflow-y-auto overscroll-contain" style={{ maxHeight: "calc(100dvh - 64px)" }}>
           <div className="container mx-auto px-4 py-4">
-            <nav className="flex flex-col space-y-4">
-              <Link to="/" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 flex items-center" onClick={closeMenu}><Home size={18} className="mr-2" />Home</Link>
-              <Link to="/pricing" className="text-gray-300 hover:text-white font-medium transition-colors duration-200" onClick={closeMenu}>Pricing</Link>
-              <Link to="/support" className="text-gray-300 hover:text-white font-medium transition-colors duration-200" onClick={closeMenu}>Support</Link>
-              <Link to="/download-app" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 flex items-center" onClick={closeMenu}><Smartphone size={18} className="mr-2" />Get App</Link>
-              <Link to="/free-trial" className="bg-primary hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors duration-200 text-center" onClick={closeMenu}>Start Free Trial</Link>
+            <nav aria-label="Mobile navigation" className="flex flex-col space-y-2">
+              <Link to="/" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100 flex items-center" onClick={closeMenu}><Home size={18} className="mr-2" />Home</Link>
+              <Link to="/pricing" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100" onClick={closeMenu}>Pricing</Link>
+              <Link to="/support" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100" onClick={closeMenu}>Support</Link>
+              <Link to="/download-app" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100 flex items-center" onClick={closeMenu}><Smartphone size={18} className="mr-2" />Get App</Link>
+              <Link to="/free-trial" className="bg-primary hover:bg-red-700 text-white px-4 py-3 rounded-xl min-h-12 font-semibold transition-colors duration-200 text-center" onClick={closeMenu}>Start Free Trial</Link>
 
               <div className="flex items-center space-x-4 pt-4 border-t border-gray-700">
                 <span className="text-gray-400 text-sm">Follow us:</span>
@@ -131,17 +131,17 @@ const Header: React.FC = memo(() => {
 
               {user ? (
                 <>
-                  <Link to="/dashboard" className="text-gray-300 hover:text-white font-medium transition-colors duration-200" onClick={closeMenu}>Dashboard</Link>
-                  <Link to="/client/account" className="text-gray-300 hover:text-white font-medium transition-colors duration-200" onClick={closeMenu}>Account</Link>
-                  <Link to="/client/subscription" className="text-gray-300 hover:text-white font-medium transition-colors duration-200" onClick={closeMenu}>Subscription</Link>
-                  <Link to="/client/devices" className="text-gray-300 hover:text-white font-medium transition-colors duration-200" onClick={closeMenu}>Devices</Link>
-                  <Link to="/client/settings" className="text-gray-300 hover:text-white font-medium transition-colors duration-200" onClick={closeMenu}>Settings</Link>
-                  <button onClick={() => { handleSignOut(); closeMenu(); }} className="bg-primary hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors duration-200">Sign Out</button>
+                  <Link to="/dashboard" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100" onClick={closeMenu}>Dashboard</Link>
+                  <Link to="/client/account" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100" onClick={closeMenu}>Account</Link>
+                  <Link to="/client/subscription" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100" onClick={closeMenu}>Subscription</Link>
+                  <Link to="/client/devices" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100" onClick={closeMenu}>Devices</Link>
+                  <Link to="/client/settings" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100" onClick={closeMenu}>Settings</Link>
+                  <button onClick={() => { handleSignOut(); closeMenu(); }} className="bg-primary hover:bg-red-700 text-white px-4 py-3 rounded-xl min-h-12 font-semibold transition-colors duration-200">Sign Out</button>
                 </>
               ) : (
                 <>
-                  <button onClick={() => { handleSignIn(); closeMenu(); }} className="text-gray-300 hover:text-white font-medium transition-colors duration-200">Sign In</button>
-                  <button onClick={() => { handleSignUp(); closeMenu(); }} className="text-gray-300 hover:text-white font-medium transition-colors duration-200">Create Account</button>
+                  <button onClick={() => { handleSignIn(); closeMenu(); }} className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100">Sign In</button>
+                  <button onClick={() => { handleSignUp(); closeMenu(); }} className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100">Create Account</button>
                 </>
               )}
             </nav>

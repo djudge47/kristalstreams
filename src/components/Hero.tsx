@@ -187,6 +187,13 @@ const Hero: React.FC = () => {
         .hero-mobile-poster {
           object-position: var(--hero-image-position-mobile, center top);
         }
+        .hero-mobile-poster { display: block; }
+        .hero-desktop-image { display: none; }
+
+        @media (orientation: landscape), (min-width: 1024px) {
+          .hero-mobile-poster { display: none; }
+          .hero-desktop-image { display: block; }
+        }
       `}</style>
       <div className="absolute inset-0">
         <div className="relative h-full w-full">
@@ -289,11 +296,19 @@ const Hero: React.FC = () => {
               </div>
             </div>
 
-            <p className="max-w-[88%] text-sm leading-relaxed text-white/80 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-              Premium channels, movies, sports, and shows — ready to stream on your favorite device.
-            </p>
+            <div className="max-w-sm space-y-2">
+              <h2 className="text-xl font-bold leading-tight text-white">
+                Premium Streaming Experience
+              </h2>
+              <p className="text-xs font-semibold leading-relaxed text-primary">
+                21,000+ Channels &bull; Movies &bull; Sports &bull; Shows
+              </p>
+              <p className="text-sm leading-relaxed text-gray-300">
+                Crystal-clear HD and 4K streaming. Watch anywhere, anytime, on your favorite device.
+              </p>
+            </div>
 
-            <div className="flex max-w-[92%] gap-2 pt-1">
+            <div className="grid w-full grid-cols-2 gap-3 pt-1">
               <button
                 onClick={handleStartWatching}
                 className="flex flex-1 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-black/30 transition hover:bg-red-700"
@@ -301,12 +316,10 @@ const Hero: React.FC = () => {
                 <Play size={16} className="mr-2" />
                 Start Trial
               </button>
-              <button
-                onClick={handleLearnMore}
-                className="flex flex-1 items-center justify-center rounded-xl bg-white/12 px-4 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/18"
-              >
+              <button onClick={() => navigate('/pricing')}
+                className="flex flex-1 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-black/30 transition hover:bg-red-700">
                 <Info size={16} className="mr-2" />
-                Details
+                View Plans
               </button>
             </div>
           </div>

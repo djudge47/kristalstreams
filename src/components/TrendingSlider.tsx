@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -102,7 +102,17 @@ const TrendingSlider: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [user, setUser] = useState(null);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
-  const itemsPerPage = 4;
+  const [itemsPerPage, setItemsPerPage] = useState(4);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const swiped = useRef(false);
+
+  useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 767px)');
+    const update = () => setItemsPerPage(mobile.matches ? 1 : 4);
+    update();
+    mobile.addEventListener('change', update);
+    return () => mobile.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -158,15 +168,43 @@ const TrendingSlider: React.FC = () => {
         <h2 className="text-2xl font-bold text-white mb-8">Trending Now</h2>
         
         <div className="relative">
-          <div className="overflow-hidden">
+          <div
+            className="overflow-hidden"
+            style={{ touchAction: 'pan-y' }}
+            onTouchStart={(event) => {
+              const touch = event.touches[0];
+              touchStart.current = { x: touch.clientX, y: touch.clientY };
+              swiped.current = false;
+            }}
+            onTouchEnd={(event) => {
+              if (!touchStart.current) return;
+              const touch = event.changedTouches[0];
+              const dx = touch.clientX - touchStart.current.x;
+              const dy = touch.clientY - touchStart.current.y;
+              touchStart.current = null;
+              if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                swiped.current = true;
+                if (dx < 0) handleNext();
+                else handlePrevious();
+              }
+            }}
+            onTouchCancel={() => { touchStart.current = null; }}
+            onClickCapture={(event) => {
+              if (swiped.current) {
+                event.preventDefault();
+                event.stopPropagation();
+                swiped.current = false;
+              }
+            }}
+          >
             <div
               className="flex transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * 25}%)` }}
+              style={{ transform: `translateX(-${currentIndex * (100 / itemsPerPage)}%)` }}
             >
               {[...trendingContent, ...trendingContent, ...trendingContent].map((item, index) => (
                 <div
                   key={`${item.id}-${index}`}
-                  className="w-1/4 flex-shrink-0 px-2"
+                  className="w-full md:w-1/4 flex-shrink-0 px-0 md:px-2"
                 >
                   <div
                     className="relative group cursor-pointer"
@@ -207,7 +245,7 @@ const TrendingSlider: React.FC = () => {
 
           <button
             onClick={handlePrevious}
-            className="absolute left-0 top-1/3 -translate-y-1/2 -translate-x-4 bg-black/50 hover:bg-black/75 text-white p-2 rounded-full transition-all duration-200"
+            className="absolute left-0 top-1/3 -translate-y-1/2 translate-x-2 md:--translate-x-2 md:translate-x-4 bg-black/50 hover:bg-black/75 text-white p-2 rounded-full transition-all duration-200"
             aria-label="Previous slides"
           >
             <ChevronLeft size={24} />
@@ -215,7 +253,7 @@ const TrendingSlider: React.FC = () => {
 
           <button
             onClick={handleNext}
-            className="absolute right-0 top-1/3 -translate-y-1/2 translate-x-4 bg-black/50 hover:bg-black/75 text-white p-2 rounded-full transition-all duration-200"
+            className="absolute right-0 top-1/3 -translate-y-1/2 -translate-x-2 md:translate-x-4 bg-black/50 hover:bg-black/75 text-white p-2 rounded-full transition-all duration-200"
             aria-label="Next slides"
           >
             <ChevronRight size={24} />
