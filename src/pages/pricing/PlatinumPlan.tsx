@@ -44,7 +44,8 @@ const PlatinumPlan: React.FC = () => {
       state: {
         plan: 'ultimate' as const,
         interval: 'yearly' as const,
-        price: finalPriceTotal
+        price: finalPriceTotal,
+        connections: selectedConnections
       }
     });
   };

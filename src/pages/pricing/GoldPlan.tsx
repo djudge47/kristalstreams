@@ -41,8 +41,9 @@ const GoldPlan: React.FC = () => {
     navigate('/checkout', {
       state: {
         plan: 'premium' as const,
-        interval: 'yearly' as const,
-        price: finalPriceTotal
+        interval: '6 months' as const,
+        price: finalPriceTotal,
+        connections: selectedConnections
       }
     });
   };

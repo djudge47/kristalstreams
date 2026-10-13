@@ -42,7 +42,8 @@ const BronzePlan: React.FC = () => {
       state: {
         plan: 'basic' as const,
         interval: 'monthly' as const,
-        price: finalPriceTotal
+        price: finalPriceTotal,
+        connections: selectedConnections
       }
     });
   };

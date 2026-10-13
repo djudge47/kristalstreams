@@ -40,8 +40,9 @@ const BasicPlan: React.FC = () => {
     navigate('/checkout', {
       state: {
         plan: 'basic',
-        interval: state.annually ? 'yearly' : 'monthly',
-        price: finalPriceTotal
+        interval: 'monthly',
+        price: finalPriceTotal,
+        connections: selectedConnections
       }
     });
   };

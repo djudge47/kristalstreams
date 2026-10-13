@@ -40,8 +40,9 @@ const StandardPlan: React.FC = () => {
     navigate('/checkout', {
       state: {
         plan: 'standard',
-        interval: state.annually ? 'yearly' : 'monthly',
-        price: finalPriceTotal
+        interval: '3 months',
+        price: finalPriceTotal,
+        connections: selectedConnections
       }
     });
   };

@@ -41,8 +41,9 @@ const SilverPlan: React.FC = () => {
     navigate('/checkout', {
       state: {
         plan: 'standard' as const,
-        interval: 'yearly' as const,
-        price: finalPriceTotal
+        interval: '3 months' as const,
+        price: finalPriceTotal,
+        connections: selectedConnections
       }
     });
   };

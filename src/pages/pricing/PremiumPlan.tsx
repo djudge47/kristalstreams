@@ -40,8 +40,9 @@ const PremiumPlan: React.FC = () => {
     navigate('/checkout', {
       state: {
         plan: 'premium',
-        interval: state.annually ? 'yearly' : 'monthly',
-        price: finalPriceTotal
+        interval: '6 months',
+        price: finalPriceTotal,
+        connections: selectedConnections
       }
     });
   };

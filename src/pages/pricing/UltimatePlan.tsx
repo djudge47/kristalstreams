@@ -40,8 +40,9 @@ const UltimatePlan: React.FC = () => {
     navigate('/checkout', {
       state: {
         plan: 'ultimate',
-        interval: state.annually ? 'yearly' : 'monthly',
-        price: finalPriceTotal
+        interval: 'yearly',
+        price: finalPriceTotal,
+        connections: selectedConnections
       }
     });
   };
