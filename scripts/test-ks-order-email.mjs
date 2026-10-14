@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { handleOrderNotification } from '../supabase/functions/ks-order-notification/handler.js';
+import { handleOrderNotification, authorizeOrderBackend } from '../supabase/functions/ks-order-notification/handler.js';
 
 const sessionId = 'cs_test_example123';
 const clock = Date.parse('2026-10-14T04:00:00Z');
@@ -37,4 +37,31 @@ await check('provider failures return a retriable failure', async () => {const f
 await check('database failures after sending preserve the same provider deduplication key and body', async () => {const f=fixture({failSave:true});assert.equal((await handleOrderNotification(request(),f.options)).status,503);f.state.failSave=false;assert.equal((await handleOrderNotification(request(),f.options)).status,200);assert.equal(f.state.sends[0].headers['Idempotency-Key'],f.state.sends[1].headers['Idempotency-Key']);assert.equal(f.state.sends[0].body,f.state.sends[1].body);});
 await check('ambiguous retries stop before provider deduplication expires', async () => {const f=fixture({startedAt:clock-24*60*60*1000});assert.equal((await handleOrderNotification(request(),f.options)).status,503);assert.equal(f.state.sends.length,0);});
 await check('missing provider configuration fails before accessing receipts', async () => {const f=fixture();f.options.resendKey='';assert.equal((await handleOrderNotification(request(),f.options)).status,503);assert.equal(f.state.prepares,0);});
+await check('alternate server credential is checked with its own database authorization', async () => {
+  let probes = 0;
+  const authOptions = { serviceKey: 'runtime-server-key', supabaseUrl: 'https://example.supabase.co', createClient: (url, key, config) => {
+    assert.equal(key, 'valid.server.signature'); assert.equal(config.auth.persistSession, false);
+    return { from: (table) => { assert.equal(table, 'ks_payment_receipts'); return { select: (columns, opts) => {
+      assert.equal(columns, 'checkout_session_id'); assert.equal(opts.head, true);
+      return { limit: async (n) => { assert.equal(n, 1); probes++; return { error: null }; } };
+    } }; } };
+  } };
+  assert.equal(await authorizeOrderBackend(request(undefined, 'valid.server.signature'), authOptions), true);
+  assert.equal(probes, 1);
+  const f = fixture(); f.options.authorize = req => authorizeOrderBackend(req, authOptions);
+  assert.equal((await handleOrderNotification(request(undefined, 'valid.server.signature'), f.options)).status, 200);
+});
+await check('customer and invalid credentials cannot use the private notification service', async () => {
+  const authOptions = { serviceKey: 'runtime-server-key', supabaseUrl: 'https://example.supabase.co', createClient: () => ({
+    from: () => ({ select: () => ({ limit: async () => ({ error: { code: '42501' } }) }) }),
+  }) };
+  for (const token of ['anon.jwt.signature', 'customer.jwt.signature', 'bad-key', '']) {
+    const f = fixture(); f.options.authorize = req => authorizeOrderBackend(req, authOptions);
+    assert.equal((await handleOrderNotification(request(undefined, token), f.options)).status, 401);
+    assert.equal(f.state.sends.length, 0); assert.equal(f.state.prepares, 0);
+  }
+  assert.equal(await authorizeOrderBackend(request(undefined, 'broken.jwt.signature'), {
+    ...authOptions, createClient: () => { throw new Error('network failure'); },
+  }), false);
+});
 console.log(`${passed} order-email checks passed. No real emails or payments were sent.`);
