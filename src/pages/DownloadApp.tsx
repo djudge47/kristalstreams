@@ -21,7 +21,7 @@ const supportedDevices = [
   'Amazon Fire TV / Firestick',
   'NVIDIA Shield',
   'Chromecast with Google TV',
-  'Web browser option',
+  'Website account access',
 ];
 
 const DownloadApp: React.FC = () => {
@@ -77,7 +77,7 @@ const DownloadApp: React.FC = () => {
               <h1 className="text-4xl font-bold text-white md:text-5xl">Download Kristal Streams Apps</h1>
             </div>
             <p className="mx-auto max-w-3xl text-xl text-gray-400">
-              Download the Kristal Streams APK for Android, Firestick, and Android TV devices, or use the website in your browser.
+              Download the Kristal Streams APK for Android, Firestick, and Android TV devices, and manage your account through the website.
             </p>
           </div>
 
@@ -147,9 +147,9 @@ const DownloadApp: React.FC = () => {
 
             <div className="rounded-xl border border-gray-800 bg-dark-100 p-6">
               <Monitor className="mb-4 h-8 w-8 text-primary" />
-              <h3 className="text-xl font-semibold text-white">Browser Option</h3>
+              <h3 className="text-xl font-semibold text-white">Website Account Access</h3>
               <p className="mt-4 text-sm text-gray-300">
-                The browser version still works without installing the APK. Customers can sign in from the website when they do not want to install the Android file.
+                Use your browser for your dashboard, plans and support. An installed web app is a shortcut to these pages. Streaming playback requires the player and setup instructions supplied separately for your account.
               </p>
               {isInstalled ? (
                 <div className="mt-4 flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-green-300">
@@ -218,16 +218,16 @@ const DownloadApp: React.FC = () => {
 
           <div className="mt-12 rounded-xl border border-gray-800 bg-dark-100 p-8 text-center">
             <Monitor className="mx-auto mb-4 h-12 w-12 text-primary" />
-            <h3 className="mb-4 text-2xl font-semibold text-white">No APK download required?</h3>
+            <h3 className="mb-4 text-2xl font-semibold text-white">Need your account or setup details?</h3>
             <p className="mx-auto mb-6 max-w-2xl text-gray-300">
-              Customers can also stream directly in the browser by signing in on the Kristal Streams website.
+              Sign in to your dashboard for account access and setup guidance. Contact support if you have not received your streaming login or need a playback method for another device.
             </p>
             <button
               type="button"
-              onClick={() => window.open('/', '_blank')}
+              onClick={() => { window.location.href = '/dashboard'; }}
               className="rounded-lg bg-dark-200 px-8 py-3 font-medium text-white transition-colors hover:bg-dark-100"
             >
-              Stream in Browser
+              Go to Dashboard
             </button>
           </div>
         </div>

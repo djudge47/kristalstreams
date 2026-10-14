@@ -35,7 +35,7 @@ const PaymentSuccess: React.FC = () => {
           setMessage('Your test payment was confirmed and recorded. No real charge or live service activation was made.');
         } else if (payload.activated === true && payload.test_mode === false) {
           setStatus('success');
-          setMessage('Your subscription is active. Taking you to your dashboard...');
+          setMessage('Your payment is confirmed and your website plan is active. Streaming login and setup instructions are supplied separately. Taking you to your dashboard...');
           redirect = window.setTimeout(() => navigate('/dashboard?payment=success', { replace: true }), 1200);
         } else throw new Error('Payment is recorded, but activation needs attention. Contact support; do not pay again.');
       } catch (error) {
@@ -55,7 +55,7 @@ const PaymentSuccess: React.FC = () => {
           status === 'error' ? <AlertCircle className="mx-auto mb-6 h-14 w-14 text-red-500" /> :
           <CheckCircle className="mx-auto mb-6 h-14 w-14 text-green-500" />}
         <h1 className="mb-4 text-3xl font-bold">
-          {status === 'checking' ? 'Verifying payment' : status === 'test' ? 'Test payment confirmed' : status === 'success' ? 'Subscription activated' : 'Verification needs attention'}
+          {status === 'checking' ? 'Verifying payment' : status === 'test' ? 'Test payment confirmed' : status === 'success' ? 'Payment confirmed' : 'Verification needs attention'}
         </h1>
         <p className="mb-8 text-gray-300">{message}</p>
         {status === 'error' && <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">

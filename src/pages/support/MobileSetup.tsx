@@ -1,11 +1,50 @@
-import React from 'react';
 import SupportPage from './SupportPage';
-const MobileSetup: React.FC = () => <SupportPage title="Mobile Setup" description="Set up Kristal Streams on your phone or tablet."
-  sections={[
-    { heading: "Android", content: "1. Open the Google Play Store\n2. Search for IPTV Smarters Pro or TiviMate\n3. Install the app\n4. Open it and select Xtream Codes API\n5. Enter your Kristal Streams server URL, username, and password\n6. Click Add User and start streaming" },
-    { heading: "iPhone / iPad", content: "1. Open the App Store\n2. Search for IPTV Smarters or GSE Smart IPTV\n3. Install the app\n4. Open and enter your Kristal Streams login credentials\n5. Your channel list will appear automatically" },
-    { heading: "Using the Web Player", content: "You can also watch directly in your mobile browser at kristalstream.com. Log in to your account and click Watch Live TV from the dashboard." },
-  ]}
-  relatedLinks={[{ title: "TV Setup", url: "/support/tv-setup" }, { title: "Computer Setup", url: "/support/computer-setup" }]}
-/>;
+
+const MobileSetup = () => (
+  <SupportPage
+    title="Mobile Setup"
+    description="Use the setup method approved for your phone or tablet."
+    sections={[
+  {
+    "heading": "Before you begin",
+    "content": "A website login gives you account and support access. Streaming credentials and setup instructions are supplied separately. If those details have not arrived, check your inbox and spam folder, then contact support."
+  },
+  {
+    "heading": "Android phones and tablets",
+    "content": "Open the Download Apps page below and follow its Android APK installation instructions. Use the current device requirements shown there. When updating an existing installation, preserve its settings and data unless support specifically asks you to clear them."
+  },
+  {
+    "heading": "Sign in to the Android player",
+    "content": "Open the installed Kristal Streams player and use the streaming username and password supplied for your service. If the player requests a server address, enter only the supplied address. Allow the channel list and guide to load before checking playback."
+  },
+  {
+    "heading": "iPhone / iPad",
+    "content": "The Kristal Streams Apple app download is currently unavailable. Contact support with your device model and iOS or iPadOS version to confirm an approved playback option. Do not install the Android APK on an Apple device."
+  },
+  {
+    "heading": "Using the website on your phone",
+    "content": "You can use the website to request a trial, review plans, manage your account and contact support. Installing the website as a web app provides a shortcut to these pages. Browser playback requires a separately confirmed player and setup instructions."
+  }
+]}
+    relatedLinks={[
+  {
+    "title": "Download Apps",
+    "url": "/download-app"
+  },
+  {
+    "title": "TV Setup",
+    "url": "/support/tv-setup"
+  },
+  {
+    "title": "Getting Started",
+    "url": "/support/getting-started"
+  },
+  {
+    "title": "Contact Support",
+    "url": "/client/support/new"
+  }
+]}
+  />
+);
+
 export default MobileSetup;

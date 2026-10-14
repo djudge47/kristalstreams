@@ -274,14 +274,14 @@ const Dashboard: React.FC = () => {
                 <h2 className="text-xl font-semibold text-white">Account</h2>
               </div>
               <div className="space-y-2">
-                <p className="text-gray-400">{profile.email}</p>
+                <p className="text-gray-400 break-all">{profile.email}</p>
                 <p className="text-gray-400">{profile.full_name || 'Name not set'}</p>
                 <span className={`inline-block px-3 py-1 rounded-full text-sm ${
                   profile.subscription_status === 'active' 
                     ? 'bg-green-500/20 text-green-500' 
                     : 'bg-red-500/20 text-red-500'
                 }`}>
-                  {profile.subscription_status}
+                  Website plan: {profile.subscription_status}
                 </span>
               </div>
             </div>
@@ -295,7 +295,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-gray-400">Plan: <span className="text-white capitalize">{profile.subscription_tier}</span></p>
                 <div className="flex items-center text-gray-400">
                   <Monitor className="w-4 h-4 mr-2" />
-                  {profile.active_connections} / {profile.connections_allowed} devices
+                  {profile.connections_allowed} simultaneous connection{profile.connections_allowed === 1 ? '' : 's'} allowed
                 </div>
                 <button
                   onClick={() => navigate('/pricing')}
@@ -312,7 +312,7 @@ const Dashboard: React.FC = () => {
                 <h2 className="text-xl font-semibold text-white">Support</h2>
               </div>
               <div className="space-y-2">
-                <p className="text-gray-400">{tickets.length} Active Tickets</p>
+                <p className="text-gray-400">{tickets.filter(ticket => !['closed', 'resolved'].includes(ticket.status.toLowerCase())).length} Active Tickets</p>
                 <button
                   onClick={() => navigate('/client/support')}
                   className="text-primary hover:text-red-700 transition-colors duration-200"
@@ -322,6 +322,17 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
+
+          <section aria-labelledby="streaming-setup-heading" className="mb-8 rounded-xl border border-gray-800 bg-dark-100 p-6">
+            <h2 id="streaming-setup-heading" className="text-xl font-semibold text-white mb-3">Your streaming setup</h2>
+            <p className="text-gray-300 leading-relaxed">Your dashboard shows your website plan. Your streaming login and device setup instructions are supplied separately by our team after your trial request or confirmed payment.</p>
+            <p className="text-gray-400 text-sm mt-3">Check your inbox and spam folder for your setup message. Use the streaming details from that message in your approved player; they may differ from your website sign-in. If setup details are missing, open a support ticket with your account email and trial or order reference.</p>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 mt-5">
+              <button onClick={() => navigate('/support/getting-started')} className="rounded-lg bg-primary hover:bg-red-700 px-4 py-3 text-sm font-medium text-white">Getting Started Guide</button>
+              <button onClick={() => navigate('/download-app')} className="rounded-lg border border-gray-700 hover:border-primary px-4 py-3 text-sm font-medium text-gray-200">Download Android App</button>
+              <button onClick={() => navigate('/client/support/new')} className="rounded-lg border border-gray-700 hover:border-primary px-4 py-3 text-sm font-medium text-gray-200">Get Setup Help</button>
+            </div>
+          </section>
 
           <PwaInstallBanner />
 

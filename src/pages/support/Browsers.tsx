@@ -1,11 +1,38 @@
-import React from 'react';
 import SupportPage from './SupportPage';
-const Browsers: React.FC = () => <SupportPage title="Browser Support" description="Supported web browsers for Kristal Streams."
-  sections={[
-    { heading: "Fully Supported", content: "Google Chrome (version 90+)\nMozilla Firefox (version 90+)\nMicrosoft Edge (version 90+)\nSafari (version 14+)\nOpera (version 76+)" },
-    { heading: "Not Supported", content: "Internet Explorer (all versions)\nOlder browser versions\nText-only browsers" },
-    { heading: "Best Experience", content: "We recommend Google Chrome for the best streaming experience. Make sure your browser is updated to the latest version." },
-  ]}
-  relatedLinks={[{ title: "System Requirements", url: "/support/requirements" }, { title: "Computer Setup", url: "/support/computer-setup" }]}
-/>;
+
+const Browsers = () => (
+  <SupportPage
+    title="Browser Support"
+    description="Use your browser for account access and confirm playback support separately."
+    sections={[
+  {
+    "heading": "Website access",
+    "content": "Use an up-to-date browser to sign in, review plans and contact support. If a page does not load correctly, update the browser and try again. Contact support with the browser name, version and exact error if the issue continues."
+  },
+  {
+    "heading": "Streaming in a browser",
+    "content": "Website access does not confirm that a browser can play your streaming service. Use only the web player address and instructions supplied for your account. Confirm compatibility for your browser and device with support."
+  },
+  {
+    "heading": "Installed web app",
+    "content": "Installing the website as a web app adds a shortcut to account and support pages. It does not install the Android player or replace the streaming setup instructions."
+  }
+]}
+    relatedLinks={[
+  {
+    "title": "Computer Setup",
+    "url": "/support/computer-setup"
+  },
+  {
+    "title": "Mobile Setup",
+    "url": "/support/mobile-setup"
+  },
+  {
+    "title": "Contact Support",
+    "url": "/client/support/new"
+  }
+]}
+  />
+);
+
 export default Browsers;
