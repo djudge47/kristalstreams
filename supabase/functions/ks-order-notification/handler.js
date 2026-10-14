@@ -1,10 +1,30 @@
+// Validate alternate server JWTs against the private receipt table, rather than
+// requiring their encoded text to match the runtime's default service key.
+// The deployed function also retains verify_jwt=true at the Supabase gateway.
+export async function authorizeOrderBackend(req, { serviceKey, supabaseUrl, createClient }) {
+  const header = req.headers.get('authorization') || '';
+  if (serviceKey && header === `Bearer ${serviceKey}`) return true;
+  const token = header.match(/^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/)?.[1];
+  if (!token || token.length > 8192 || !supabaseUrl) return false;
+  try {
+    const caller = createClient(supabaseUrl, token, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    // anon and authenticated have no SELECT grant on this table. The caller's
+    // own key is used for both apikey and Authorization; no admin key is mixed in.
+    const { error } = await caller.from('ks_payment_receipts')
+      .select('checkout_session_id', { head: true }).limit(1);
+    return !error;
+  } catch { return false; }
+}
+
 // Called only by the payment backend after a confirmed receipt is stored.
 export async function handleOrderNotification(req, options) {
   const { admin, serviceKey, resendKey, fetchImpl = fetch, now = Date.now } = options;
   const response = (status, body) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
   if (req.method !== 'POST') return response(405, { success: false, error: 'Method not allowed' });
   if (!serviceKey || !resendKey) return response(503, { success: false, error: 'Order email is not configured' });
-  if (req.headers.get('authorization') !== `Bearer ${serviceKey}`) {
+  if (!(await (options.authorize || ((request) => request.headers.get('authorization') === `Bearer ${serviceKey}`))(req))) {
     return response(401, { success: false, error: 'Unauthorized' });
   }
   let sessionId;
