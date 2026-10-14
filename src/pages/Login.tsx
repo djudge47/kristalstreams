@@ -33,7 +33,8 @@ const Login: React.FC = () => {
       return;
     }
 
-    navigate('/dashboard');
+    const destination = (location.state as { from?: unknown } | null)?.from === '/free-trial' ? '/free-trial' : '/dashboard';
+    navigate(destination, { replace: true });
   };
 
   const handleForgotPassword = async (event: React.FormEvent) => {

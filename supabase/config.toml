@@ -1,2 +1,5 @@
 [functions.resend-email]
 verify_jwt = false
+
+[functions.ks-trial-notification]
+verify_jwt = true
