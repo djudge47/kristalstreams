@@ -40,7 +40,7 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = glob
       res.setHeader('Allow', 'GET');
       return reply(405, 'method_not_allowed');
     }
-    if (!authorized(req.headers?.authorization, env.CRON_SECRET)) return reply(401, 'unauthorized');
+    if (!authorized(req.headers?.authorization, env.ROOMBA_PREVIEW_SECRET)) return reply(401, 'unauthorized');
     if (!env.ROOMBA_API_URL || !env.ROOMBA_API_KEY) return reply(503, 'not_configured');
 
     // Only the provider address supplied by Donald is permitted. No request

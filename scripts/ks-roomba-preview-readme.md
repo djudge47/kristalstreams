@@ -9,7 +9,7 @@ Server-only configuration:
 
 - `ROOMBA_API_URL`: `http://live.roomba.tv:80/WDxTMHmN/`
 - `ROOMBA_API_KEY`: the provider key, entered privately in server settings.
-- `CRON_SECRET`: the backend bearer secret used to authorize this route.
+- `ROOMBA_PREVIEW_SECRET`: the backend bearer secret used to authorize this route.
 - `ROOMBA_ALLOW_INSECURE_HTTP`: exactly `true` to permit a credential-bearing
   request to this HTTP endpoint. Leave unset to keep provider calls disabled.
 
@@ -19,7 +19,7 @@ to the database, or integrate with payment fulfillment. Requests cannot change
 its target or action. Redirects are blocked, response size and request duration
 are bounded, and provider response bodies and errors are never logged.
 
-Call it only from a trusted backend with `Authorization: Bearer <CRON_SECRET>`.
+Call it only from a trusted backend with `Authorization: Bearer <ROOMBA_PREVIEW_SECRET>`.
 Do not put either secret in a browser URL, screenshot, support ticket, or chat.
 Use Preview configuration for initial testing; no production promotion is needed.
 

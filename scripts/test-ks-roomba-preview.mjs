@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { createRoombaPreviewHandler } from '../_server/ks-roomba-preview.js';
 
 const env = {
-  CRON_SECRET: 'fake-backend-secret', ROOMBA_API_KEY: 'fake-provider-key',
+  ROOMBA_PREVIEW_SECRET: 'fake-backend-secret', ROOMBA_API_KEY: 'fake-provider-key',
   ROOMBA_API_URL: 'http://live.roomba.tv:80/WDxTMHmN/', ROOMBA_ALLOW_INSECURE_HTTP: 'true',
 };
 let checks = 0;
-async function run({ overrides = {}, method = 'GET', auth = `Bearer ${env.CRON_SECRET}`, response, throws = false } = {}) {
+async function run({ overrides = {}, method = 'GET', auth = `Bearer ${env.ROOMBA_PREVIEW_SECRET}`, response, throws = false } = {}) {
   const calls = [];
   const fetchImpl = async (url, options) => {
     calls.push({ url: String(url), options });
@@ -29,8 +29,12 @@ await check('HTTP requires explicit server opt-in', async () => {
   const result = await run({ overrides: { ROOMBA_ALLOW_INSECURE_HTTP: '' } });
   assert.equal(result.body.status, 'http_opt_in_required'); assert.equal(result.calls.length, 0);
 });
+await check('the existing cron secret cannot authorize the Roomba test', async () => {
+  const result = await run({ overrides: { ROOMBA_PREVIEW_SECRET: '', CRON_SECRET: env.ROOMBA_PREVIEW_SECRET } });
+  assert.equal(result.code, 401); assert.equal(result.calls.length, 0);
+});
 await check('missing configuration and malformed keys never reach the provider', async () => {
-  for (const overrides of [{ ROOMBA_API_KEY: '' }, { ROOMBA_API_KEY: 'bad key' }, { ROOMBA_API_KEY: 'bad\nkey' }, { ROOMBA_API_URL: '' }, { CRON_SECRET: '' }]) {
+  for (const overrides of [{ ROOMBA_API_KEY: '' }, { ROOMBA_API_KEY: 'bad key' }, { ROOMBA_API_KEY: 'bad\nkey' }, { ROOMBA_API_URL: '' }, { ROOMBA_PREVIEW_SECRET: '' }]) {
     assert.equal((await run({ overrides })).calls.length, 0);
   }
 });
