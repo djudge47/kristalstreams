@@ -41,7 +41,8 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = glob
       return reply(405, 'method_not_allowed');
     }
     if (!authorized(req.headers?.authorization, env.ROOMBA_PREVIEW_SECRET)) return reply(401, 'unauthorized');
-    if (!env.ROOMBA_API_URL || !env.ROOMBA_API_KEY) return reply(503, 'not_configured');
+    const missing = ['ROOMBA_API_URL', 'ROOMBA_API_KEY'].filter(name => !env[name]?.trim());
+    if (missing.length) return reply(503, 'not_configured', { missing });
 
     // Only the provider address supplied by Donald is permitted. No request
     // parameters can change the target or the original read-only action.

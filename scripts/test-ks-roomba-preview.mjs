@@ -33,6 +33,15 @@ await check('the existing cron secret cannot authorize the Roomba test', async (
   const result = await run({ overrides: { ROOMBA_PREVIEW_SECRET: '', CRON_SECRET: env.ROOMBA_PREVIEW_SECRET } });
   assert.equal(result.code, 401); assert.equal(result.calls.length, 0);
 });
+await check('missing settings are identified by name without exposing their values', async () => {
+  for (const name of ['ROOMBA_API_URL', 'ROOMBA_API_KEY']) {
+    const result = await run({ overrides: { [name]: '' } });
+    assert.equal(result.code, 503); assert.deepEqual(result.body.missing, [name]);
+    assert.equal(result.calls.length, 0);
+  }
+  const result = await run({ auth: '', overrides: { ROOMBA_API_KEY: '' } });
+  assert.equal(result.code, 401); assert.equal(result.body.missing, undefined);
+});
 await check('missing configuration and malformed keys never reach the provider', async () => {
   for (const overrides of [{ ROOMBA_API_KEY: '' }, { ROOMBA_API_KEY: 'bad key' }, { ROOMBA_API_KEY: 'bad\nkey' }, { ROOMBA_API_URL: '' }, { ROOMBA_PREVIEW_SECRET: '' }]) {
     assert.equal((await run({ overrides })).calls.length, 0);
