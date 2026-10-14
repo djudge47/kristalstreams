@@ -55,7 +55,14 @@ export function webhookSecret() {
 
 export async function fulfill(sessionId, context, ownerId) {
   const session = await context.stripe.checkout.sessions.retrieve(sessionId);
-  return applyPaidSession(session, context.live, ownerId, context.admin);
+  const receipt = await applyPaidSession(session, context.live, ownerId, context.admin);
+  const { data: alert, error: alertError } = await context.admin.functions.invoke('ks-order-notification', {
+    body: { sessionId: session.id },
+  });
+  if (alertError || !alert?.success) {
+    throw new PaymentError(503, 'Your payment is recorded, but the setup notification needs attention. Please contact support; do not pay again.');
+  }
+  return receipt;
 }
 
 export function respondError(res, error) {
@@ -63,3 +70,4 @@ export function respondError(res, error) {
   console.error('Kristal Streams payment request failed', { type: error?.type || error?.name || 'UnknownError', code: error?.code || null });
   return res.status(502).json({ error: 'Payment verification could not finish. Please try again or contact support; do not pay again if you were already charged.' });
 }
+
