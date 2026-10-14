@@ -16,7 +16,6 @@ import {
   Shield,
   Download,
   Smartphone,
-  Wifi,
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'djudge47@gmail.com';
@@ -438,15 +437,15 @@ const PwaInstallBanner: React.FC = () => {
           <Smartphone className="w-6 h-6 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-semibold text-lg mb-1">Install Kristal Streams App</h3>
+          <h3 className="text-white font-semibold text-lg mb-1">Add Kristal Streams to Your Home Screen</h3>
           <p className="text-gray-400 text-sm mb-4">
-            Get the full app experience — launch from your home screen, access content offline, and receive notifications.
+            Add a shortcut to your website dashboard, plans and support. Your streaming player uses the separate download and setup instructions supplied for your device.
           </p>
           <div className="flex flex-wrap gap-4 mb-4">
             {[
               { icon: Download, label: 'Home screen shortcut' },
-              { icon: Wifi, label: 'Works offline' },
-              { icon: Bell, label: 'Push notifications' },
+              { icon: User, label: 'Account dashboard' },
+              { icon: MessageSquare, label: 'Support access' },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-2 text-sm text-gray-300">
                 <Icon className="w-4 h-4 text-primary flex-shrink-0" />
@@ -456,7 +455,7 @@ const PwaInstallBanner: React.FC = () => {
           </div>
           {isIOS ? (
             <div className="bg-dark-200 rounded-lg p-4 text-sm text-gray-300">
-              <p className="font-semibold text-white mb-2">Install on iOS:</p>
+              <p className="font-semibold text-white mb-2">Add the website on iPhone or iPad:</p>
               <ol className="space-y-1 list-decimal list-inside">
                 <li>Tap the Share button (square with arrow up)</li>
                 <li>Scroll down and tap "Add to Home Screen"</li>
@@ -471,7 +470,7 @@ const PwaInstallBanner: React.FC = () => {
                   className="bg-primary hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
                 >
                   <Download className="w-4 h-4" />
-                  Install App
+                  Add Website
                 </button>
               )}
               <button
