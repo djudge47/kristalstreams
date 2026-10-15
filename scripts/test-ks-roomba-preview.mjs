@@ -3,7 +3,7 @@ import { createRoombaPreviewHandler } from '../_server/ks-roomba-preview.js';
 
 const env = {
   ROOMBA_PREVIEW_SECRET: 'fake-backend-secret', ROOMBA_API_KEY: 'fake-provider-key',
-  ROOMBA_API_URL: 'http://live.roomba.tv:80/WDxTMHmN/', ROOMBA_ALLOW_INSECURE_HTTP: 'true',
+  ROOMBA_API_URL: 'https://cdn.rooomba.tv/WDXTMHmN/',
 };
 let checks = 0;
 async function run({ overrides = {}, method = 'GET', auth = `Bearer ${env.ROOMBA_PREVIEW_SECRET}`, response, throws = false } = {}) {
@@ -25,9 +25,11 @@ async function check(name, fn) { await fn(); checks++; console.log(`PASS: ${name
 await check('unauthorized and write requests never contact the provider', async () => {
   for (const options of [{ auth: '' }, { auth: 'Bearer wrong' }, { method: 'POST' }]) assert.equal((await run(options)).calls.length, 0);
 });
-await check('HTTP requires explicit server opt-in', async () => {
-  const result = await run({ overrides: { ROOMBA_ALLOW_INSECURE_HTTP: '' } });
-  assert.equal(result.body.status, 'http_opt_in_required'); assert.equal(result.calls.length, 0);
+await check('HTTP stays blocked even when the legacy opt-in is set', async () => {
+  for (const url of ['http://cdn.rooomba.tv/WDXTMHmN/', 'http://live.roomba.tv:80/WDxTMHmN/', 'http://limited-names.com:80/WDXTMHmN/']) {
+    const result = await run({ overrides: { ROOMBA_API_URL: url, ROOMBA_ALLOW_INSECURE_HTTP: 'true' } });
+    assert.equal(result.body.status, 'endpoint_not_approved'); assert.equal(result.calls.length, 0);
+  }
 });
 await check('the existing cron secret cannot authorize the Roomba test', async () => {
   const result = await run({ overrides: { ROOMBA_PREVIEW_SECRET: '', CRON_SECRET: env.ROOMBA_PREVIEW_SECRET } });
@@ -48,23 +50,37 @@ await check('missing configuration and malformed keys never reach the provider',
   }
 });
 await check('lookalike hosts, other ports, paths and URL credentials are blocked', async () => {
-  for (const url of ['http://live.roomba.tv.evil.invalid/WDxTMHmN/', 'http://live.roomba.tv:8080/WDxTMHmN/', 'http://live.roomba.tv/other/', 'http://user:pass@live.roomba.tv/WDxTMHmN/', 'http://127.0.0.1/WDxTMHmN/', 'http://live.roomba.tv/WDxTMHmN/?action=create_user', 'https://live.roomba.tv/WDxTMHmN/']) {
-    assert.equal((await run({ overrides: { ROOMBA_API_URL: url } })).calls.length, 0);
+  for (const url of ['https://cdn.rooomba.tv.evil.invalid/WDXTMHmN/', 'https://cdn.rooomba.tv:8080/WDXTMHmN/', 'https://cdn.rooomba.tv/other/', 'https://user:pass@cdn.rooomba.tv/WDXTMHmN/', 'https://127.0.0.1/WDXTMHmN/', 'https://cdn.rooomba.tv/WDXTMHmN/?action=create_line', 'https://cdn.rooomba.tv/WDXTMHmN/?api_key=untrusted', 'https://cdn.rooomba.tv/WDXTMHmN/#fragment', 'https://cdn.rooomba.tv/WDxTMHmN/', 'https://cdn.rooomba.tv/WDXTM/HmN/', 'https://cdn.rooomba.tv/WDXTMHmN', 'https://live.cdn.rooomba.tv/WDXTMHmN/', 'https://limited-names.com/WDXTMHmN/', 'not a URL']) {
+    const result = await run({ overrides: { ROOMBA_API_URL: url } });
+    assert.equal(result.body.status, 'endpoint_not_approved'); assert.equal(result.calls.length, 0);
   }
 });
-await check('approved port 80 address uses only the fixed read-only command', async () => {
+await check('approved HTTPS address uses only the fixed read-only command without HTTP opt-in', async () => {
   const result = await run(); assert.equal(result.code, 200); assert.equal(result.calls.length, 1);
   const { url, options } = result.calls[0]; const parsed = new URL(url);
-  assert.equal(parsed.hostname, 'live.roomba.tv'); assert.equal(parsed.searchParams.get('action'), 'user_info');
+  assert.equal(parsed.protocol, 'https:'); assert.equal(parsed.hostname, 'cdn.rooomba.tv');
+  assert.equal(parsed.port, ''); assert.equal(parsed.pathname, '/WDXTMHmN/');
+  assert.equal(parsed.searchParams.get('action'), 'user_info');
+  assert.deepEqual([...parsed.searchParams.keys()].sort(), ['action', 'api_key']);
   assert.equal(parsed.searchParams.get('api_key'), env.ROOMBA_API_KEY); assert.equal(options.method, 'GET');
   assert.equal(options.redirect, 'manual'); assert.ok(options.signal); assert.equal(result.body.account.credits, 5);
+});
+await check('the explicit default HTTPS port is accepted without changing the destination', async () => {
+  const result = await run({ overrides: { ROOMBA_API_URL: 'https://cdn.rooomba.tv:443/WDXTMHmN/' } });
+  assert.equal(result.code, 200); assert.equal(result.calls.length, 1);
+  assert.equal(new URL(result.calls[0].url).origin, 'https://cdn.rooomba.tv');
 });
 await check('redirects are never followed', async () => {
   const result = await run({ response: new Response('', { status: 302, headers: { Location: 'http://evil.invalid' } }) });
   assert.equal(result.code, 502); assert.equal(result.calls.length, 1);
 });
 await check('provider errors and network errors never disclose credentials', async () => {
-  for (const options of [{ throws: true }, { response: new Response(env.ROOMBA_API_KEY, { status: 404 }) }, { response: new Response(env.ROOMBA_API_KEY) }]) assert.equal((await run(options)).code, 502);
+  for (const options of [{ throws: true }, { response: new Response(env.ROOMBA_API_KEY, { status: 403 }) }, { response: new Response(env.ROOMBA_API_KEY, { status: 404 }) }, { response: new Response(env.ROOMBA_API_KEY) }]) assert.equal((await run(options)).code, 502);
+});
+await check('a forbidden response is reported accurately without claiming a connection', async () => {
+  const result = await run({ response: new Response('Forbidden', { status: 403 }) });
+  assert.equal(result.code, 502); assert.equal(result.body.status, 'connection_failed');
+  assert.equal(result.body.upstreamStatus, 403); assert.equal(result.body.account, undefined);
 });
 await check('unrecognized and error payloads cannot report a connection', async () => {
   for (const payload of [{}, { data: [] }, { error: 'bad key', data: { id: 1 } }, { status: false, data: { id: 1 } }]) assert.equal((await run({ response: Response.json(payload) })).code, 502);

@@ -1,6 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 
-const endpoint = 'http://live.roomba.tv/WDxTMHmN/';
+// HTTPS hostname supplied by Roomba support; access-code case copied from
+// the reseller panel's API URL tooltip. Connectivity still requires a test.
+const endpoint = 'https://cdn.rooomba.tv/WDXTMHmN/';
 const service = 'Kristal Streams Roomba Preview';
 
 function authorized(header, secret) {
@@ -44,14 +46,13 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = glob
     const missing = ['ROOMBA_API_URL', 'ROOMBA_API_KEY'].filter(name => !env[name]?.trim());
     if (missing.length) return reply(503, 'not_configured', { missing });
 
-    // Only the provider address supplied by Donald is permitted. No request
-    // parameters can change the target or the original read-only action.
+    // Only this HTTPS destination is permitted. No request parameters can
+    // change the target or the original read-only action.
     let url;
     try {
       url = new URL(env.ROOMBA_API_URL);
       if (url.href !== endpoint) return reply(503, 'endpoint_not_approved');
     } catch { return reply(503, 'endpoint_not_approved'); }
-    if (env.ROOMBA_ALLOW_INSECURE_HTTP !== 'true') return reply(503, 'http_opt_in_required');
     const apiKey = env.ROOMBA_API_KEY.trim();
     if (!apiKey || /\s/.test(apiKey)) return reply(503, 'invalid_configuration');
 
