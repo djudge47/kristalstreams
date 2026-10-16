@@ -1,4 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
+import { fetch } from 'undici';
+import { createFixieDispatcher, fixieProxyUrl } from './ks-fixie-proxy.js';
 
 // HTTPS hostname supplied by Roomba support; access-code case copied from
 // the reseller panel's API URL tooltip. Connectivity still requires a test.
@@ -32,7 +34,9 @@ async function readJson(response) {
 }
 
 // Dependencies are injectable so tests never contact the provider.
-export function createRoombaPreviewHandler({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
+export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetch, dispatcherFactory = createFixieDispatcher } = {}) {
+  let dispatcher;
+  let dispatcherSetting;
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     const reply = (code, status, extra = {}) => res.status(code).json({
@@ -42,8 +46,9 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = glob
       res.setHeader('Allow', 'GET');
       return reply(405, 'method_not_allowed');
     }
+    if (env.VERCEL_ENV === 'production') return reply(404, 'preview_only');
     if (!authorized(req.headers?.authorization, env.ROOMBA_PREVIEW_SECRET)) return reply(401, 'unauthorized');
-    const missing = ['ROOMBA_API_URL', 'ROOMBA_API_KEY'].filter(name => !env[name]?.trim());
+    const missing = ['ROOMBA_API_URL', 'ROOMBA_API_KEY', 'FIXIE_URL'].filter(name => typeof env[name] !== 'string' || !env[name].trim());
     if (missing.length) return reply(503, 'not_configured', { missing });
 
     // Only this HTTPS destination is permitted. No request parameters can
@@ -56,12 +61,29 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = glob
     const apiKey = env.ROOMBA_API_KEY.trim();
     if (!apiKey || /\s/.test(apiKey)) return reply(503, 'invalid_configuration');
 
+    let proxyUrl;
+    try { proxyUrl = fixieProxyUrl(env.FIXIE_URL); }
+    catch { return reply(503, 'invalid_proxy_configuration'); }
+    // A rotated proxy setting needs a fresh dispatcher, without changing the
+    // global dispatcher used by payments, email, or other API routes.
+    try {
+      if (!dispatcher || dispatcherSetting !== proxyUrl.href) {
+        const next = dispatcherFactory(proxyUrl.href);
+        if (!next || typeof next.dispatch !== 'function') throw new Error('Invalid dispatcher');
+        const previous = dispatcher;
+        dispatcher = next;
+        dispatcherSetting = proxyUrl.href;
+        if (previous) void Promise.resolve(previous.close()).catch(() => {});
+      }
+    } catch { return reply(503, 'invalid_proxy_configuration'); }
+
     url.searchParams.set('api_key', apiKey);
     url.searchParams.set('action', 'user_info');
     try {
       const response = await fetchImpl(url, {
         method: 'GET', redirect: 'manual', headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(15000),
+        dispatcher,
       });
       if (!response.ok) {
         await response.body?.cancel().catch(() => {});
@@ -77,8 +99,9 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = glob
           || !['id', 'username', 'credits'].some(key => ['string', 'number'].includes(typeof account[key]))) {
         return reply(502, 'unexpected_response', { error: 'Provider response did not contain recognizable account data.' });
       }
-      const safeValue = value => typeof value === 'number' || (typeof value === 'string' && value.length <= 256 && !value.includes(apiKey)) ? value : null;
-      return reply(200, 'connected', { account: {
+      const secrets = [apiKey, env.FIXIE_URL, proxyUrl.password, decodeURIComponent(proxyUrl.password)];
+      const safeValue = value => (typeof value === 'number' && Number.isFinite(value)) || (typeof value === 'string' && value.length <= 256 && !secrets.some(secret => value.includes(secret))) ? value : null;
+      return reply(200, 'connected', { transport: 'fixie', account: {
         id: safeValue(account.id), username: safeValue(account.username), credits: safeValue(account.credits),
       } });
     } catch {
@@ -88,3 +111,4 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = glob
     }
   };
 }
+
