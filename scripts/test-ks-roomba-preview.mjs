@@ -168,7 +168,7 @@ await check('safe diagnostics distinguish proxy failure, timeout and unreadable 
   assert.equal(html.body.stage, 'response_body');
   assert.equal(html.body.reason, 'KS_HTML_RESPONSE');
   assert.equal(html.body.upstreamStatus, 200);
-  const oversized = await run({ response: new Response('x'.repeat(65537)) });
+  const oversized = await run({ response: new Response('x'.repeat(1024 * 1024 + 1)) });
   assert.equal(oversized.body.reason, 'KS_RESPONSE_TOO_LARGE');
 });
 await check('large HTML pages are identified without returning their text or arbitrary headers', async () => {
@@ -185,12 +185,22 @@ await check('large HTML pages are identified without returning their text or arb
   assert.equal(result.body.responseType, 'text/html');
   assert.equal(result.body.upstreamStatus, 200);
   assert.equal(canceled, true);
-  const json = await run({ response: new Response(JSON.stringify({ data: { id: 1, unused: 'x'.repeat(70000) } }), { headers: { 'content-type': 'application/json' } }) });
+  const json = await run({ response: new Response(JSON.stringify({ data: { id: 1, unused: 'x'.repeat(1024 * 1024) } }), { headers: { 'content-type': 'application/json' } }) });
   assert.equal(json.body.reason, 'KS_RESPONSE_TOO_LARGE');
   assert.equal(json.body.responseType, 'application/json');
   const untrusted = await run({ response: new Response('not json', { headers: { 'content-type': env.ROOMBA_API_KEY } }) });
   assert.equal(untrusted.body.responseType, 'other');
   assert.equal(untrusted.body.reason, 'NON_JSON_RESPONSE');
+});
+await check('documented large permission lists are accepted despite a legacy text/html media type', async () => {
+  const result = await run({ response: new Response(JSON.stringify({
+    status: 'STATUS_SUCCESS', data: { id: 12, username: 'test-reseller', credits: 5, api_key: env.ROOMBA_API_KEY },
+    permissions: Array.from({ length: 10000 }, (_, i) => `permission_${i}`),
+  }), { headers: { 'content-type': 'text/html; charset=utf-8' } }) });
+  assert.equal(result.code, 200);
+  assert.equal(result.body.status, 'connected');
+  assert.deepEqual(result.body.account, { id: 12, username: 'test-reseller', credits: 5 });
+  assert.equal(result.body.permissions, undefined);
 });
 console.log(`${checks} checks passed. No network requests, real credentials, database changes or customer lines.`);
 

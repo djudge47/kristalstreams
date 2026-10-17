@@ -26,7 +26,9 @@ Fixie-generated HTTP port 80 URLs are converted internally to the documented
 HTTPS proxy endpoint on port 443, with the same proxy hostname and credentials.
 Both proxy TLS and the Roomba HTTPS tunnel require valid certificates. Neither
 proxy credentials nor the API key is sent in plain text. Redirects are blocked.
-Roomba responses are bounded to 64 KiB and the request timeout is 15 seconds.
+Roomba responses are bounded to 1 MiB and the request timeout is 15 seconds.
+The account response can include large permission lists; JSON is parsed regardless
+of a legacy `text/html` media type. Only the three sanitized account fields are returned.
 Provider bodies and raw transport errors are never logged or returned.
 
 References:
@@ -50,7 +52,7 @@ References:
 
 Runtime: Vercel Node.js 24 (Undici 8.12.2 requires Node.js >=22.19.0).
 Run `npm ci` and `node scripts/test-ks-roomba-preview.mjs` on that runtime.
-These 21 checks use synthetic credentials and make no network requests.
+These 22 checks use synthetic credentials and make no network requests.
 
 Authorized failures include a fixed `stage` and allowlisted `reason` to distinguish
 transport errors from non-JSON or oversized responses. A received HTTP status is
