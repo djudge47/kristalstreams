@@ -24,13 +24,36 @@ async function readJson(response) {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 65536) throw new Error('response too large');
+      if (size > 65536) throw Object.assign(new Error('response too large'), { code: 'KS_RESPONSE_TOO_LARGE' });
       chunks.push(Buffer.from(value));
     }
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
   } finally {
     await reader.cancel().catch(() => {});
   }
+}
+
+// Report only fixed diagnostic labels, never raw errors, URLs or bodies.
+function failureReason(error, stage) {
+  const known = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT',
+    'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
+    'UND_ERR_SOCKET', 'UND_ERR_PRX_TLS', 'UND_ERR_PRX_CONN', 'UND_ERR_ABORTED',
+    'ERR_TLS_CERT_ALTNAME_INVALID', 'CERT_HAS_EXPIRED', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+    'DEPTH_ZERO_SELF_SIGNED_CERT', 'SELF_SIGNED_CERT_IN_CHAIN',
+    'ERR_SSL_WRONG_VERSION_NUMBER', 'UND_ERR_INVALID_ARG', 'KS_RESPONSE_TOO_LARGE']);
+  let current = error;
+  for (let depth = 0; current && depth < 5; depth++, current = current.cause) {
+    if (known.has(current.code)) {
+      if (current.code === 'UND_ERR_ABORTED') {
+        const match = /^Proxy response \((403|407|429|502|503|504)\) !== 200 when HTTP Tunneling$/.exec(current.message);
+        if (match) return `PROXY_HTTP_${match[1]}`;
+      }
+      return current.code;
+    }
+    if (current.name === 'TimeoutError') return 'TIMEOUT';
+    if (stage === 'response_body' && current instanceof SyntaxError) return 'NON_JSON_RESPONSE';
+  }
+  return stage === 'response_body' ? 'RESPONSE_READ_FAILED' : 'TRANSPORT_FAILED';
 }
 
 // Dependencies are injectable so tests never contact the provider.
@@ -79,12 +102,15 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
 
     url.searchParams.set('api_key', apiKey);
     url.searchParams.set('action', 'user_info');
+    let stage = 'proxy_request';
+    let upstreamStatus;
     try {
       const response = await fetchImpl(url, {
         method: 'GET', redirect: 'manual', headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(15000),
         dispatcher,
       });
+      upstreamStatus = response.status;
       if (!response.ok) {
         await response.body?.cancel().catch(() => {});
         return reply(502, 'connection_failed', {
@@ -92,6 +118,7 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
           upstreamStatus: response.status,
         });
       }
+      stage = 'response_body';
       const payload = await readJson(response);
       const account = payload?.data;
       if (payload?.error || payload?.status === false || ['error', 'failed'].includes(payload?.status)
@@ -104,10 +131,14 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
       return reply(200, 'connected', { transport: 'fixie', account: {
         id: safeValue(account.id), username: safeValue(account.username), credits: safeValue(account.credits),
       } });
-    } catch {
+    } catch (error) {
       // Network errors and provider bodies can include credentials. Never
       // return or log their raw contents.
-      return reply(502, 'connection_failed', { error: 'Unable to read the provider account response.' });
+      return reply(502, 'connection_failed', {
+        error: 'Unable to read the provider account response.',
+        stage, reason: failureReason(error, stage),
+        ...(upstreamStatus === undefined ? {} : { upstreamStatus }),
+      });
     }
   };
 }

@@ -8,7 +8,7 @@ const env = {
   FIXIE_URL: 'http://fixie:fake-proxy-password@test-proxy.usefixie.com:80',
 };
 let checks = 0;
-async function run({ overrides = {}, method = 'GET', auth = `Bearer ${env.ROOMBA_PREVIEW_SECRET}`, response, throws = false, factoryThrows = false } = {}) {
+async function run({ overrides = {}, method = 'GET', auth = `Bearer ${env.ROOMBA_PREVIEW_SECRET}`, response, throws = false, transportError, factoryThrows = false } = {}) {
   const calls = [];
   const proxyCalls = [];
   const dispatcher = { dispatch() {}, async close() {} };
@@ -19,6 +19,7 @@ async function run({ overrides = {}, method = 'GET', auth = `Bearer ${env.ROOMBA
   };
   const fetchImpl = async (url, options) => {
     calls.push({ url: String(url), options });
+    if (transportError) throw transportError;
     if (throws) throw new Error(`network failure ${env.ROOMBA_API_KEY}`);
     return response || Response.json({ data: { id: 12, username: 'test-reseller', credits: 5 } });
   };
@@ -148,6 +149,27 @@ await check('proxy failures make only one attempt and never retry directly', asy
 await check('provider echoes cannot disclose proxy credentials or provider credentials', async () => {
   const result = await run({ response: Response.json({ data: { id: 12, username: env.FIXIE_URL, credits: 'fake-proxy-password' } }) });
   assert.deepEqual(result.body.account, { id: 12, username: null, credits: null });
+});
+await check('safe diagnostics distinguish proxy failure, timeout and unreadable provider bodies', async () => {
+  const cases = [
+    [new TypeError('fetch failed', { cause: Object.assign(new Error(env.FIXIE_URL), { code: 'ENOTFOUND' }) }), 'ENOTFOUND'],
+    [Object.assign(new Error(env.ROOMBA_API_KEY), { name: 'TimeoutError' }), 'TIMEOUT'],
+    [new TypeError('fetch failed', { cause: Object.assign(new Error('Proxy response (407) !== 200 when HTTP Tunneling'), { code: 'UND_ERR_ABORTED' }) }), 'PROXY_HTTP_407'],
+    [Object.assign(new Error(env.FIXIE_URL), { code: env.ROOMBA_API_KEY }), 'TRANSPORT_FAILED'],
+  ];
+  for (const [transportError, reason] of cases) {
+    const result = await run({ transportError });
+    assert.equal(result.body.stage, 'proxy_request');
+    assert.equal(result.body.reason, reason);
+    assert.equal(result.body.upstreamStatus, undefined);
+    assert.equal(result.calls.length, 1);
+  }
+  const html = await run({ response: new Response(`<html>${env.ROOMBA_API_KEY}</html>`, { status: 200 }) });
+  assert.equal(html.body.stage, 'response_body');
+  assert.equal(html.body.reason, 'NON_JSON_RESPONSE');
+  assert.equal(html.body.upstreamStatus, 200);
+  const oversized = await run({ response: new Response('x'.repeat(65537)) });
+  assert.equal(oversized.body.reason, 'KS_RESPONSE_TOO_LARGE');
 });
 console.log(`${checks} checks passed. No network requests, real credentials, database changes or customer lines.`);
 
