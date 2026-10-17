@@ -6,8 +6,9 @@ import { createFixieDispatcher, fixieProxyUrl } from './ks-fixie-proxy.js';
 // the reseller panel's API URL tooltip. Connectivity still requires a test.
 const endpoint = 'https://cdn.rooomba.tv/WDXTMHmN/';
 const service = 'Kristal Streams Roomba Preview';
-// user_info includes provider permissions; allow a bounded 1 MiB JSON response.
-const maxResponseBytes = 1024 * 1024;
+// The confirmed JSON prefix exceeds 1 MiB; user_info includes large permissions.
+// Keep a finite bound and the existing timeout, returning only account fields.
+const maxResponseBytes = 8 * 1024 * 1024;
 
 function authorized(header, secret) {
   if (typeof secret !== 'string' || !secret || typeof header !== 'string') return false;

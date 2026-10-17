@@ -26,7 +26,7 @@ Fixie-generated HTTP port 80 URLs are converted internally to the documented
 HTTPS proxy endpoint on port 443, with the same proxy hostname and credentials.
 Both proxy TLS and the Roomba HTTPS tunnel require valid certificates. Neither
 proxy credentials nor the API key is sent in plain text. Redirects are blocked.
-Roomba responses are bounded to 1 MiB and the request timeout is 15 seconds.
+Roomba responses are bounded to 8 MiB and the request timeout is 15 seconds.
 The account response can include large permission lists; JSON is parsed regardless
 of a legacy `text/html` media type. Only the three sanitized account fields are returned.
 Provider bodies and raw transport errors are never logged or returned.
