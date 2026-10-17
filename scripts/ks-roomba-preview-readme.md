@@ -69,6 +69,30 @@ excluded; diagnostics do not add requests or change transport verification.
 Body failures also include the fixed opening-format classification and bytes read.
 JSON-prefix labels describe only the opening bytes, not a validated JSON document.
 
+## Private admin connection panel
+
+Open `/admin/roomba` in this protected Preview deployment and sign in with the
+existing Kristal Streams administrator account. The sidebar includes **Roomba
+Connection**. Select **Check connection** to retrieve the status, credit balance,
+reseller username and account ID. Nothing is fetched automatically on page load.
+
+`GET /api/ks-roomba-account` validates the session token with Supabase Auth on
+every request. It requires the existing administrator's verified email, rejects
+anonymous accounts, and ignores browser-supplied roles, email and query parameters.
+It uses the existing Supabase URL/anon configuration; no service-role access or
+schema change is needed. The private Preview bearer remains on the server.
+
+The API reuses a successful result for up to 60 seconds per warm function instance
+and shares concurrent checks. Failed attempts have a brief per-instance cooldown.
+The UI displays the original check time and removes account details on failure.
+Responses use private/no-store cache headers. This endpoint is disabled outside
+Vercel Preview and supports no customer creation, renewal or payment operation.
+
+Run `node scripts/test-ks-roomba-admin.mjs` for ten offline authorization/cache
+checks in addition to the 27 connector checks. The website production build and
+API bundle check also pass. No real sign-in, provider read or account write is
+performed by these checks; verify the signed-in panel in Preview before rollout.
+
 ## Rollback
 
 Restore the prior reviewed Preview deployment to undo this code update. Its
