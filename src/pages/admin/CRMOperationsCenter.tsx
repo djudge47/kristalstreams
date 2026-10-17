@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import RoombaCrmLink from './RoombaCrmLink';
+import PreviewPaidOrders from './PreviewPaidOrders';
 import { displayedAccountStatus, isBillingOverdue, isDueWithin, isTrialCustomer, isUnpaidCustomer, trialBadge } from '../../../_shared/ks-crm-status.js';
 
 type Customer = {
@@ -459,6 +460,7 @@ const CRMOperationsCenter: React.FC = () => {
 
       <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200" role="note">CRM records only: payment and date actions do not charge customers or renew Roomba service. Account and connection statuses reflect saved records.</p>
 
+      <PreviewPaidOrders />
       <RoombaCrmLink onLinked={refresh} onShowCustomer={(username) => {
         setSearch(username); setFilter('all');
         document.getElementById('crm-customer-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });

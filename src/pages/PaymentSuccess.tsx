@@ -13,7 +13,7 @@ const PaymentSuccess: React.FC = () => {
 
   useEffect(() => {
     const controller = new AbortController();
-    let redirect: ReturnType<typeof window.setTimeout> | undefined;
+    let redirect: number | undefined;
     const confirm = async () => {
       setStatus('checking');
       setMessage('Checking your payment with Stripe...');
@@ -32,7 +32,9 @@ const PaymentSuccess: React.FC = () => {
         if (!response.ok || !payload.ok) throw new Error(payload.error || 'Payment verification could not finish. Contact support; do not pay again.');
         if (payload.test_mode === true && payload.activated === false) {
           setStatus('test');
-          setMessage('Your test payment was confirmed and recorded. No real charge or live service activation was made.');
+          setMessage(payload.order_status === 'awaiting_activation'
+            ? 'Your test payment is confirmed and saved in the CRM as paid — awaiting activation. No real charge or streaming service activation was made.'
+            : 'Your test payment was confirmed and recorded. No real charge or live service activation was made.');
         } else if (payload.activated === true && payload.test_mode === false) {
           setStatus('success');
           setMessage('Your payment is confirmed and your website plan is active. Streaming login and setup instructions are supplied separately. Taking you to your dashboard...');
