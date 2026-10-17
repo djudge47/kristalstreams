@@ -7,7 +7,8 @@ const safeScalar = value => (typeof value === 'number' && Number.isFinite(value)
 
 // Uses the existing verified admin identity, never a browser-supplied role/email.
 export function createAdminRoombaHandler({ createClient, env = process.env,
-  accountHandler = createRoombaPreviewHandler({ env }), now = Date.now } = {}) {
+  accountHandler = createRoombaPreviewHandler({ env }), now = Date.now, dataKind = 'account' } = {}) {
+  if (!['account', 'packages'].includes(dataKind)) throw new Error('Unsupported admin read');
   let cached;
   let pending;
   let retryAt = 0;
@@ -21,17 +22,23 @@ export function createAdminRoombaHandler({ createClient, env = process.env,
       json(value) { body = value; return this; },
     };
     await accountHandler({ method: 'GET', headers: { authorization: `Bearer ${env.ROOMBA_PREVIEW_SECRET}` } }, internalResponse);
-    if (code !== 200 || body?.status !== 'connected' || body?.transport !== 'fixie'
-      || body?.mode !== 'read-only' || body?.databaseWrites !== false || !body?.account) {
+    if (code !== 200 || body?.transport !== 'fixie' || body?.mode !== 'read-only' || body?.databaseWrites !== false) {
       throw new Error('account_unavailable');
     }
-    const account = { id: safeScalar(body.account.id), username: safeScalar(body.account.username), credits: safeScalar(body.account.credits) };
-    if (!Object.values(account).some(value => value !== null)) throw new Error('account_unavailable');
+    let content;
+    if (dataKind === 'packages') {
+      if (body.status !== 'packages_ready' || !Array.isArray(body.packages)) throw new Error('packages_unavailable');
+      content = { status: 'packages_ready', packages: body.packages };
+    } else {
+      if (body.status !== 'connected' || !body.account) throw new Error('account_unavailable');
+      const account = { id: safeScalar(body.account.id), username: safeScalar(body.account.username), credits: safeScalar(body.account.credits) };
+      if (!Object.values(account).some(value => value !== null)) throw new Error('account_unavailable');
+      content = { status: 'connected', account };
+    }
     const checkedAt = now();
     cached = { checkedAt, body: {
-      status: 'connected', mode: 'read-only', databaseWrites: false,
+      ...content, mode: 'read-only', databaseWrites: false,
       transport: 'fixie', checkedAt: new Date(checkedAt).toISOString(),
-      account,
     } };
     return cached.body;
   }

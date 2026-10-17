@@ -2,9 +2,9 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { parser } from 'stream-json/parser.js';
 
-// Stream all JSON for validation, retaining only three bounded account scalars.
+// Stream all JSON for validation, retaining bounded account or package fields.
 // Provider permissions, credentials, and other large values are never assembled.
-export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024 } = {}) {
+export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, dataMode = 'account' } = {}) {
   const reader = response.body?.getReader();
   if (!reader) throw new Error('empty response');
   let size = 0;
@@ -33,12 +33,15 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024 } 
 
   const payload = { data: null };
   const stack = [];
+  const packageFields = new Set(['id', 'package_name', 'is_trial', 'is_official', 'trial_credits', 'official_credits',
+    'trial_duration', 'trial_duration_in', 'official_duration', 'official_duration_in', 'max_connections', 'bouquets']);
   let scalar;
   let tokenCount = 0;
   const target = () => {
     const parent = stack.at(-1);
     if (parent?.role === 'root' && ['status', 'error'].includes(parent.key)) return [payload, parent.key];
     if (parent?.role === 'account' && ['id', 'username', 'credits'].includes(parent.key)) return [payload.data, parent.key];
+    if (parent?.role === 'package' && packageFields.has(parent.key)) return [parent.record, parent.key];
     return null;
   };
   const assign = (destination, value) => { if (destination) destination[0][destination[1]] = value; };
@@ -53,14 +56,26 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024 } 
           case 'startArray': {
             if (stack.length >= 64) throw fail('KS_RESPONSE_COMPLEXITY');
             let role = 'ignored';
+            let record;
             if (!stack.length && token.name === 'startObject') role = 'root';
             if (parent?.role === 'root' && parent.key === 'data') {
-              payload.data = token.name === 'startObject' ? {} : null;
-              if (payload.data) role = 'account';
+              if (dataMode === 'packages') {
+                payload.data = token.name === 'startArray' ? [] : null;
+                if (payload.data) role = 'packages';
+              } else {
+                payload.data = token.name === 'startObject' ? {} : null;
+                if (payload.data) role = 'account';
+              }
+            }
+            if (parent?.role === 'packages') {
+              if (token.name !== 'startObject' || payload.data.length >= 128) throw fail('KS_RESPONSE_COMPLEXITY');
+              record = {};
+              payload.data.push(record);
+              role = 'package';
             }
             // An object/array in error is still an error; account fields must be scalar.
             assign(target(), parent?.role === 'root' && parent.key === 'error' ? true : null);
-            stack.push({ role, key: '', readingKey: false });
+            stack.push({ role, key: '', readingKey: false, record });
             break;
           }
           case 'endObject':
@@ -68,14 +83,17 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024 } 
           case 'startKey': parent.key = ''; parent.readingKey = true; break;
           case 'endKey': parent.readingKey = false; break;
           case 'startString':
-          case 'startNumber': scalar = { destination: target(), value: '', oversized: false, number: token.name === 'startNumber' }; break;
+          case 'startNumber':
+            if (parent?.role === 'packages') throw fail('KS_RESPONSE_COMPLEXITY');
+            scalar = { destination: target(), value: '', oversized: false, number: token.name === 'startNumber', limit: parent?.role === 'package' && parent.key === 'bouquets' ? 65536 : 256 };
+            break;
           case 'stringChunk':
           case 'numberChunk':
             if (parent?.readingKey) {
               // All recognized names are short; never retain arbitrary large keys.
               parent.key = (parent.key + token.value).slice(0, 257);
             } else if (scalar?.destination && !scalar.oversized) {
-              if (scalar.value.length + token.value.length > 256) scalar.oversized = true;
+              if (scalar.value.length + token.value.length > scalar.limit) scalar.oversized = true;
               else scalar.value += token.value;
             }
             break;
@@ -88,6 +106,7 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024 } 
           case 'nullValue':
           case 'trueValue':
           case 'falseValue':
+            if (parent?.role === 'packages') throw fail('KS_RESPONSE_COMPLEXITY');
             assign(target(), token.value);
             if (parent?.role === 'root' && parent.key === 'data') payload.data = null;
             break;
@@ -103,3 +122,5 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024 } 
     });
   }
 }
+
+export const readPackageJson = (response, options = {}) => readAccountJson(response, { ...options, dataMode: 'packages' });

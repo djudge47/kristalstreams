@@ -1,7 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import { fetch } from 'undici';
 import { createFixieDispatcher, fixieProxyUrl } from './ks-fixie-proxy.js';
-import { readAccountJson } from './ks-roomba-account-reader.js';
+import { readAccountJson, readPackageJson } from './ks-roomba-account-reader.js';
+import { normalizePackages } from '../_shared/ks-roomba-setup.js';
 
 // HTTPS hostname supplied by Roomba support; access-code case copied from
 // the reseller panel's API URL tooltip. Connectivity still requires a test.
@@ -39,7 +40,8 @@ function failureReason(error, stage) {
 }
 
 // Dependencies are injectable so tests never contact the provider.
-export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetch, dispatcherFactory = createFixieDispatcher } = {}) {
+export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetch, dispatcherFactory = createFixieDispatcher, readAction = 'user_info' } = {}) {
+  if (!['user_info', 'packages'].includes(readAction)) throw new Error('Unsupported read action');
   let dispatcher;
   let dispatcherSetting;
   return async function handler(req, res) {
@@ -83,7 +85,7 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
     } catch { return reply(503, 'invalid_proxy_configuration'); }
 
     url.searchParams.set('api_key', apiKey);
-    url.searchParams.set('action', 'user_info');
+    url.searchParams.set('action', readAction);
     let stage = 'proxy_request';
     let upstreamStatus;
     let responseType;
@@ -104,14 +106,21 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
         });
       }
       stage = 'response_body';
-      const payload = await readAccountJson(response);
+      const payload = await (readAction === 'packages' ? readPackageJson(response) : readAccountJson(response));
+      const secrets = [apiKey, env.FIXIE_URL, proxyUrl.password, decodeURIComponent(proxyUrl.password)];
+      if (readAction === 'packages') {
+        if (payload?.error || (payload?.status !== undefined && ![true, 'STATUS_SUCCESS', 'success'].includes(payload.status)) || !Array.isArray(payload?.data)) {
+          return reply(502, 'unexpected_response', { error: 'The provider package list could not be verified.' });
+        }
+        const packages = normalizePackages(payload.data, secrets);
+        return reply(200, 'packages_ready', { transport: 'fixie', packages });
+      }
       const account = payload?.data;
       if (payload?.error || (payload?.status !== undefined && ![true, 'STATUS_SUCCESS', 'success'].includes(payload.status))
           || !account || typeof account !== 'object' || Array.isArray(account)
           || !['id', 'username', 'credits'].some(key => ['string', 'number'].includes(typeof account[key]))) {
         return reply(502, 'unexpected_response', { error: 'Provider response did not contain recognizable account data.' });
       }
-      const secrets = [apiKey, env.FIXIE_URL, proxyUrl.password, decodeURIComponent(proxyUrl.password)];
       const safeValue = value => (typeof value === 'number' && Number.isFinite(value)) || (typeof value === 'string' && value.length <= 256 && !secrets.some(secret => value.includes(secret))) ? value : null;
       return reply(200, 'connected', { transport: 'fixie', account: {
         id: safeValue(account.id), username: safeValue(account.username), credits: safeValue(account.credits),

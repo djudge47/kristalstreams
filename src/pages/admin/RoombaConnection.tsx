@@ -82,6 +82,7 @@ const RoombaConnection: React.FC = () => {
       <Link to="/admin" className="inline-flex items-center gap-2 text-sm font-medium text-gray-400 transition hover:text-white">
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />Back to dashboard
       </Link>
+      <Link to="/admin/setup" className="inline-flex min-h-11 items-center rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/20">Prepare customer setup</Link>
       <section className="overflow-hidden rounded-3xl border border-red-500/20 bg-gradient-to-br from-red-950/70 via-gray-900 to-gray-950 p-5 shadow-2xl shadow-black/30 sm:p-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div>

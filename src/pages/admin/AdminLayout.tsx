@@ -12,6 +12,7 @@ const ADMIN_EMAIL = 'djudge47@gmail.com';
 const navItems = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { path: '/admin/roomba', label: 'Roomba Connection', icon: Wifi },
+  { path: '/admin/setup', label: 'Prepare Setup', icon: List },
   { path: '/admin/customers', label: 'Customers', icon: Users },
   { path: '/admin/tickets', label: 'Support Tickets', icon: TicketCheck },
   { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },

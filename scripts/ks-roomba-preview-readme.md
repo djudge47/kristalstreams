@@ -93,6 +93,34 @@ checks in addition to the 27 connector checks. The website production build and
 API bundle check also pass. No real sign-in, provider read or account write is
 performed by these checks; verify the signed-in panel in Preview before rollout.
 
+## Customer setup drafts
+
+`/admin/setup` is a draft-only preparation page, also linked from the admin
+sidebar and the Roomba connection panel. It starts with a manual **Load packages**
+action. `GET /api/ks-roomba-packages` applies the same server-verified admin,
+Preview-only, proxy, cache and cooldown requirements as the account endpoint.
+Its server-selected provider action is the documented read-only `packages` GET;
+the existing `/api/xui-sync` continues to select only `user_info`.
+
+The streaming reader retains only documented package fields. IDs, durations,
+credit costs, connection allowances and bouquet IDs come from the provider.
+Incomplete/unsupported package details block preparation rather than using
+example IDs, guessed prices or inferred durations. Duplicate package IDs and
+malformed/truncated JSON fail validation. Package records and bouquet lists have
+explicit count/length limits. Provider credentials and unrelated fields are dropped.
+
+The form validates a proposed username/password and selected connection count,
+then builds a local request draft using only the documented creation fields:
+`trial`, `username`, `password`, `package`, `package_duration`, `max_connections`,
+`bouquets_selected[]`, and `reseller_notes`. Month durations remain months.
+The review explicitly states **Not sent**; there is no creation endpoint, send
+button, payment change, credit debit, database write or credential persistence.
+Customer credentials remain in React memory and clear when the page is reloaded.
+
+Run `node scripts/test-ks-roomba-setup.mjs` for ten additional offline checks.
+The live package read and browser draft review still require verification in
+Preview; no customer line may be created as part of that verification.
+
 ## Rollback
 
 Restore the prior reviewed Preview deployment to undo this code update. Its
