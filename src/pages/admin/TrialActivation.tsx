@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { Link } from 'react-router-dom';
 import type { SetupInput } from '../../../_shared/ks-roomba-setup.js';
 
 interface TrialResult { lineId: string; username: string; expiresAt: string; connections: number; trial: boolean }
@@ -97,6 +98,7 @@ const TrialActivation: React.FC<Props> = ({ input, onBusy, onCreated }) => {
           <h4 className="flex items-center gap-2 font-semibold text-emerald-300"><CheckCircle2 className="h-5 w-5" aria-hidden="true" />Trial created and recorded</h4>
           <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">{[['Line ID', attempt.result.lineId], ['Streaming username', attempt.result.username], ['Expires', new Date(attempt.result.expiresAt).toLocaleString()], ['Connections', String(attempt.result.connections)]].map(([label, value]) => <div key={label}><dt className="text-gray-400">{label}</dt><dd className="mt-1 break-words text-white">{value}</dd></div>)}</dl>
           <p className="mt-4 text-sm leading-6 text-gray-300">{createdHere ? 'Use the proposed password above for your app test.' : 'Saved status does not recover the password. Review the existing line in the Roomba reseller panel.'} No second trial will be created from this page.</p>
+          <Link to="/admin/crm" className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-500">Open CRM setup record</Link>
         </> : <><h4 className="font-semibold text-amber-200">Saved request needs review</h4><p className="mt-2 text-sm leading-6 text-gray-300">A request is already recorded. Further creation is locked. Check the Roomba reseller panel before doing anything else.</p></>}
       </div>}
       {review && <div ref={confirmation} tabIndex={-1} className="mt-5 rounded-2xl border border-red-400/30 bg-gray-950/60 p-5 outline-none focus-visible:ring-2 focus-visible:ring-red-400">
