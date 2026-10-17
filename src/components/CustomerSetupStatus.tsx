@@ -2,24 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Clock3, Loader2, MessageSquare, Monitor, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { readSetupHelpOrders } from '../../_shared/ks-setup-help.js';
+import type { SetupHelpOrder } from '../../_shared/ks-setup-help.js';
 
-type SetupOrder = {
-  reference: string; tier: string; interval: string; connections: number;
-  amountCents: number; currency: 'usd'; recordedAt: string;
-  status: 'awaiting_activation'; testMode: true; providerActivated: false;
-};
 type View = { kind: 'loading' | 'hidden' | 'signed_out' }
   | { kind: 'error'; message: string }
-  | { kind: 'ready'; orders: SetupOrder[]; checkedAt: string };
-
-const validOrder = (value: SetupOrder) => value && typeof value.reference === 'string'
-  && /^cs_(test_)?[A-Za-z0-9]+$/.test(value.reference)
-  && ['bronze', 'silver', 'gold', 'platinum'].includes(value.tier)
-  && ['monthly', '3 months', '6 months', 'yearly'].includes(value.interval)
-  && Number.isInteger(value.connections) && value.connections >= 1 && value.connections <= 5
-  && Number.isInteger(value.amountCents) && value.amountCents > 0 && value.currency === 'usd'
-  && typeof value.recordedAt === 'string' && Number.isFinite(Date.parse(value.recordedAt))
-  && value.status === 'awaiting_activation' && value.testMode === true && value.providerActivated === false;
+  | { kind: 'ready'; orders: SetupHelpOrder[]; checkedAt: string };
 
 const CustomerSetupStatus: React.FC<{ accountId: string }> = ({ accountId }) => {
   const [view, setView] = useState<View>({ kind: 'loading' });
@@ -48,12 +36,8 @@ const CustomerSetupStatus: React.FC<{ accountId: string }> = ({ accountId }) => 
       const payload = await response.json().catch(() => null);
       if (controller.signal.aborted || request.current !== controller) return;
       if (!response.ok) throw new Error(payload?.error || 'Your saved order status is temporarily unavailable.');
-      if (payload?.accountId !== accountId || payload.mode !== 'read-only' || payload.testMode !== true
-        || !Array.isArray(payload.orders) || payload.orders.length > 5 || !payload.orders.every(validOrder)
-        || typeof payload.checkedAt !== 'string' || !Number.isFinite(Date.parse(payload.checkedAt))) {
-        throw new Error('Your saved order status could not be verified.');
-      }
-      setView({ kind: 'ready', orders: payload.orders, checkedAt: payload.checkedAt });
+      const result = readSetupHelpOrders(payload, accountId);
+      setView({ kind: 'ready', ...result });
     } catch (failure) {
       if (request.current === controller) setView({ kind: 'error', message: controller.signal.aborted
         ? 'The order check took too long. You can check again.'
@@ -109,7 +93,7 @@ const CustomerSetupStatus: React.FC<{ accountId: string }> = ({ accountId }) => 
       <p className="mt-4 text-sm leading-6 text-gray-300">Please do not pay again for these orders. Your website plan and any existing streaming access are separate from this pending setup.</p>
       <p className="mt-2 text-xs leading-5 text-gray-500">Saved status checked {new Date(view.checkedAt).toLocaleString()}. No new streaming login or service end date has been confirmed for these orders.</p>
     </>}
-    {view.kind !== 'loading' && <Link to="/client/support/new" className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-400 sm:w-auto"><MessageSquare className="h-4 w-4" aria-hidden="true" />Get setup help</Link>}
+    {view.kind !== 'loading' && <Link to="/client/support/new" state={{ setupHelp: true }} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-400 sm:w-auto"><MessageSquare className="h-4 w-4" aria-hidden="true" />Get setup help</Link>}
   </section>;
 };
 

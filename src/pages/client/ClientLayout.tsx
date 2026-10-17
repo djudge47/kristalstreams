@@ -7,7 +7,8 @@ import {
   Monitor, 
   History,
   Shield,
-  MessageSquare
+  MessageSquare,
+  ArrowLeft
 } from 'lucide-react';
 
 const navigation = [
@@ -22,13 +23,15 @@ const navigation = [
 
 const ClientLayout: React.FC = () => {
   const location = useLocation();
+  const setupHelp = location.pathname === '/client/support/new' && location.state?.setupHelp === true;
 
   return (
     <div className="min-h-screen py-32 bg-dark-300">
       <div className="container mx-auto px-4">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Navigation */}
-          <aside className="lg:w-64 flex-shrink-0">
+          {setupHelp && <Link to="/dashboard" className="inline-flex min-h-12 items-center gap-2 text-sm font-medium text-gray-300 hover:text-white lg:hidden"><ArrowLeft className="h-4 w-4" aria-hidden="true" />Back to Dashboard</Link>}
+          <aside className={`lg:w-64 flex-shrink-0 ${setupHelp ? 'hidden lg:block' : ''}`}>
             <nav className="space-y-1">
               {navigation.map((item) => {
                 const Icon = item.icon;
