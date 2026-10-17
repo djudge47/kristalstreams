@@ -26,9 +26,13 @@ Fixie-generated HTTP port 80 URLs are converted internally to the documented
 HTTPS proxy endpoint on port 443, with the same proxy hostname and credentials.
 Both proxy TLS and the Roomba HTTPS tunnel require valid certificates. Neither
 proxy credentials nor the API key is sent in plain text. Redirects are blocked.
-Roomba responses are bounded to 8 MiB and the request timeout is 15 seconds.
-The account response can include large permission lists; JSON is parsed regardless
-of a legacy `text/html` media type. Only the three sanitized account fields are returned.
+Roomba responses are streamed through the pinned `stream-json` 3.7.0 parser,
+with absolute limits of 64 MiB, 64 nesting levels, eight million tokens and 15 seconds.
+The full JSON must validate, including its trailing data. Only status/error flags
+and three account scalars (each at most 256 characters) are retained; permission
+lists, provider API keys and arbitrary large strings/keys are not assembled.
+JSON is parsed regardless of a legacy `text/html` media type. Only the three
+sanitized account fields are returned. A JSON opening alone never means success.
 Provider bodies and raw transport errors are never logged or returned.
 
 References:
@@ -52,7 +56,9 @@ References:
 
 Runtime: Vercel Node.js 24 (Undici 8.12.2 requires Node.js >=22.19.0).
 Run `npm ci` and `node scripts/test-ks-roomba-preview.mjs` on that runtime.
-These 23 checks use synthetic credentials and make no network requests.
+These 27 checks use synthetic credentials and make no network requests. They
+include a streamed response over 12 MiB, malformed trailing JSON, nesting and byte
+limits, oversize scalar rejection, split UTF-8, and prototype-key handling.
 
 Authorized failures include a fixed `stage` and allowlisted `reason` to distinguish
 transport errors from non-JSON or oversized responses. A received HTTP status is

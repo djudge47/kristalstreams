@@ -1,51 +1,18 @@
 import { timingSafeEqual } from 'node:crypto';
 import { fetch } from 'undici';
 import { createFixieDispatcher, fixieProxyUrl } from './ks-fixie-proxy.js';
+import { readAccountJson } from './ks-roomba-account-reader.js';
 
 // HTTPS hostname supplied by Roomba support; access-code case copied from
 // the reseller panel's API URL tooltip. Connectivity still requires a test.
 const endpoint = 'https://cdn.rooomba.tv/WDXTMHmN/';
 const service = 'Kristal Streams Roomba Preview';
-// The confirmed JSON prefix exceeds 1 MiB; user_info includes large permissions.
-// Keep a finite bound and the existing timeout, returning only account fields.
-const maxResponseBytes = 8 * 1024 * 1024;
 
 function authorized(header, secret) {
   if (typeof secret !== 'string' || !secret || typeof header !== 'string') return false;
   const actual = Buffer.from(header);
   const expected = Buffer.from(`Bearer ${secret}`);
   return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
-
-async function readJson(response) {
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error('empty response');
-  const chunks = [];
-  let size = 0;
-  let prefix = Buffer.alloc(0);
-  let bodyFormat = 'unknown';
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (prefix.length < 512) prefix = Buffer.concat([prefix, Buffer.from(value).subarray(0, 512 - prefix.length)]);
-      const opening = prefix.toString('utf8').trimStart();
-      bodyFormat = !opening ? 'unknown' : opening[0] === '{' ? 'json_object_prefix' : opening[0] === '[' ? 'json_array_prefix' : opening[0] === '<' ? 'markup' : 'other';
-      if (bodyFormat === 'markup') {
-        throw Object.assign(new Error('HTML response'), { code: 'KS_HTML_RESPONSE' });
-      }
-      if (size > maxResponseBytes) throw Object.assign(new Error('response too large'), { code: 'KS_RESPONSE_TOO_LARGE' });
-      chunks.push(Buffer.from(value));
-    }
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
-  } catch (error) {
-    throw Object.assign(new Error('Response read failed', { cause: error }), {
-      ksResponseDiagnostics: { bodyFormat, receivedBytes: size },
-    });
-  } finally {
-    await reader.cancel().catch(() => {});
-  }
 }
 
 // Report only fixed diagnostic labels, never raw errors, URLs or bodies.
@@ -55,7 +22,7 @@ function failureReason(error, stage) {
     'UND_ERR_SOCKET', 'UND_ERR_PRX_TLS', 'UND_ERR_PRX_CONN', 'UND_ERR_ABORTED',
     'ERR_TLS_CERT_ALTNAME_INVALID', 'CERT_HAS_EXPIRED', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
     'DEPTH_ZERO_SELF_SIGNED_CERT', 'SELF_SIGNED_CERT_IN_CHAIN',
-    'ERR_SSL_WRONG_VERSION_NUMBER', 'UND_ERR_INVALID_ARG', 'KS_RESPONSE_TOO_LARGE', 'KS_HTML_RESPONSE']);
+    'ERR_SSL_WRONG_VERSION_NUMBER', 'UND_ERR_INVALID_ARG', 'KS_RESPONSE_TOO_LARGE', 'KS_HTML_RESPONSE', 'KS_INVALID_JSON', 'KS_RESPONSE_TIMEOUT', 'KS_RESPONSE_COMPLEXITY']);
   let current = error;
   for (let depth = 0; current && depth < 5; depth++, current = current.cause) {
     if (known.has(current.code)) {
@@ -137,9 +104,9 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
         });
       }
       stage = 'response_body';
-      const payload = await readJson(response);
+      const payload = await readAccountJson(response);
       const account = payload?.data;
-      if (payload?.error || payload?.status === false || ['error', 'failed'].includes(payload?.status)
+      if (payload?.error || (payload?.status !== undefined && ![true, 'STATUS_SUCCESS', 'success'].includes(payload.status))
           || !account || typeof account !== 'object' || Array.isArray(account)
           || !['id', 'username', 'credits'].some(key => ['string', 'number'].includes(typeof account[key]))) {
         return reply(502, 'unexpected_response', { error: 'Provider response did not contain recognizable account data.' });

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRoombaPreviewHandler } from '../_server/ks-roomba-preview.js';
 import { createFixieDispatcher, fixieProxyUrl } from '../_server/ks-fixie-proxy.js';
+import { readAccountJson } from '../_server/ks-roomba-account-reader.js';
 
 const env = {
   ROOMBA_PREVIEW_SECRET: 'fake-backend-secret', ROOMBA_API_KEY: 'fake-provider-key',
@@ -169,7 +170,7 @@ await check('safe diagnostics distinguish proxy failure, timeout and unreadable 
   assert.equal(html.body.reason, 'KS_HTML_RESPONSE');
   assert.equal(html.body.upstreamStatus, 200);
   const oversized = await run({ response: new Response('x'.repeat(8 * 1024 * 1024 + 1)) });
-  assert.equal(oversized.body.reason, 'KS_RESPONSE_TOO_LARGE');
+  assert.equal(oversized.body.reason, 'KS_INVALID_JSON');
 });
 await check('large HTML pages are identified without returning their text or arbitrary headers', async () => {
   let canceled = false;
@@ -186,13 +187,11 @@ await check('large HTML pages are identified without returning their text or arb
   assert.equal(result.body.upstreamStatus, 200);
   assert.equal(canceled, true);
   const json = await run({ response: new Response(JSON.stringify({ data: { id: 1, unused: 'x'.repeat(8 * 1024 * 1024) } }), { headers: { 'content-type': 'application/json' } }) });
-  assert.equal(json.body.reason, 'KS_RESPONSE_TOO_LARGE');
-  assert.equal(json.body.responseType, 'application/json');
-  assert.equal(json.body.bodyFormat, 'json_object_prefix');
-  assert.ok(json.body.receivedBytes > 8 * 1024 * 1024);
+  assert.equal(json.body.status, 'connected');
+  assert.deepEqual(json.body.account, { id: 1, username: null, credits: null });
   const untrusted = await run({ response: new Response('not json', { headers: { 'content-type': env.ROOMBA_API_KEY } }) });
   assert.equal(untrusted.body.responseType, 'other');
-  assert.equal(untrusted.body.reason, 'NON_JSON_RESPONSE');
+  assert.equal(untrusted.body.reason, 'KS_INVALID_JSON');
   assert.equal(untrusted.body.bodyFormat, 'other');
 });
 await check('markup comments and split prefixes are classified without exposing content', async () => {
@@ -203,7 +202,7 @@ await check('markup comments and split prefixes are classified without exposing 
   assert.equal(result.body.account, undefined);
   const other = await run({ response: new Response('x'.repeat(8 * 1024 * 1024 + 1)) });
   assert.equal(other.body.bodyFormat, 'other');
-  assert.equal(other.body.reason, 'KS_RESPONSE_TOO_LARGE');
+  assert.equal(other.body.reason, 'KS_INVALID_JSON');
 });
 await check('documented large permission lists are accepted despite a legacy text/html media type', async () => {
   const result = await run({ response: new Response(JSON.stringify({
@@ -214,6 +213,48 @@ await check('documented large permission lists are accepted despite a legacy tex
   assert.equal(result.body.status, 'connected');
   assert.deepEqual(result.body.account, { id: 12, username: 'test-reseller', credits: 5 });
   assert.equal(result.body.permissions, undefined);
+});
+await check('responses above 12 MiB stream correctly with account fields after large permissions', async () => {
+  let index = 0;
+  const stream = new ReadableStream({
+    pull(controller) {
+      if (index === 0) controller.enqueue(new TextEncoder().encode('{"permissions":["'));
+      else if (index <= 192) controller.enqueue(new TextEncoder().encode('p'.repeat(65536)));
+      else if (index === 193) controller.enqueue(new TextEncoder().encode('\"],"status":"STATUS_SUCCESS","data":{"id":12,"username":"test-reseller","credits":5}}'));
+      else controller.close();
+      index++;
+    },
+  });
+  const result = await run({ response: new Response(stream, { headers: { 'content-type': 'text/html' } }) });
+  assert.equal(result.body.status, 'connected');
+  assert.deepEqual(result.body.account, { id: 12, username: 'test-reseller', credits: 5 });
+  assert.ok(JSON.stringify(result.body).length < 300);
+});
+await check('malformed or truncated trailing JSON never reports an account connection', async () => {
+  for (const text of ['{"data":{"id":12},"permissions":[', '{"data":{"id":12}}oops', '{"data":{"id":12},"permissions":[1,]}', '{"data":{"id":12},"status":"STATUS_ERROR"}']) {
+    const result = await run({ response: new Response(text) });
+    assert.equal(result.code, 502);
+    assert.equal(result.body.account, undefined);
+  }
+});
+await check('streaming reader enforces byte and nesting limits and bounds selected values', async () => {
+  await assert.rejects(readAccountJson(new Response('{"permissions":"' + 'x'.repeat(2048) + '"}'), { maxBytes: 1024 }), error => error.code === 'KS_RESPONSE_TOO_LARGE');
+  const deep = await run({ response: new Response('{"permissions":' + '['.repeat(65) + '0' + ']'.repeat(65) + ',"data":{"id":12}}') });
+  assert.equal(deep.body.reason, 'KS_RESPONSE_COMPLEXITY');
+  const long = await run({ response: Response.json({ data: { id: 12, username: 'x'.repeat(10000), credits: 5 } }) });
+  assert.equal(long.body.status, 'connected');
+  assert.equal(long.body.account.username, null);
+  const error = await run({ response: Response.json({ error: 'x'.repeat(1000), data: { id: 12 } }) });
+  assert.equal(error.code, 502);
+});
+await check('streamed keys and UTF-8 scalars survive chunk boundaries without prototype injection', async () => {
+  const bytes = new TextEncoder().encode('{"__proto__":{"polluted":true},"status":"STATUS_SUCCESS","data":{"i\\u0064":12,"username":"\u00e9\u6f22","credits":5}}');
+  let index = 0;
+  const result = await run({ response: new Response(new ReadableStream({ pull(controller) { if (index < bytes.length) controller.enqueue(bytes.subarray(index, ++index)); else controller.close(); } })) });
+  assert.equal(result.body.status, 'connected');
+  assert.equal(result.body.account.username, '\u00e9\u6f22');
+  assert.equal(result.body.account.id, 12);
+  assert.equal({}.polluted, undefined);
 });
 console.log(`${checks} checks passed. No network requests, real credentials, database changes or customer lines.`);
 
