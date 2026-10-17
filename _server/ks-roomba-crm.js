@@ -1,6 +1,6 @@
 const options = { auth: { persistSession: false, autoRefreshToken: false } };
 const slot = 'preview_trial_activation_v1';
-const columns = 'slot,admin_id,package_id,username,state,result,updated_at,crm_customer_id,crm_linked_at';
+const columns = 'slot,admin_id,reseller_id,package_id,username,state,result,updated_at,crm_customer_id,crm_linked_at';
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 // The receipt and CRM are the only dependencies. This module has no provider transport.
@@ -19,6 +19,7 @@ export function trialSnapshot(receipt, customer, now = Date.now()) {
   return {
     status: linked ? match ? 'linked' : 'conflict' : 'unlinked',
     username: receipt.username, lineId: String(result.lineId), packageId: '1', packageName: 'Trial',
+    resellerId: /^[1-9]\d{0,14}$/.test(String(receipt.reseller_id ?? '')) ? String(receipt.reseller_id) : null,
     duration: '36 hours', connections: 1, expiresAt: result.expiresAt,
     access: Date.parse(result.expiresAt) <= now ? 'expired' : 'within_trial_period',
     recordedAt: receipt.updated_at,

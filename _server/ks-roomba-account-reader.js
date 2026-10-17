@@ -35,7 +35,7 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, d
   const stack = [];
   const packageFields = new Set(['id', 'package_name', 'is_trial', 'is_official', 'trial_credits', 'official_credits',
     'trial_duration', 'trial_duration_in', 'official_duration', 'official_duration_in', 'max_connections', 'bouquets']);
-  const lineFields = new Set(['id', 'username', 'is_trial', 'max_connections', 'member_id', 'exp_date', 'enabled', 'admin_enabled']);
+  const lineFields = new Set(['id', 'username', 'is_trial', 'max_connections', 'member_id', 'package_id', 'bouquet', 'exp_date', 'enabled', 'admin_enabled']);
   let scalar;
   let tokenCount = 0;
   const target = () => {
@@ -87,7 +87,7 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, d
           case 'startString':
           case 'startNumber':
             if (parent?.role === 'packages') throw fail('KS_RESPONSE_COMPLEXITY');
-            scalar = { destination: target(), value: '', oversized: false, number: token.name === 'startNumber', limit: parent?.role === 'package' && parent.key === 'bouquets' ? 65536 : 256 };
+            scalar = { destination: target(), value: '', oversized: false, number: token.name === 'startNumber', limit: (parent?.role === 'package' && parent.key === 'bouquets') || (parent?.role === 'line' && parent.key === 'bouquet') ? 65536 : 256 };
             break;
           case 'stringChunk':
           case 'numberChunk':

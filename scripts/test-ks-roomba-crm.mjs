@@ -5,7 +5,7 @@ import { isBillingOverdue, isDueWithin, isTrialCustomer, isUnpaidCustomer, trial
 const user = { id: '00000000-0000-4000-8000-000000000001', email: 'djudge47@gmail.com', email_confirmed_at: '2026-01-01' };
 const customerId = '00000000-0000-4000-8000-000000000002';
 const now = Date.parse('2026-10-17T13:00:00Z');
-const receipt = { slot: 'preview_trial_activation_v1', admin_id: user.id, package_id: '1', username: 'synthetic_trial', state: 'succeeded', result: { trial: true, lineId: '123', username: 'synthetic_trial', connections: 1, expiresAt: '2026-10-18T17:00:00.000Z', password: 'MUST_NOT_APPEAR' }, updated_at: '2026-10-17T05:00:00.000Z', crm_customer_id: null, crm_linked_at: null };
+const receipt = { slot: 'preview_trial_activation_v1', admin_id: user.id, reseller_id: '888', package_id: '1', username: 'synthetic_trial', state: 'succeeded', result: { trial: true, lineId: '123', username: 'synthetic_trial', connections: 1, expiresAt: '2026-10-18T17:00:00.000Z', password: 'MUST_NOT_APPEAR' }, updated_at: '2026-10-17T05:00:00.000Z', crm_customer_id: null, crm_linked_at: null };
 const env = { VERCEL_ENV: 'preview', VITE_SUPABASE_URL: 'https://fake.supabase.co', VITE_SUPABASE_ANON_KEY: 'fake-anon', SUPABASE_SERVICE_ROLE_KEY: 'MUST_NOT_APPEAR' };
 function fixture(settings = {}) {
   let saved = structuredClone(settings.receipt === undefined ? receipt : settings.receipt);
@@ -47,7 +47,7 @@ await check('Production, invalid methods and unauthorized identities cannot use 
   const f = fixture(); assert.equal((await f.request({ token: '' })).code, 401); assert.equal((await f.request({ token: 'expired' })).code, 401); assert.equal((await f.request({ method: 'DELETE' })).code, 405); assert.equal(f.calls.service, 0);
 });
 await check('saved setup GET is read-only, bounded and excludes credentials', async () => {
-  const f = fixture(); const res = await f.request(); assert.equal(res.code, 200); assert.equal(res.body.setup.status, 'unlinked'); assert.equal(res.body.setup.lineId, '123'); assert.equal(res.body.trialCreationEnabled, false); assert.equal(f.calls.writes, 0);
+  const f = fixture(); const res = await f.request(); assert.equal(res.code, 200); assert.equal(res.body.setup.status, 'unlinked'); assert.equal(res.body.setup.lineId, '123'); assert.equal(res.body.setup.resellerId, '888'); assert.equal(res.body.trialCreationEnabled, false); assert.equal(f.calls.writes, 0);
 });
 await check('CRM linking works with provider creation disabled and ignores caller identity overrides', async () => {
   const f = fixture(); const res = await f.request({ method: 'POST', body: { confirmed: true, customerId: 'forged', username: 'forged', p_admin_id: 'forged', password: 'MUST_NOT_APPEAR' } });
