@@ -52,7 +52,7 @@ export function createPreviewPaidOrdersHandler({ createClient, env = process.env
       const admin = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, options);
       const { data: rows, error: readError } = await admin.rpc('ks_list_preview_paid_orders');
       if (readError) throw new Error('storage_unavailable');
-      return res.status(200).json({ orders: paidOrderSnapshot(rows), mode: 'read-only', providerActivated: false });
+      return res.status(200).json({ orders: paidOrderSnapshot(rows).map(order => ({ ...order, canReviewTrial: order.userId === user.id })), mode: 'read-only', providerActivated: false });
     } catch {
       return res.status(503).json({ error: 'The saved payment orders could not be checked. No provider action was sent.' });
     }
