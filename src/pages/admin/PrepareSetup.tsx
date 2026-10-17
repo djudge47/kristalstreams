@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, ClipboardList, Eye, EyeOff, KeyRound, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ClipboardList, Download, Eye, EyeOff, KeyRound, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { buildSetupDraft, type RoombaPackage, type SetupDraft, type SetupInput } from '../../../_shared/ks-roomba-setup.js';
 import TrialActivation from './TrialActivation';
+import { buildPackageSummary } from '../../../_shared/ks-roomba-package-summary.js';
 
 const fieldStyle = 'mt-2 min-h-12 w-full rounded-xl border border-gray-700 bg-gray-950/80 px-4 py-3 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-400/20';
 const initialInput: SetupInput = { packageId: '', mode: 'trial', username: '', password: '', connections: 1, notes: '' };
@@ -19,6 +20,7 @@ const PrepareSetup: React.FC = () => {
   const [cooldown, setCooldown] = useState(0);
   const [trialBusy, setTrialBusy] = useState(false);
   const [trialCreated, setTrialCreated] = useState(false);
+  const [summaryMessage, setSummaryMessage] = useState('');
   const controller = useRef<AbortController | null>(null);
   const busy = useRef(false);
   const review = useRef<HTMLDivElement | null>(null);
@@ -47,6 +49,7 @@ const PrepareSetup: React.FC = () => {
     controller.current = request;
     const timeout = window.setTimeout(() => request.abort(), 25000);
     setLoading(true);
+    setSummaryMessage('');
     setError(null);
     setDraft(null);
     setPackages(null);
@@ -77,6 +80,28 @@ const PrepareSetup: React.FC = () => {
       window.clearTimeout(timeout);
       busy.current = false;
       if (controller.current === request) { controller.current = null; setLoading(false); }
+    }
+  };
+
+  const downloadPackageSummary = () => {
+    setSummaryMessage('');
+    try {
+      const summary = buildPackageSummary(packages || [], checkedAt || '');
+      const blob = new Blob([JSON.stringify(summary, null, 2) + '\n'], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      try {
+        link.href = url;
+        link.download = `KristalStreams-Roomba-Packages-${new Date(summary.checkedAt).toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(link);
+        link.click();
+        setSummaryMessage('Package summary downloaded. You can attach this JSON file for plan matching.');
+      } finally {
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    } catch {
+      setSummaryMessage('The summary could not be downloaded. Reload packages and try again.');
     }
   };
 
@@ -111,6 +136,11 @@ const PrepareSetup: React.FC = () => {
           </button>
         </div>
         {checkedAt && <p className="mt-4 text-xs text-gray-400">Package details checked {new Date(checkedAt).toLocaleString()}</p>}
+        {packages && packages.length > 0 && checkedAt && <div className="mt-5 border-t border-white/10 pt-5">
+          <button type="button" onClick={downloadPackageSummary} disabled={loading || trialBusy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-600 px-4 py-3 text-sm font-semibold text-gray-200 hover:border-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-400 disabled:cursor-not-allowed disabled:opacity-60"><Download className="h-4 w-4" aria-hidden="true" />Download package summary</button>
+          <p className="mt-2 text-xs leading-5 text-gray-400">Review all package IDs, durations, credit costs, connection limits and channel groups in one file. This uses the loaded list and includes no customer logins, passwords or API keys.</p>
+        </div>}
+        <p role="status" aria-live="polite" className="mt-3 text-sm text-gray-300">{summaryMessage}</p>
         {packages?.length === 0 && <p className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">Roomba returned no packages for this account.</p>}
       </section>
       <div role="status" aria-live="polite" className="sr-only">{loading ? 'Loading available Roomba packages.' : packages ? `${packages.length} packages loaded.` : 'Packages have not been loaded.'}</div>
