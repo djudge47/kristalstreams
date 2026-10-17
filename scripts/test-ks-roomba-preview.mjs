@@ -166,10 +166,31 @@ await check('safe diagnostics distinguish proxy failure, timeout and unreadable 
   }
   const html = await run({ response: new Response(`<html>${env.ROOMBA_API_KEY}</html>`, { status: 200 }) });
   assert.equal(html.body.stage, 'response_body');
-  assert.equal(html.body.reason, 'NON_JSON_RESPONSE');
+  assert.equal(html.body.reason, 'KS_HTML_RESPONSE');
   assert.equal(html.body.upstreamStatus, 200);
   const oversized = await run({ response: new Response('x'.repeat(65537)) });
   assert.equal(oversized.body.reason, 'KS_RESPONSE_TOO_LARGE');
+});
+await check('large HTML pages are identified without returning their text or arbitrary headers', async () => {
+  let canceled = false;
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('  <!DOC'));
+      controller.enqueue(new TextEncoder().encode(`TYPE html><html>${env.ROOMBA_API_KEY}${'x'.repeat(70000)}</html>`));
+    },
+    cancel() { canceled = true; },
+  });
+  const result = await run({ response: new Response(stream, { headers: { 'content-type': 'text/html; charset=utf-8' } }) });
+  assert.equal(result.body.reason, 'KS_HTML_RESPONSE');
+  assert.equal(result.body.responseType, 'text/html');
+  assert.equal(result.body.upstreamStatus, 200);
+  assert.equal(canceled, true);
+  const json = await run({ response: new Response(JSON.stringify({ data: { id: 1, unused: 'x'.repeat(70000) } }), { headers: { 'content-type': 'application/json' } }) });
+  assert.equal(json.body.reason, 'KS_RESPONSE_TOO_LARGE');
+  assert.equal(json.body.responseType, 'application/json');
+  const untrusted = await run({ response: new Response('not json', { headers: { 'content-type': env.ROOMBA_API_KEY } }) });
+  assert.equal(untrusted.body.responseType, 'other');
+  assert.equal(untrusted.body.reason, 'NON_JSON_RESPONSE');
 });
 console.log(`${checks} checks passed. No network requests, real credentials, database changes or customer lines.`);
 

@@ -50,11 +50,13 @@ References:
 
 Runtime: Vercel Node.js 24 (Undici 8.12.2 requires Node.js >=22.19.0).
 Run `npm ci` and `node scripts/test-ks-roomba-preview.mjs` on that runtime.
-These 20 checks use synthetic credentials and make no network requests.
+These 21 checks use synthetic credentials and make no network requests.
 
 Authorized failures include a fixed `stage` and allowlisted `reason` to distinguish
 transport errors from non-JSON or oversized responses. A received HTTP status is
-included when available. Raw errors, response bodies and credential values remain
+included when available. A fixed response media-type label and bounded HTML
+prefix detection distinguish web pages from oversized JSON without exposing text.
+Raw errors, response bodies and credential values remain
 excluded; diagnostics do not add requests or change transport verification.
 
 ## Rollback

@@ -19,10 +19,15 @@ async function readJson(response) {
   if (!reader) throw new Error('empty response');
   const chunks = [];
   let size = 0;
+  let prefix = Buffer.alloc(0);
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      if (prefix.length < 512) prefix = Buffer.concat([prefix, Buffer.from(value).subarray(0, 512 - prefix.length)]);
+      if (/^\s*<(?:!doctype\s+html\b|html\b|head\b|body\b)/i.test(prefix.toString('utf8').replace(/^\uFEFF/, ''))) {
+        throw Object.assign(new Error('HTML response'), { code: 'KS_HTML_RESPONSE' });
+      }
       size += value.byteLength;
       if (size > 65536) throw Object.assign(new Error('response too large'), { code: 'KS_RESPONSE_TOO_LARGE' });
       chunks.push(Buffer.from(value));
@@ -40,7 +45,7 @@ function failureReason(error, stage) {
     'UND_ERR_SOCKET', 'UND_ERR_PRX_TLS', 'UND_ERR_PRX_CONN', 'UND_ERR_ABORTED',
     'ERR_TLS_CERT_ALTNAME_INVALID', 'CERT_HAS_EXPIRED', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
     'DEPTH_ZERO_SELF_SIGNED_CERT', 'SELF_SIGNED_CERT_IN_CHAIN',
-    'ERR_SSL_WRONG_VERSION_NUMBER', 'UND_ERR_INVALID_ARG', 'KS_RESPONSE_TOO_LARGE']);
+    'ERR_SSL_WRONG_VERSION_NUMBER', 'UND_ERR_INVALID_ARG', 'KS_RESPONSE_TOO_LARGE', 'KS_HTML_RESPONSE']);
   let current = error;
   for (let depth = 0; current && depth < 5; depth++, current = current.cause) {
     if (known.has(current.code)) {
@@ -104,6 +109,7 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
     url.searchParams.set('action', 'user_info');
     let stage = 'proxy_request';
     let upstreamStatus;
+    let responseType;
     try {
       const response = await fetchImpl(url, {
         method: 'GET', redirect: 'manual', headers: { Accept: 'application/json' },
@@ -111,6 +117,8 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
         dispatcher,
       });
       upstreamStatus = response.status;
+      const mediaType = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+      responseType = ['application/json', 'text/html', 'text/plain'].includes(mediaType) ? mediaType : mediaType ? 'other' : 'missing';
       if (!response.ok) {
         await response.body?.cancel().catch(() => {});
         return reply(502, 'connection_failed', {
@@ -137,7 +145,7 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
       return reply(502, 'connection_failed', {
         error: 'Unable to read the provider account response.',
         stage, reason: failureReason(error, stage),
-        ...(upstreamStatus === undefined ? {} : { upstreamStatus }),
+        ...(upstreamStatus === undefined ? {} : { upstreamStatus, responseType }),
       });
     }
   };
