@@ -188,9 +188,22 @@ await check('large HTML pages are identified without returning their text or arb
   const json = await run({ response: new Response(JSON.stringify({ data: { id: 1, unused: 'x'.repeat(1024 * 1024) } }), { headers: { 'content-type': 'application/json' } }) });
   assert.equal(json.body.reason, 'KS_RESPONSE_TOO_LARGE');
   assert.equal(json.body.responseType, 'application/json');
+  assert.equal(json.body.bodyFormat, 'json_object_prefix');
+  assert.ok(json.body.receivedBytes > 1024 * 1024);
   const untrusted = await run({ response: new Response('not json', { headers: { 'content-type': env.ROOMBA_API_KEY } }) });
   assert.equal(untrusted.body.responseType, 'other');
   assert.equal(untrusted.body.reason, 'NON_JSON_RESPONSE');
+  assert.equal(untrusted.body.bodyFormat, 'other');
+});
+await check('markup comments and split prefixes are classified without exposing content', async () => {
+  const response = new Response(`<!-- ${env.ROOMBA_API_KEY} -->` + 'x'.repeat(1024 * 1024));
+  const result = await run({ response });
+  assert.equal(result.body.reason, 'KS_HTML_RESPONSE');
+  assert.equal(result.body.bodyFormat, 'markup');
+  assert.equal(result.body.account, undefined);
+  const other = await run({ response: new Response('x'.repeat(1024 * 1024 + 1)) });
+  assert.equal(other.body.bodyFormat, 'other');
+  assert.equal(other.body.reason, 'KS_RESPONSE_TOO_LARGE');
 });
 await check('documented large permission lists are accepted despite a legacy text/html media type', async () => {
   const result = await run({ response: new Response(JSON.stringify({

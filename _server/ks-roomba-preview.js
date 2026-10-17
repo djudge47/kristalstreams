@@ -22,19 +22,26 @@ async function readJson(response) {
   const chunks = [];
   let size = 0;
   let prefix = Buffer.alloc(0);
+  let bodyFormat = 'unknown';
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      size += value.byteLength;
       if (prefix.length < 512) prefix = Buffer.concat([prefix, Buffer.from(value).subarray(0, 512 - prefix.length)]);
-      if (/^\s*<(?:!doctype\s+html\b|html\b|head\b|body\b)/i.test(prefix.toString('utf8').replace(/^\uFEFF/, ''))) {
+      const opening = prefix.toString('utf8').trimStart();
+      bodyFormat = !opening ? 'unknown' : opening[0] === '{' ? 'json_object_prefix' : opening[0] === '[' ? 'json_array_prefix' : opening[0] === '<' ? 'markup' : 'other';
+      if (bodyFormat === 'markup') {
         throw Object.assign(new Error('HTML response'), { code: 'KS_HTML_RESPONSE' });
       }
-      size += value.byteLength;
       if (size > maxResponseBytes) throw Object.assign(new Error('response too large'), { code: 'KS_RESPONSE_TOO_LARGE' });
       chunks.push(Buffer.from(value));
     }
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch (error) {
+    throw Object.assign(new Error('Response read failed', { cause: error }), {
+      ksResponseDiagnostics: { bodyFormat, receivedBytes: size },
+    });
   } finally {
     await reader.cancel().catch(() => {});
   }
@@ -148,6 +155,7 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
         error: 'Unable to read the provider account response.',
         stage, reason: failureReason(error, stage),
         ...(upstreamStatus === undefined ? {} : { upstreamStatus, responseType }),
+        ...(stage === 'response_body' && error?.ksResponseDiagnostics ? error.ksResponseDiagnostics : {}),
       });
     }
   };
