@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { isAuthSessionMissingError } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { subscribeToTickets, getUnreadTicketCount, useNotificationStore } from '../lib/api';
@@ -59,11 +60,12 @@ const Dashboard: React.FC = () => {
       try {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         
-        if (authError) throw authError;
-        if (!user) {
-          navigate('/login');
+        if (isAuthSessionMissingError(authError) || authError?.status === 401 || (!authError && !user)) {
+          if (mounted) navigate('/login', { replace: true });
           return;
         }
+        if (authError) throw authError;
+        if (!mounted || !user) return;
 
         if (mounted) setIsAdmin(user.email === ADMIN_EMAIL);
 
