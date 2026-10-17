@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { subscribeToTickets, getUnreadTicketCount, useNotificationStore } from '../lib/api';
 import InstallPrompt from '../components/InstallPrompt';
+import CustomerSetupStatus from '../components/CustomerSetupStatus';
 import {
   User,
   CreditCard,
@@ -22,6 +23,7 @@ const ADMIN_EMAIL = 'djudge47@gmail.com';
 // Dashboard intentionally excludes the Watch Live TV action.
 
 interface Profile {
+  id: string;
   email: string;
   full_name: string | null;
   subscription_tier: string;
@@ -265,6 +267,8 @@ const Dashboard: React.FC = () => {
               ))}
             </div>
           )}
+
+          <CustomerSetupStatus key={profile.id} accountId={profile.id} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-8">
             <div className="bg-dark-100 rounded-xl p-6 border border-gray-800">
