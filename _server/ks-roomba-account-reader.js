@@ -35,12 +35,14 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, d
   const stack = [];
   const packageFields = new Set(['id', 'package_name', 'is_trial', 'is_official', 'trial_credits', 'official_credits',
     'trial_duration', 'trial_duration_in', 'official_duration', 'official_duration_in', 'max_connections', 'bouquets']);
+  const lineFields = new Set(['id', 'username', 'is_trial', 'max_connections', 'member_id', 'exp_date', 'enabled', 'admin_enabled']);
   let scalar;
   let tokenCount = 0;
   const target = () => {
     const parent = stack.at(-1);
     if (parent?.role === 'root' && ['status', 'error'].includes(parent.key)) return [payload, parent.key];
     if (parent?.role === 'account' && ['id', 'username', 'credits'].includes(parent.key)) return [payload.data, parent.key];
+    if (parent?.role === 'line' && lineFields.has(parent.key)) return [payload.data, parent.key];
     if (parent?.role === 'package' && packageFields.has(parent.key)) return [parent.record, parent.key];
     return null;
   };
@@ -64,7 +66,7 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, d
                 if (payload.data) role = 'packages';
               } else {
                 payload.data = token.name === 'startObject' ? {} : null;
-                if (payload.data) role = 'account';
+                if (payload.data) role = dataMode === 'line' ? 'line' : 'account';
               }
             }
             if (parent?.role === 'packages') {
@@ -124,3 +126,4 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, d
 }
 
 export const readPackageJson = (response, options = {}) => readAccountJson(response, { ...options, dataMode: 'packages' });
+export const readLineJson = (response, options = {}) => readAccountJson(response, { ...options, dataMode: 'line' });

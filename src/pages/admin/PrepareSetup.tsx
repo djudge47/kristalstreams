@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, ClipboardList, Eye, EyeOff, KeyRound, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { buildSetupDraft, type RoombaPackage, type SetupDraft, type SetupInput } from '../../../_shared/ks-roomba-setup.js';
+import TrialActivation from './TrialActivation';
 
 const fieldStyle = 'mt-2 min-h-12 w-full rounded-xl border border-gray-700 bg-gray-950/80 px-4 py-3 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-400/20';
 const initialInput: SetupInput = { packageId: '', mode: 'trial', username: '', password: '', connections: 1, notes: '' };
@@ -16,6 +17,8 @@ const PrepareSetup: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [trialBusy, setTrialBusy] = useState(false);
+  const [trialCreated, setTrialCreated] = useState(false);
   const controller = useRef<AbortController | null>(null);
   const busy = useRef(false);
   const review = useRef<HTMLDivElement | null>(null);
@@ -33,11 +36,12 @@ const PrepareSetup: React.FC = () => {
   const update = (patch: Partial<SetupInput>) => {
     setInput(previous => ({ ...previous, ...patch }));
     setDraft(null);
+    setTrialCreated(false);
     setError(null);
   };
 
   const loadPackages = async () => {
-    if (busy.current || cooldown) return;
+    if (busy.current || cooldown || trialBusy) return;
     busy.current = true;
     const request = new AbortController();
     controller.current = request;
@@ -85,6 +89,7 @@ const PrepareSetup: React.FC = () => {
   const prepare = (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
+    setTrialCreated(false);
     try { setDraft(buildSetupDraft(input, packages || [])); }
     catch (failure) { setError(failure instanceof Error ? failure.message : 'The setup draft could not be prepared.'); }
   };
@@ -93,7 +98,7 @@ const PrepareSetup: React.FC = () => {
     <div className="mx-auto max-w-5xl space-y-6 pb-10">
       <Link to="/admin/roomba" className="inline-flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white"><ArrowLeft className="h-4 w-4" aria-hidden="true" />Roomba connection</Link>
       <section className="rounded-3xl border border-red-500/20 bg-gradient-to-br from-red-950/70 via-gray-900 to-gray-950 p-5 shadow-2xl shadow-black/30 sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-red-300"><ShieldCheck className="h-4 w-4" aria-hidden="true" />Private admin · Draft only</span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-red-300"><ShieldCheck className="h-4 w-4" aria-hidden="true" />Private admin · Preview</span>
         <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">Prepare customer setup</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-300 sm:text-base">Choose a provider package and review the customer details. Preparing this draft does not activate service or spend reseller credits.</p>
       </section>
@@ -101,7 +106,7 @@ const PrepareSetup: React.FC = () => {
       <section className="rounded-3xl border border-gray-700 bg-gray-800/60 p-5 sm:p-7" aria-labelledby="packages-title">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div><h2 id="packages-title" className="text-xl font-semibold text-white">1. Load your available packages</h2><p className="mt-2 text-sm leading-6 text-gray-400">Use the packages and settings returned for your Roomba account.</p></div>
-          <button type="button" onClick={loadPackages} disabled={loading || cooldown > 0} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-400 disabled:cursor-not-allowed disabled:opacity-60">
+          <button type="button" onClick={loadPackages} disabled={loading || cooldown > 0 || trialBusy} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-400 disabled:cursor-not-allowed disabled:opacity-60">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}{loading ? 'Loading packages...' : cooldown ? `Refresh in ${cooldown}s` : packages ? 'Refresh packages' : 'Load packages'}
           </button>
         </div>
@@ -113,6 +118,7 @@ const PrepareSetup: React.FC = () => {
 
       {packages && packages.length > 0 && (
         <form onSubmit={prepare} autoComplete="off" className="space-y-6 rounded-3xl border border-gray-700 bg-gray-800/60 p-5 sm:p-7">
+          <fieldset disabled={trialBusy} className="space-y-6">
           <h2 className="text-xl font-semibold text-white">2. Enter the setup details</h2>
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="text-sm font-medium text-gray-300">Provider package
@@ -146,12 +152,13 @@ const PrepareSetup: React.FC = () => {
           </div>
           <label className="block text-sm font-medium text-gray-300">Reseller notes <span className="font-normal text-gray-400">(optional)</span><textarea value={input.notes} onChange={event => update({ notes: event.target.value })} maxLength={1000} rows={3} className={fieldStyle} placeholder="Notes for this proposed setup" /></label>
           <button type="submit" disabled={!selected || selected.issues.length > 0 || !selectedAccess || loading} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"><ClipboardList className="h-5 w-5" aria-hidden="true" />Review setup draft</button>
+          </fieldset>
         </form>
       )}
 
       {draft && (
         <div ref={review} tabIndex={-1} className="rounded-3xl border border-emerald-500/30 bg-emerald-950/20 p-5 outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 sm:p-7" aria-labelledby="draft-title">
-          <div className="flex items-start gap-3"><CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-emerald-400" aria-hidden="true" /><div><h2 id="draft-title" className="text-xl font-semibold text-white">3. Setup draft ready for review</h2><p className="mt-2 text-sm leading-6 text-emerald-200">Not sent to Roomba. No customer line has been created and no credits have been used.</p></div></div>
+          <div className="flex items-start gap-3"><CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-emerald-400" aria-hidden="true" /><div><h2 id="draft-title" className="text-xl font-semibold text-white">{trialCreated ? '3. Trial setup details' : '3. Setup draft ready for review'}</h2><p className="mt-2 text-sm leading-6 text-emerald-200">{trialCreated ? 'The saved trial result is shown below.' : 'Draft prepared. No creation request is sent until the final trial action is confirmed.'}</p></div></div>
           <dl className="mt-6 grid gap-5 text-sm sm:grid-cols-2">
             {[
               ['Package', `${draft.packageName} (ID ${draft.packageId})`], ['Access type', draft.accessType === 'trial' ? 'Trial' : 'Paid'],
@@ -162,6 +169,7 @@ const PrepareSetup: React.FC = () => {
           </dl>
           {draft.fields.reseller_notes && <div className="mt-5 text-sm"><p className="text-gray-400">Reseller notes</p><p className="mt-1 whitespace-pre-wrap break-words text-gray-200">{draft.fields.reseller_notes}</p></div>}
           <details className="mt-6 rounded-xl border border-white/10 bg-gray-950/40 p-4 text-xs leading-6 text-gray-400"><summary className="cursor-pointer font-medium text-gray-300">Included channel group IDs</summary><p className="mt-2 break-words">{draft.fields['bouquets_selected[]'].join(', ')}</p></details>
+          {draft.accessType === 'trial' && draft.packageId === '1' && <TrialActivation input={input} onBusy={setTrialBusy} onCreated={setTrialCreated} />}
         </div>
       )}
     </div>
