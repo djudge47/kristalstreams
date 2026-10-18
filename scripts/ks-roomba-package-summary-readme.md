@@ -1,0 +1,9 @@
+# Private package summary
+
+After loading packages on `/admin/setup`, the verified administrator can select **Download package summary**. The browser saves `KristalStreams-Roomba-Packages-YYYY-MM-DD.json` from the already-loaded catalog. No additional request, database write, line activation or reseller debit occurs. Existing Preview-only package authentication and trial guards remain unchanged.
+
+The versioned JSON includes the package-check timestamp and an explicit whitelist: package ID/name, paid/trial duration and credit cost, connection allowance, included bouquet IDs and incomplete-detail warnings. Unknown details remain null. Proposed customer credentials, reseller notes, provider keys, tokens and arbitrary nested fields are excluded. This file is for private plan review; never commit an actual account catalog to the public repository.
+
+The website's four one-connection durations were checked visually against the provider: Bronze 1 month, Silver 3 months, Gold 6 months and Platinum 12 months. The standard catalog, rather than the packages labelled “Without Adults”, was chosen for regular plans. These observations are not an executable package mapping: the actual IDs, all connection variants and included groups must be reviewed from the downloaded catalog before enabling paid provisioning. Provider calendar-month durations must not be replaced with the payment receipt's fixed day count.
+
+Four offline checks cover nested whitelist redaction, preservation of incomplete details, bounded input validation and no network calls or catalog mutation. The existing setup checks verify that the page fetches only the authenticated read-only package endpoint and does not persist credentials. The signed-in CRM review also confirmed its linked trial card and disabled trial creation message. The package download itself still requires a signed-in browser check after deployment.

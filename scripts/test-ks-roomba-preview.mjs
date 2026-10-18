@@ -1,40 +1,54 @@
 import assert from 'node:assert/strict';
 import { createRoombaPreviewHandler } from '../_server/ks-roomba-preview.js';
+import { createFixieDispatcher, fixieProxyUrl } from '../_server/ks-fixie-proxy.js';
+import { readAccountJson } from '../_server/ks-roomba-account-reader.js';
 
 const env = {
   ROOMBA_PREVIEW_SECRET: 'fake-backend-secret', ROOMBA_API_KEY: 'fake-provider-key',
-  ROOMBA_API_URL: 'http://live.roomba.tv:80/WDxTMHmN/', ROOMBA_ALLOW_INSECURE_HTTP: 'true',
+  ROOMBA_API_URL: 'https://cdn.rooomba.tv/WDXTMHmN/',
+  FIXIE_URL: 'http://fixie:fake-proxy-password@test-proxy.usefixie.com:80',
 };
 let checks = 0;
-async function run({ overrides = {}, method = 'GET', auth = `Bearer ${env.ROOMBA_PREVIEW_SECRET}`, response, throws = false } = {}) {
+async function run({ overrides = {}, method = 'GET', auth = `Bearer ${env.ROOMBA_PREVIEW_SECRET}`, response, throws = false, transportError, factoryThrows = false } = {}) {
   const calls = [];
+  const proxyCalls = [];
+  const dispatcher = { dispatch() {}, async close() {} };
+  const dispatcherFactory = url => {
+    proxyCalls.push(url);
+    if (factoryThrows) throw new Error(`proxy failure ${env.FIXIE_URL}`);
+    return dispatcher;
+  };
   const fetchImpl = async (url, options) => {
     calls.push({ url: String(url), options });
+    if (transportError) throw transportError;
     if (throws) throw new Error(`network failure ${env.ROOMBA_API_KEY}`);
     return response || Response.json({ data: { id: 12, username: 'test-reseller', credits: 5 } });
   };
   const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
-  await createRoombaPreviewHandler({ env: { ...env, ...overrides }, fetchImpl })({ method, headers: { authorization: auth }, query: { action: 'create_user', url: 'http://evil.invalid' } }, res);
+  await createRoombaPreviewHandler({ env: { ...env, ...overrides }, fetchImpl, dispatcherFactory })({ method, headers: { authorization: auth }, query: { action: 'create_user', url: 'http://evil.invalid', FIXIE_URL: 'http://evil.invalid' } }, res);
   assert.equal(res.headers['Cache-Control'], 'no-store');
   assert.equal(res.body.databaseWrites, false);
   assert.ok(!JSON.stringify(res.body).includes(env.ROOMBA_API_KEY));
-  return { ...res, calls };
+  assert.ok(!JSON.stringify(res.body).includes('fake-proxy-password'));
+  return { ...res, calls, proxyCalls, dispatcher };
 }
 async function check(name, fn) { await fn(); checks++; console.log(`PASS: ${name}`); }
 
 await check('unauthorized and write requests never contact the provider', async () => {
   for (const options of [{ auth: '' }, { auth: 'Bearer wrong' }, { method: 'POST' }]) assert.equal((await run(options)).calls.length, 0);
 });
-await check('HTTP requires explicit server opt-in', async () => {
-  const result = await run({ overrides: { ROOMBA_ALLOW_INSECURE_HTTP: '' } });
-  assert.equal(result.body.status, 'http_opt_in_required'); assert.equal(result.calls.length, 0);
+await check('HTTP stays blocked even when the legacy opt-in is set', async () => {
+  for (const url of ['http://cdn.rooomba.tv/WDXTMHmN/', 'http://live.roomba.tv:80/WDxTMHmN/', 'http://limited-names.com:80/WDXTMHmN/']) {
+    const result = await run({ overrides: { ROOMBA_API_URL: url, ROOMBA_ALLOW_INSECURE_HTTP: 'true' } });
+    assert.equal(result.body.status, 'endpoint_not_approved'); assert.equal(result.calls.length, 0);
+  }
 });
 await check('the existing cron secret cannot authorize the Roomba test', async () => {
   const result = await run({ overrides: { ROOMBA_PREVIEW_SECRET: '', CRON_SECRET: env.ROOMBA_PREVIEW_SECRET } });
   assert.equal(result.code, 401); assert.equal(result.calls.length, 0);
 });
 await check('missing settings are identified by name without exposing their values', async () => {
-  for (const name of ['ROOMBA_API_URL', 'ROOMBA_API_KEY']) {
+  for (const name of ['ROOMBA_API_URL', 'ROOMBA_API_KEY', 'FIXIE_URL']) {
     const result = await run({ overrides: { [name]: '' } });
     assert.equal(result.code, 503); assert.deepEqual(result.body.missing, [name]);
     assert.equal(result.calls.length, 0);
@@ -48,23 +62,37 @@ await check('missing configuration and malformed keys never reach the provider',
   }
 });
 await check('lookalike hosts, other ports, paths and URL credentials are blocked', async () => {
-  for (const url of ['http://live.roomba.tv.evil.invalid/WDxTMHmN/', 'http://live.roomba.tv:8080/WDxTMHmN/', 'http://live.roomba.tv/other/', 'http://user:pass@live.roomba.tv/WDxTMHmN/', 'http://127.0.0.1/WDxTMHmN/', 'http://live.roomba.tv/WDxTMHmN/?action=create_user', 'https://live.roomba.tv/WDxTMHmN/']) {
-    assert.equal((await run({ overrides: { ROOMBA_API_URL: url } })).calls.length, 0);
+  for (const url of ['https://cdn.rooomba.tv.evil.invalid/WDXTMHmN/', 'https://cdn.rooomba.tv:8080/WDXTMHmN/', 'https://cdn.rooomba.tv/other/', 'https://user:pass@cdn.rooomba.tv/WDXTMHmN/', 'https://127.0.0.1/WDXTMHmN/', 'https://cdn.rooomba.tv/WDXTMHmN/?action=create_line', 'https://cdn.rooomba.tv/WDXTMHmN/?api_key=untrusted', 'https://cdn.rooomba.tv/WDXTMHmN/#fragment', 'https://cdn.rooomba.tv/WDxTMHmN/', 'https://cdn.rooomba.tv/WDXTM/HmN/', 'https://cdn.rooomba.tv/WDXTMHmN', 'https://live.cdn.rooomba.tv/WDXTMHmN/', 'https://limited-names.com/WDXTMHmN/', 'not a URL']) {
+    const result = await run({ overrides: { ROOMBA_API_URL: url } });
+    assert.equal(result.body.status, 'endpoint_not_approved'); assert.equal(result.calls.length, 0);
   }
 });
-await check('approved port 80 address uses only the fixed read-only command', async () => {
+await check('approved HTTPS address uses only the fixed read-only command without HTTP opt-in', async () => {
   const result = await run(); assert.equal(result.code, 200); assert.equal(result.calls.length, 1);
   const { url, options } = result.calls[0]; const parsed = new URL(url);
-  assert.equal(parsed.hostname, 'live.roomba.tv'); assert.equal(parsed.searchParams.get('action'), 'user_info');
+  assert.equal(parsed.protocol, 'https:'); assert.equal(parsed.hostname, 'cdn.rooomba.tv');
+  assert.equal(parsed.port, ''); assert.equal(parsed.pathname, '/WDXTMHmN/');
+  assert.equal(parsed.searchParams.get('action'), 'user_info');
+  assert.deepEqual([...parsed.searchParams.keys()].sort(), ['action', 'api_key']);
   assert.equal(parsed.searchParams.get('api_key'), env.ROOMBA_API_KEY); assert.equal(options.method, 'GET');
   assert.equal(options.redirect, 'manual'); assert.ok(options.signal); assert.equal(result.body.account.credits, 5);
+});
+await check('the explicit default HTTPS port is accepted without changing the destination', async () => {
+  const result = await run({ overrides: { ROOMBA_API_URL: 'https://cdn.rooomba.tv:443/WDXTMHmN/' } });
+  assert.equal(result.code, 200); assert.equal(result.calls.length, 1);
+  assert.equal(new URL(result.calls[0].url).origin, 'https://cdn.rooomba.tv');
 });
 await check('redirects are never followed', async () => {
   const result = await run({ response: new Response('', { status: 302, headers: { Location: 'http://evil.invalid' } }) });
   assert.equal(result.code, 502); assert.equal(result.calls.length, 1);
 });
 await check('provider errors and network errors never disclose credentials', async () => {
-  for (const options of [{ throws: true }, { response: new Response(env.ROOMBA_API_KEY, { status: 404 }) }, { response: new Response(env.ROOMBA_API_KEY) }]) assert.equal((await run(options)).code, 502);
+  for (const options of [{ throws: true }, { response: new Response(env.ROOMBA_API_KEY, { status: 403 }) }, { response: new Response(env.ROOMBA_API_KEY, { status: 404 }) }, { response: new Response(env.ROOMBA_API_KEY) }]) assert.equal((await run(options)).code, 502);
+});
+await check('a forbidden response is reported accurately without claiming a connection', async () => {
+  const result = await run({ response: new Response('Forbidden', { status: 403 }) });
+  assert.equal(result.code, 502); assert.equal(result.body.status, 'connection_failed');
+  assert.equal(result.body.upstreamStatus, 403); assert.equal(result.body.account, undefined);
 });
 await check('unrecognized and error payloads cannot report a connection', async () => {
   for (const payload of [{}, { data: [] }, { error: 'bad key', data: { id: 1 } }, { status: false, data: { id: 1 } }]) assert.equal((await run({ response: Response.json(payload) })).code, 502);
@@ -74,4 +102,159 @@ await check('large responses are rejected and account output is limited', async 
   const result = await run({ response: Response.json({ data: { id: 12, username: env.ROOMBA_API_KEY, password: 'hidden', api_key: env.ROOMBA_API_KEY, credits: 1 } }) });
   assert.deepEqual(result.body.account, { id: 12, username: null, credits: 1 });
 });
+await check('production and unauthorized requests never create a proxy connection', async () => {
+  for (const options of [{ overrides: { VERCEL_ENV: 'production' } }, { auth: '' }, { method: 'POST' }]) {
+    const result = await run(options);
+    assert.equal(result.calls.length, 0); assert.equal(result.proxyCalls.length, 0);
+  }
+  assert.equal((await run({ overrides: { VERCEL_ENV: 'production' } })).code, 404);
+});
+await check('missing or invalid Fixie settings never fall back to a direct request', async () => {
+  for (const FIXIE_URL of ['', 'not a URL', 'http://user:pass@127.0.0.1/', 'http://user:pass@proxy.usefixie.com.evil.invalid/',
+    'https://user:pass@proxy.usefixie.com:8080/', 'https://proxy.usefixie.com/',
+    'https://user:pass@proxy.usefixie.com/path', 'https://user:pass@proxy.usefixie.com/?x=1',
+    'https://user:pass@proxy.usefixie.com/#fragment', 'socks5://user:pass@proxy.usefixie.com/',
+    'https://user:bad%0Avalue@proxy.usefixie.com/', 'https://user:bad%ZZvalue@proxy.usefixie.com/']) {
+    const result = await run({ overrides: { FIXIE_URL } });
+    assert.equal(result.code, 503); assert.equal(result.calls.length, 0); assert.equal(result.proxyCalls.length, 0);
+  }
+  const result = await run({ factoryThrows: true });
+  assert.equal(result.code, 503); assert.equal(result.calls.length, 0);
+});
+await check('every approved request gets its own route-scoped Fixie dispatcher and fixed action', async () => {
+  const result = await run();
+  assert.equal(result.calls[0].options.dispatcher, result.dispatcher);
+  assert.deepEqual(result.proxyCalls, ['https://fixie:fake-proxy-password@test-proxy.usefixie.com/']);
+  assert.equal(result.calls[0].options.headers['Proxy-Authorization'], undefined);
+  assert.equal(result.body.transport, 'fixie');
+});
+await check('proxy credentials and CONNECT metadata use TLS with verification on both connections', async () => {
+  let options;
+  const fake = createFixieDispatcher(env.FIXIE_URL, class { constructor(value) { options = value; } });
+  assert.ok(fake);
+  assert.equal(new URL(options.uri).protocol, 'https:');
+  assert.equal(new URL(options.uri).port, '');
+  assert.equal(options.requestTls.rejectUnauthorized, true);
+  assert.equal(options.proxyTls.rejectUnauthorized, true);
+  assert.equal(fixieProxyUrl('https://user:pass@proxy.usefixie.com:443').href, 'https://user:pass@proxy.usefixie.com/');
+  // Construction is lazy: this uses the real library without network I/O.
+  const real = createFixieDispatcher(env.FIXIE_URL);
+  assert.equal(typeof real.dispatch, 'function');
+  await real.close();
+});
+await check('proxy failures make only one attempt and never retry directly', async () => {
+  const result = await run({ throws: true });
+  assert.equal(result.code, 502); assert.equal(result.calls.length, 1);
+  assert.equal(result.calls[0].options.dispatcher, result.dispatcher);
+});
+await check('provider echoes cannot disclose proxy credentials or provider credentials', async () => {
+  const result = await run({ response: Response.json({ data: { id: 12, username: env.FIXIE_URL, credits: 'fake-proxy-password' } }) });
+  assert.deepEqual(result.body.account, { id: 12, username: null, credits: null });
+});
+await check('safe diagnostics distinguish proxy failure, timeout and unreadable provider bodies', async () => {
+  const cases = [
+    [new TypeError('fetch failed', { cause: Object.assign(new Error(env.FIXIE_URL), { code: 'ENOTFOUND' }) }), 'ENOTFOUND'],
+    [Object.assign(new Error(env.ROOMBA_API_KEY), { name: 'TimeoutError' }), 'TIMEOUT'],
+    [new TypeError('fetch failed', { cause: Object.assign(new Error('Proxy response (407) !== 200 when HTTP Tunneling'), { code: 'UND_ERR_ABORTED' }) }), 'PROXY_HTTP_407'],
+    [Object.assign(new Error(env.FIXIE_URL), { code: env.ROOMBA_API_KEY }), 'TRANSPORT_FAILED'],
+  ];
+  for (const [transportError, reason] of cases) {
+    const result = await run({ transportError });
+    assert.equal(result.body.stage, 'proxy_request');
+    assert.equal(result.body.reason, reason);
+    assert.equal(result.body.upstreamStatus, undefined);
+    assert.equal(result.calls.length, 1);
+  }
+  const html = await run({ response: new Response(`<html>${env.ROOMBA_API_KEY}</html>`, { status: 200 }) });
+  assert.equal(html.body.stage, 'response_body');
+  assert.equal(html.body.reason, 'KS_HTML_RESPONSE');
+  assert.equal(html.body.upstreamStatus, 200);
+  const oversized = await run({ response: new Response('x'.repeat(8 * 1024 * 1024 + 1)) });
+  assert.equal(oversized.body.reason, 'KS_INVALID_JSON');
+});
+await check('large HTML pages are identified without returning their text or arbitrary headers', async () => {
+  let canceled = false;
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('  <!DOC'));
+      controller.enqueue(new TextEncoder().encode(`TYPE html><html>${env.ROOMBA_API_KEY}${'x'.repeat(70000)}</html>`));
+    },
+    cancel() { canceled = true; },
+  });
+  const result = await run({ response: new Response(stream, { headers: { 'content-type': 'text/html; charset=utf-8' } }) });
+  assert.equal(result.body.reason, 'KS_HTML_RESPONSE');
+  assert.equal(result.body.responseType, 'text/html');
+  assert.equal(result.body.upstreamStatus, 200);
+  assert.equal(canceled, true);
+  const json = await run({ response: new Response(JSON.stringify({ data: { id: 1, unused: 'x'.repeat(8 * 1024 * 1024) } }), { headers: { 'content-type': 'application/json' } }) });
+  assert.equal(json.body.status, 'connected');
+  assert.deepEqual(json.body.account, { id: 1, username: null, credits: null });
+  const untrusted = await run({ response: new Response('not json', { headers: { 'content-type': env.ROOMBA_API_KEY } }) });
+  assert.equal(untrusted.body.responseType, 'other');
+  assert.equal(untrusted.body.reason, 'KS_INVALID_JSON');
+  assert.equal(untrusted.body.bodyFormat, 'other');
+});
+await check('markup comments and split prefixes are classified without exposing content', async () => {
+  const response = new Response(`<!-- ${env.ROOMBA_API_KEY} -->` + 'x'.repeat(1024 * 1024));
+  const result = await run({ response });
+  assert.equal(result.body.reason, 'KS_HTML_RESPONSE');
+  assert.equal(result.body.bodyFormat, 'markup');
+  assert.equal(result.body.account, undefined);
+  const other = await run({ response: new Response('x'.repeat(8 * 1024 * 1024 + 1)) });
+  assert.equal(other.body.bodyFormat, 'other');
+  assert.equal(other.body.reason, 'KS_INVALID_JSON');
+});
+await check('documented large permission lists are accepted despite a legacy text/html media type', async () => {
+  const result = await run({ response: new Response(JSON.stringify({
+    status: 'STATUS_SUCCESS', data: { id: 12, username: 'test-reseller', credits: 5, api_key: env.ROOMBA_API_KEY },
+    permissions: Array.from({ length: 100000 }, (_, i) => `permission_${i}`),
+  }), { headers: { 'content-type': 'text/html; charset=utf-8' } }) });
+  assert.equal(result.code, 200);
+  assert.equal(result.body.status, 'connected');
+  assert.deepEqual(result.body.account, { id: 12, username: 'test-reseller', credits: 5 });
+  assert.equal(result.body.permissions, undefined);
+});
+await check('responses above 12 MiB stream correctly with account fields after large permissions', async () => {
+  let index = 0;
+  const stream = new ReadableStream({
+    pull(controller) {
+      if (index === 0) controller.enqueue(new TextEncoder().encode('{"permissions":["'));
+      else if (index <= 192) controller.enqueue(new TextEncoder().encode('p'.repeat(65536)));
+      else if (index === 193) controller.enqueue(new TextEncoder().encode('\"],"status":"STATUS_SUCCESS","data":{"id":12,"username":"test-reseller","credits":5}}'));
+      else controller.close();
+      index++;
+    },
+  });
+  const result = await run({ response: new Response(stream, { headers: { 'content-type': 'text/html' } }) });
+  assert.equal(result.body.status, 'connected');
+  assert.deepEqual(result.body.account, { id: 12, username: 'test-reseller', credits: 5 });
+  assert.ok(JSON.stringify(result.body).length < 300);
+});
+await check('malformed or truncated trailing JSON never reports an account connection', async () => {
+  for (const text of ['{"data":{"id":12},"permissions":[', '{"data":{"id":12}}oops', '{"data":{"id":12},"permissions":[1,]}', '{"data":{"id":12},"status":"STATUS_ERROR"}']) {
+    const result = await run({ response: new Response(text) });
+    assert.equal(result.code, 502);
+    assert.equal(result.body.account, undefined);
+  }
+});
+await check('streaming reader enforces byte and nesting limits and bounds selected values', async () => {
+  await assert.rejects(readAccountJson(new Response('{"permissions":"' + 'x'.repeat(2048) + '"}'), { maxBytes: 1024 }), error => error.code === 'KS_RESPONSE_TOO_LARGE');
+  const deep = await run({ response: new Response('{"permissions":' + '['.repeat(65) + '0' + ']'.repeat(65) + ',"data":{"id":12}}') });
+  assert.equal(deep.body.reason, 'KS_RESPONSE_COMPLEXITY');
+  const long = await run({ response: Response.json({ data: { id: 12, username: 'x'.repeat(10000), credits: 5 } }) });
+  assert.equal(long.body.status, 'connected');
+  assert.equal(long.body.account.username, null);
+  const error = await run({ response: Response.json({ error: 'x'.repeat(1000), data: { id: 12 } }) });
+  assert.equal(error.code, 502);
+});
+await check('streamed keys and UTF-8 scalars survive chunk boundaries without prototype injection', async () => {
+  const bytes = new TextEncoder().encode('{"__proto__":{"polluted":true},"status":"STATUS_SUCCESS","data":{"i\\u0064":12,"username":"\u00e9\u6f22","credits":5}}');
+  let index = 0;
+  const result = await run({ response: new Response(new ReadableStream({ pull(controller) { if (index < bytes.length) controller.enqueue(bytes.subarray(index, ++index)); else controller.close(); } })) });
+  assert.equal(result.body.status, 'connected');
+  assert.equal(result.body.account.username, '\u00e9\u6f22');
+  assert.equal(result.body.account.id, 12);
+  assert.equal({}.polluted, undefined);
+});
 console.log(`${checks} checks passed. No network requests, real credentials, database changes or customer lines.`);
+

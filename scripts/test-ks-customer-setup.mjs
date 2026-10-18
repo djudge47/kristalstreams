@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict';
+import { createClient as realCreateClient } from '@supabase/supabase-js';
+import { createCustomerSetupHandler, customerSetupSnapshot } from '../_server/ks-customer-setup.js';
+
+const owner='00000000-0000-4000-8000-000000000001';
+const other='00000000-0000-4000-8000-000000000002';
+const user={id:owner,email:'customer@example.invalid',email_confirmed_at:'2026-01-01',is_anonymous:false};
+const receipt={checkout_session_id:'cs_test_customerSetup1',user_id:owner,livemode:false,tier:'bronze',connections:1,duration_days:30,amount_cents:2000,currency:'usd',activated:false,expires_at:null,recorded_at:'2026-10-17T12:00:00Z'};
+const row={checkout_session_id:receipt.checkout_session_id,fulfillment_status:'awaiting_activation',queued_at:'2026-10-17T13:00:00Z',receipt};
+const env={VERCEL_ENV:'preview',VITE_SUPABASE_URL:'https://synthetic.supabase.co',VITE_SUPABASE_ANON_KEY:'fake-anon',SUPABASE_SERVICE_ROLE_KEY:'SERVER_SECRET'};
+const response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(body){this.body=body;return this;}});
+function fixture(patch={}){
+  const calls={auth:0,service:0,requests:[]};
+  // Real SDK constructs the PostgREST URL; fetch is intercepted before network.
+  const admin=realCreateClient(env.VITE_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:async(input,options)=>{
+    const url=new URL(typeof input==='string'?input:input.url);calls.requests.push({url,options});
+    assert.equal(options.method,'GET');assert.equal(url.pathname,'/rest/v1/ks_preview_paid_orders');
+    return new Response(JSON.stringify(patch.storageError?{message:'SERVER_SECRET',code:'DB_UNAVAILABLE'}:patch.rows===undefined?[row]:patch.rows),{status:patch.storageError?503:200,headers:{'Content-Type':'application/json'}});
+  }}});
+  const createClient=(_url,key)=>{
+    if(key===env.VITE_SUPABASE_ANON_KEY)return{auth:{getUser:async token=>{calls.auth++;assert.equal(token,'synthetic-token');if(patch.authThrows)throw new Error('SERVER_SECRET');return{data:{user:patch.user===undefined?user:patch.user},error:patch.authError?{}:null};}}};
+    assert.equal(key,env.SUPABASE_SERVICE_ROLE_KEY);calls.service++;return admin;
+  };
+  const handler=createCustomerSetupHandler({createClient,env:{...env,...patch.env},now:()=>Date.parse('2026-10-17T14:00:00Z')});
+  return{calls,async request(patchReq={}){
+    const res=response();await handler({method:'GET',headers:{authorization:'Bearer synthetic-token'},query:{userId:other,sessionId:'cs_test_other',mode:'live',action:'activate',email:'other@example.invalid'},body:{user_id:other,confirmed:true},...patchReq},res);
+    const output=JSON.stringify(res.body);assert.ok(!output.includes('SERVER_SECRET'));return res;
+  }};
+}
+let checks=0;async function check(name,fn){await fn();checks++;console.log(`PASS: ${name}`);}
+await check('environment, method and bearer checks run before service data access',async()=>{
+  for(const envPatch of[{VERCEL_ENV:'production'},{VERCEL_ENV:'development'},{VERCEL_ENV:undefined}]){const f=fixture({env:envPatch});assert.equal((await f.request()).code,404);assert.equal(f.calls.auth,0);assert.equal(f.calls.service,0);}
+  for(const method of['POST','PATCH','DELETE','OPTIONS']){const f=fixture();const res=await f.request({method});assert.equal(res.code,405);assert.equal(res.headers.Allow,'GET');assert.equal(f.calls.service,0);}
+  for(const authorization of['','Bearer','Bearer fake token']){const f=fixture();assert.equal((await f.request({headers:{authorization}})).code,401);assert.equal(f.calls.service,0);}
+  const f=fixture({env:{SUPABASE_SERVICE_ROLE_KEY:''}});assert.equal((await f.request()).code,503);assert.equal(f.calls.service,0);
+});
+await check('a confirmed customer can read their orders without administrator privileges',async()=>{
+  const f=fixture();const res=await f.request();assert.equal(res.code,200);assert.equal(res.headers['Cache-Control'],'private, no-store');assert.equal(res.headers.Vary,'Authorization');
+  assert.equal(res.body.accountId,owner);assert.equal(res.body.mode,'read-only');assert.equal(res.body.testMode,true);assert.equal(res.body.orders.length,1);
+  assert.deepEqual(res.body.orders[0],{reference:receipt.checkout_session_id,tier:'bronze',interval:'monthly',connections:1,amountCents:2000,currency:'usd',recordedAt:receipt.recorded_at,status:'awaiting_activation',testMode:true,providerActivated:false});
+  const url=f.calls.requests[0].url;assert.equal(url.searchParams.get('receipt.user_id'),`eq.${owner}`);assert.equal(url.searchParams.get('receipt.livemode'),'eq.false');assert.equal(url.searchParams.get('receipt.activated'),'eq.false');assert.equal(url.searchParams.get('receipt.expires_at'),'is.null');assert.equal(url.searchParams.get('fulfillment_status'),'eq.awaiting_activation');assert.equal(url.searchParams.get('limit'),'5');assert.equal(url.searchParams.get('order'),'queued_at.desc,checkout_session_id.asc');
+  const selection=url.searchParams.get('select');assert.ok(selection.includes('receipt:ks_payment_receipts!inner('));assert.ok(!selection.includes('*'));assert.ok(!selection.includes('payment_intent_id'));assert.ok(!url.toString().includes(other));
+});
+await check('expired, unconfirmed, anonymous and malformed identities cannot read service data',async()=>{
+  for(const patch of[{user:null},{authError:true},{authThrows:true},{user:{...user,id:'invalid'}},{user:{...user,email_confirmed_at:null}},{user:{...user,is_anonymous:true}}]){const f=fixture(patch);assert.ok((await f.request()).code>=400);assert.equal(f.calls.service,0);assert.equal(f.calls.requests.length,0);}
+});
+await check('another account’s row is rejected even if storage ignores the owner filter',async()=>{
+  const f=fixture({rows:[{...row,receipt:{...receipt,user_id:other}}]});const res=await f.request();assert.equal(res.code,503);assert.equal(res.body.orders,undefined);assert.ok(!JSON.stringify(res.body).includes(other));
+});
+await check('wrong environment, activated, price, duration and queue mismatches never become pending status',async()=>{
+  for(const change of[{livemode:true},{activated:true},{expires_at:'2026-11-01T00:00:00Z'},{amount_cents:1},{duration_days:90},{connections:1.5},{tier:'unknown'},{currency:'eur'},{checkout_session_id:'cs_live_wrong'},{recorded_at:'bad'}])assert.throws(()=>customerSetupSnapshot([{...row,receipt:{...receipt,...change}}],owner));
+  for(const change of[{fulfillment_status:'active'},{checkout_session_id:'cs_test_other'},{queued_at:'bad'},{receipt:null},{receipt:[receipt]}])assert.throws(()=>customerSetupSnapshot([{...row,...change}],owner));
+});
+await check('empty, duplicate, oversized and credential-bearing results are handled safely',async()=>{
+  const empty=await fixture({rows:[]}).request();assert.equal(empty.code,200);assert.deepEqual(empty.body.orders,[]);assert.equal(empty.body.activated,undefined);
+  assert.throws(()=>customerSetupSnapshot([row,row],owner));assert.throws(()=>customerSetupSnapshot(Array(6).fill(row),owner));assert.throws(()=>customerSetupSnapshot(null,owner));
+  const res=await fixture({rows:[{...row,password:'PRIVATE_PASSWORD',receipt:{...receipt,payment_intent_id:'PRIVATE_INTENT',email:'PRIVATE_EMAIL',password:'PRIVATE_PASSWORD'}}]}).request();assert.equal(res.code,200);const text=JSON.stringify(res.body);for(const marker of['PRIVATE_PASSWORD','PRIVATE_INTENT','PRIVATE_EMAIL'])assert.ok(!text.includes(marker));
+  assert.equal(res.body.orders[0].expiresAt,undefined);assert.equal(res.body.orders[0].username,undefined);
+});
+await check('storage errors never imply missing payment, service readiness or a second payment request',async()=>{
+  const res=await fixture({storageError:true}).request();assert.equal(res.code,503);assert.equal(res.body.orders,undefined);assert.ok(res.body.error.includes('do not pay again'));
+});
+console.log(`${checks} customer setup checks passed. Real SDK query construction with synthetic auth/storage only; no network, charges, provider calls or database mutations.`);

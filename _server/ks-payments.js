@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { PaymentError, applyPaidSession } from './ks-payment-validation.js';
+import { queuePreviewPaidOrder } from './ks-preview-paid-orders.js';
 
 export { PaymentError } from './ks-payment-validation.js';
 
@@ -23,6 +24,7 @@ export function runtime() {
   const options = { auth: { persistSession: false, autoRefreshToken: false } };
   return {
     live,
+    environment: process.env.VERCEL_ENV,
     stripe: new Stripe(key, { apiVersion: '2026-08-26.dahlia', timeout: 15000, maxNetworkRetries: 1 }),
     auth: createClient(url, anonKey, options),
     admin: createClient(url, adminKey, options),
@@ -56,13 +58,14 @@ export function webhookSecret() {
 export async function fulfill(sessionId, context, ownerId) {
   const session = await context.stripe.checkout.sessions.retrieve(sessionId);
   const receipt = await applyPaidSession(session, context.live, ownerId, context.admin);
+  const queued = await queuePreviewPaidOrder(session, context, ownerId);
   const { data: alert, error: alertError } = await context.admin.functions.invoke('ks-order-notification', {
     body: { sessionId: session.id },
   });
   if (alertError || !alert?.success) {
     throw new PaymentError(503, 'Your payment is recorded, but the setup notification needs attention. Please contact support; do not pay again.');
   }
-  return receipt;
+  return { ...receipt, ...queued };
 }
 
 export function respondError(res, error) {
