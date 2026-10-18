@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import TrialUpgradeReview from './TrialUpgradeReview';
 import NewPaidSetupSimulation from './NewPaidSetupSimulation';
 import PaidFoundationReview from './PaidFoundationReview';
+import PaidActivationReview from './PaidActivationReview';
 
 type PaidOrder = {
   sessionId: string; userId: string; accountLabel: string; testMode: true;
@@ -69,6 +70,7 @@ const PreviewPaidOrders: React.FC = () => {
       {order.canReviewTrial && <TrialUpgradeReview sessionId={order.sessionId} />}
       {order.canReviewTrial && <NewPaidSetupSimulation sessionId={order.sessionId} tier={order.tier} connections={order.connections} interval={order.interval} amountCents={order.amountCents} />}
       {order.canReviewTrial && <PaidFoundationReview />}
+      <PaidActivationReview reference={order.sessionId} customerId={order.userId} tier={order.tier} connections={order.connections} interval={order.interval} amountCents={order.amountCents} />
     </article>)}</div>}
     <p className="mt-4 text-xs leading-5 text-gray-500">Saved receipts only; this is not a live Stripe or Roomba status check. This Preview queue does not activate service, spend credits or add test payments to live customer revenue.</p>
   </section>;
