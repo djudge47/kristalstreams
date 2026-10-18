@@ -55,6 +55,7 @@ try {
     revoke all on function public.ks_assert_preview_new_customer(uuid) from public,anon,authenticated;
     grant execute on function public.ks_assert_preview_new_customer(uuid) to service_role;`);
   await db.exec(queueSql); await db.exec(claimsSql);
+  await db.exec(await read('./ks-reseller-reservation-exclusion-schema.sql'));
   await check('one transaction binds the order, policy, reseller slot and exact reserved credit units', async () => {
     const args=await fixture();const before=(await db.query('select jsonb_agg(to_jsonb(p) order by id) as profiles from public.profiles p')).rows[0].profiles;
     const result=await reserve(args);

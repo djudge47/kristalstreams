@@ -17,7 +17,7 @@ async function snapshot(){return (await rows(`select jsonb_build_object(
   'spent',(select spent_units::text from public.ks_setup_review_budgets),'reserved',(select reserved_units::text from public.ks_setup_review_budgets),
   'oldSlots',(select count(*) from public.ks_preview_reseller_dispatches),'reviewSlots',(select count(*) from public.ks_setup_review_reseller_slots),
   'state',(select state from public.ks_preview_provisioning_attempts),'queue',(select fulfillment_status from public.ks_setup_order_queue)) as value`))[0].value;}
-async function fixture({state='provider_verified',cost='1.5',approvedBalance='100500000',fingerprint=f.review.entry.provider.fingerprint}={}){
+async function fixture({state='provider_verified',cost='1.5',approvedBalance='100500000',fingerprint=f.review.entry.provider.fingerprint,withReview=true}={}){
   await db.exec('reset role');
   await rows(`insert into public.ks_setup_review_policies(policy_id,environment,reseller_id,mode,policy_hash,starts_at,expires_at,per_order_units,daily_limit_units,min_reserve_units)
     values($1,'preview','99999','review-only',$2,clock_timestamp()-interval '2 minutes',clock_timestamp()+interval '1 hour',2000000,10000000,5000000)`,[policy,'a'.repeat(64)]);
@@ -26,8 +26,8 @@ async function fixture({state='provider_verified',cost='1.5',approvedBalance='10
   await rows("select public.ks_record_paid_checkout($1,$2,$3,false,'bronze',1,30,2000,'usd')",[f.session.id,f.row.payment_intent_id,owner]);
   await rows("insert into public.ks_setup_purchase_intents select $1,$2,'new_service',true,'authenticated_checkout',recorded_at-interval '1 millisecond' from public.ks_payment_receipts where checkout_session_id=$1",[f.session.id,owner]);
   const [clock]=await rows("select clock_timestamp() as at,(clock_timestamp() at time zone 'UTC')::date as day");
-  const [reserved]=await rows('select public.ks_reserve_setup_review($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) as value',
-    [f.session.id,owner,policy,'a'.repeat(64),'preview','99999','1000',fingerprint,'1500000','100500000',clock.day,clock.at,'c'.repeat(64)]);
+  const reserved=withReview ? (await rows('select public.ks_reserve_setup_review($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) as value',
+    [f.session.id,owner,policy,'a'.repeat(64),'preview','99999','1000',fingerprint,'1500000','100500000',clock.day,clock.at,'c'.repeat(64)]))[0] : null;
   await rows('select public.ks_queue_preview_paid_order($1,$2)',[f.session.id,owner]);
   const [attempt]=await rows('select public.ks_reserve_preview_provisioning($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,true) as value',
     [f.row.attempt_id,f.session.id,owner,f.row.binding_hash,'99999','1000',1,1,cost,[13,14],JSON.stringify(f.row.login_envelope),f.row.username_hash]);
@@ -38,7 +38,7 @@ async function fixture({state='provider_verified',cost='1.5',approvedBalance='10
     if(state==='provider_verified')await rows("select public.ks_record_preview_provider_result($1,$2,'9999901','99999','1000',$3,1,array[13,14],clock_timestamp()+interval '31 days')",[f.row.attempt_id,token,f.row.username_hash]);
     if(state==='reconciliation_required')await rows('select public.ks_reconcile_preview_provisioning($1,$2)',[f.row.attempt_id,token]);
   }
-  return {claimId:reserved.value.claim_id,attemptId:f.row.attempt_id,token,ownerId:owner,username:f.login.username};
+  return {claimId:reserved?.value.claim_id,attemptId:f.row.attempt_id,token,ownerId:owner,username:f.login.username};
 }
 async function complete(input){return (await rows('select public.ks_complete_reviewed_preview_setup($1,$2,$3,$4,$5) as value',[input.claimId,input.attemptId,input.token,input.ownerId,input.username]))[0].value;}
 
@@ -61,6 +61,8 @@ try{
     ${payment.slice(payment.indexOf('create table'),payment.indexOf('CREATE OR REPLACE FUNCTION'))}`);
   for(const name of ['./ks-preview-paid-orders-schema.sql','./ks-paid-foundation-schema.sql','./ks-guarded-paid-execution-schema.sql','./ks-receipt-only-schema.sql','./ks-setup-review-claim-schema.sql','./ks-reviewed-preview-completion-schema.sql'])await db.exec(await read(name));
 
+  // Historical completion migration tests run first, in migration order. Their
+  // dual-slot fixture is deliberately rejected by the new exclusion below.
   await check('actual guarded completion commits CRM, encrypted login, both queues and exact review credit settlement together',async()=>{
     const input=await fixture(),before=(await rows('select jsonb_agg(to_jsonb(p) order by id) as value from public.profiles p'))[0].value;
     const result=await complete(input);assert.equal(result.state,'credentials_ready');assert.equal(result.may_dispatch,false);assert.equal(result.replayed,false);
@@ -164,6 +166,37 @@ try{
     const defs=await rows("select prosecdef,proconfig from pg_proc where proname in ('ks_guard_reviewed_preview_completion','ks_check_review_completion_committed','ks_complete_reviewed_preview_setup')");assert.equal(defs.length,3);assert.ok(defs.every(r=>!r.prosecdef&&r.proconfig.includes('search_path=""')));
     for(const role of ['anon','authenticated']){await db.exec(`set role ${role}`);await rejected(()=>complete(input),/permission denied/);await rejected(()=>db.exec('select * from public.ks_setup_review_completions'),/permission denied/);await db.exec('reset role');}
   });
-  console.log(`${checks} application-schema completion checks passed in isolated PostgreSQL. No connected project, real credit, provider, payment or email was changed.`);
+  const historicalChecks=checks;
+  await db.exec(await read('./ks-reseller-reservation-exclusion-schema.sql'));
+  await check('current schema refuses the historical dual-slot completion fixture',async()=>{
+    await rejected(()=>fixture(),/reseller_reserved_for_setup_review/);
+    assert.equal((await rows('select count(*)::int as n from public.ks_preview_provisioning_attempts'))[0].n,0);
+    assert.equal((await snapshot()).reviewSlots,0);assert.equal((await snapshot()).oldSlots,0);
+  });
+  await check('a review-only claim remains reserved and blocks the actual approved Preview begin RPC',async()=>{
+    const input=await fixture({state:'reserved'}),before=await snapshot();
+    await rejected(()=>rows("select public.ks_begin_approved_preview_provisioning($1,$2,$3,$4,clock_timestamp()+interval '1 minute',1500000,100500000)",
+      [input.attemptId,input.token,admin,'d'.repeat(64)]),/reseller_reserved_for_setup_review/);
+    assert.deepEqual(await snapshot(),before);assert.equal(before.state,'reserved');
+    assert.equal(before.reserved,'1500000');assert.equal(before.oldSlots,0);assert.equal(before.reviewSlots,1);
+    await rejected(()=>db.exec('delete from public.ks_setup_review_reseller_slots'),/setup_review_history_cannot_be_deleted/);
+  });
+  await check('a standalone approved Preview attempt blocks direct review-slot insertion',async()=>{
+    await fixture({withReview:false});const before=await snapshot();
+    await rejected(()=>rows('insert into public.ks_setup_review_reseller_slots(reseller_id,claim_id) values($1,$2)',
+      ['99999',other]),/reseller_reserved_for_preview_dispatch/);
+    assert.deepEqual(await snapshot(),before);assert.equal(before.oldSlots,1);assert.equal(before.reviewSlots,0);
+    await rejected(()=>db.exec('delete from public.ks_preview_reseller_dispatches'),/unresolved_dispatch_remains_locked/);
+  });
+  await check('standalone verified Preview completion and its saved replay still work with the new guard',async()=>{
+    const input=await fixture({withReview:false});
+    const commit=()=>rows('select public.ks_commit_preview_paid_setup($1,$2,$3) as value',[input.attemptId,input.token,input.username]);
+    assert.equal((await commit())[0].value.replayed,false);const before=await snapshot();
+    assert.equal((await commit())[0].value.replayed,true);assert.deepEqual(await snapshot(),before);
+    assert.equal(before.crm,1);assert.equal(before.logins,1);assert.equal(before.fulfillments,1);
+    assert.equal(before.oldSlots,0);assert.equal(before.reviewSlots,0);assert.equal(before.audits,0);
+    assert.equal((await rows('select activated from public.ks_payment_receipts'))[0].activated,false);
+  });
+  console.log(`${historicalChecks} historical completion checks and ${checks-historicalChecks} current exclusion integration checks passed in isolated PostgreSQL. No connected project, real credit, provider, payment or email was changed.`);
 }catch(error){console.error('Reviewed Preview completion test failed',{message:error.message,code:error.code,where:error.where});process.exitCode=1;}
 finally{await db.close();}
