@@ -18,11 +18,12 @@ export async function queuePreviewPaidOrder(session, context, ownerId) {
   const { data, error } = await context.admin.rpc('ks_queue_preview_paid_order', {
     p_session_id: payment.sessionId, p_user_id: payment.userId,
   });
-  if (error || data?.ok !== true || data.order_status !== 'awaiting_activation'
-    || data.test_mode !== true || data.provider_activated !== false) {
+  const pending = data?.order_status === 'awaiting_activation' && data.provider_activated === false;
+  const completed = data?.order_status === 'setup_complete' && data.provider_activated === true;
+  if (error || data?.ok !== true || (!pending && !completed) || data.test_mode !== true) {
     throw new PaymentError(503, 'Your test payment is recorded, but adding it to the CRM needs attention. Please contact support; do not pay again.');
   }
-  return { order_status: 'awaiting_activation', provider_activated: false };
+  return { order_status: data.order_status, provider_activated: data.provider_activated };
 }
 
 export function paidOrderSnapshot(rows) {

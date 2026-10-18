@@ -1,4 +1,5 @@
 import { loginEncryptionKey } from './ks-login-envelope.js';
+import { runGuardedPaidWorkerChecks } from './ks-guarded-paid-fixtures.js';
 
 export function createPaidFoundationHandler({ createClient, env = process.env } = {}) {
   const options = { auth: { persistSession: false, autoRefreshToken: false } };
@@ -15,11 +16,16 @@ export function createPaidFoundationHandler({ createClient, env = process.env } 
       if (user.is_anonymous || !user.email_confirmed_at || user.email?.trim().toLowerCase() !== 'djudge47@gmail.com') return res.status(403).json({ error: 'Administrator access is required.' });
       const { data: status, error: dbError } = await createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, options).rpc('ks_preview_provisioning_foundation_status');
       if (dbError || status?.version !== 1 || status.durableAttempts !== true || status.encryptedLoginTable !== true || status.browserAccessRevoked !== true) throw new Error('foundation_unavailable');
+      const { data: execution, error: executionError } = await createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, options).rpc('ks_preview_paid_execution_status');
+      if (executionError || execution?.version !== 1 || execution.atomicCompletion !== true || execution.resellerDispatchLock !== true || execution.browserAccessRevoked !== true) throw new Error('execution_foundation_unavailable');
+      const guardedWorkerChecks = await runGuardedPaidWorkerChecks();
       let encryptionConfigured = false;
       try { loginEncryptionKey(env); encryptionConfigured = true; } catch { /* Configuration only; never return key material. */ }
       return res.status(200).json({ foundation: { version: 1, durableAttempts: true, browserAccessRevoked: true,
         encryptedLoginTable: true, encryptionConfigured, ownerOnlyHandoffImplemented: true, providerExecutionEnabled: false,
-        liveTestReady: false, note: 'Live provider execution, fresh execution checks and separate credit approval are still required.' } });
+        liveTestReady: false, atomicPreviewCompletionInstalled: true, resellerDispatchLockInstalled: true,
+        guardedWorkerChecks, realProviderWrites: 0,
+        note: 'Guarded worker checks use fictional records. No paid execution route is released; real testing requires a reviewed customer, explicit credit approval and a separately approved release.' } });
     } catch { return res.status(503).json({ error: 'The setup foundation could not be verified. No account or provider state was changed.' }); }
   };
 }

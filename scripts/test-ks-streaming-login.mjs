@@ -82,11 +82,11 @@ await check('browser response helpers bind identity/order, whitelist fields and 
 });
 await check('foundation status is administrator-only, read-only and exposes key configuration rather than key values', async () => {
   const client = (_url, apiKey) => apiKey === 'fake-anon' ? { auth: { getUser: async () => ({ data: { user }, error: null }) } } : {
-    rpc: async name => { foundationReads++; assert.equal(name, 'ks_preview_provisioning_foundation_status'); return { data: { version: 1, durableAttempts: true, encryptedLoginTable: true, browserAccessRevoked: true }, error: null }; },
+    rpc: async name => { foundationReads++; if (name === 'ks_preview_paid_execution_status') return { data: { version: 1, atomicCompletion: true, resellerDispatchLock: true, browserAccessRevoked: true }, error: null }; assert.equal(name, 'ks_preview_provisioning_foundation_status'); return { data: { version: 1, durableAttempts: true, encryptedLoginTable: true, browserAccessRevoked: true }, error: null }; },
   };
   for (const configured of [true, false]) {
     const res = response(); await createPaidFoundationHandler({ createClient: client, env: { ...env, KS_LOGIN_ENCRYPTION_KEY: configured ? key : undefined } })({ ...request, method: 'GET' }, res);
-    assert.equal(res.code, 200); assert.equal(res.body.foundation.encryptionConfigured, configured); assert.equal(res.body.foundation.providerExecutionEnabled, false);
+    assert.equal(res.code, 200); assert.equal(res.body.foundation.encryptionConfigured, configured); assert.equal(res.body.foundation.providerExecutionEnabled, false); assert.equal(res.body.foundation.guardedWorkerChecks.length, 9); assert.ok(res.body.foundation.guardedWorkerChecks.every(row => row.passed)); assert.equal(res.body.foundation.realProviderWrites, 0);
     assert.ok(!JSON.stringify(res.body).includes(key));
   }
   const before = foundationReads;

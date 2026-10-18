@@ -1,10 +1,13 @@
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { parser } from 'stream-json/parser.js';
+import { timingSafeEqual } from 'node:crypto';
 
 // Stream all JSON for validation, retaining bounded account or package fields.
 // Provider permissions, credentials, and other large values are never assembled.
-export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, dataMode = 'account' } = {}) {
+export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, dataMode = 'account', expectedLinePassword } = {}) {
+  if (expectedLinePassword !== undefined && (dataMode !== 'line' || typeof expectedLinePassword !== 'string' || !/^[A-Za-z0-9_-]{24,64}$/.test(expectedLinePassword))) throw new Error('invalid_login_verification');
+  const credentialCheck = { password: null };
   const reader = response.body?.getReader();
   if (!reader) throw new Error('empty response');
   let size = 0;
@@ -43,6 +46,7 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, d
     if (parent?.role === 'root' && ['status', 'error'].includes(parent.key)) return [payload, parent.key];
     if (parent?.role === 'account' && ['id', 'username', 'credits'].includes(parent.key)) return [payload.data, parent.key];
     if (parent?.role === 'line' && lineFields.has(parent.key)) return [payload.data, parent.key];
+    if (parent?.role === 'line' && parent.key === 'password' && expectedLinePassword !== undefined) return [credentialCheck, 'password'];
     if (parent?.role === 'package' && packageFields.has(parent.key)) return [parent.record, parent.key];
     return null;
   };
@@ -61,6 +65,7 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, d
             let record;
             if (!stack.length && token.name === 'startObject') role = 'root';
             if (parent?.role === 'root' && parent.key === 'data') {
+              credentialCheck.password = null;
               if (dataMode === 'packages') {
                 payload.data = token.name === 'startArray' ? [] : null;
                 if (payload.data) role = 'packages';
@@ -115,6 +120,12 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, d
         }
       }
     });
+    if (expectedLinePassword !== undefined) {
+      const actual = Buffer.from(typeof credentialCheck.password === 'string' ? credentialCheck.password : '');
+      const expected = Buffer.from(expectedLinePassword);
+      try { if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw fail('KS_LINE_LOGIN_MISMATCH'); }
+      finally { actual.fill(0); expected.fill(0); credentialCheck.password = null; }
+    }
     return payload;
   } catch (error) {
     // Parser messages can contain input text. Wrap them; callers only emit fixed labels.
@@ -122,7 +133,7 @@ export async function readAccountJson(response, { maxBytes = 64 * 1024 * 1024, d
     throw Object.assign(new Error('Response read failed', { cause: error }), {
       code, ksResponseDiagnostics: { bodyFormat, receivedBytes: size },
     });
-  }
+  } finally { credentialCheck.password = null; }
 }
 
 export const readPackageJson = (response, options = {}) => readAccountJson(response, { ...options, dataMode: 'packages' });

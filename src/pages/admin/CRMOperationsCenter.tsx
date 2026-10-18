@@ -24,7 +24,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import RoombaCrmLink from './RoombaCrmLink';
 import PreviewPaidOrders from './PreviewPaidOrders';
-import { displayedAccountStatus, isBillingOverdue, isDueWithin, isTrialCustomer, isUnpaidCustomer, trialBadge } from '../../../_shared/ks-crm-status.js';
+import { displayedAccountStatus, isBillingExcluded, isPreviewPaidCustomer, isBillingOverdue, isDueWithin, isTrialCustomer, isUnpaidCustomer, trialBadge } from '../../../_shared/ks-crm-status.js';
 
 type Customer = {
   id: string;
@@ -211,6 +211,7 @@ const CRMOperationsCenter: React.FC = () => {
   };
 
   const renewalBadge = (c: Customer) => {
+    if (isPreviewPaidCustomer(c)) return { label: 'Preview · paid setup', cls: 'bg-cyan-500/10 text-cyan-300' };
     if (isTrialCustomer(c)) return { label: trialBadge(c), cls: 'bg-cyan-500/10 text-cyan-300' };
     if (isOverdue(c)) return { label: 'Overdue', cls: 'bg-red-500/15 text-red-300' };
     if (!ts(c.renewal_at)) return { label: 'Unknown', cls: 'bg-yellow-500/15 text-yellow-300' };
@@ -233,7 +234,7 @@ const CRMOperationsCenter: React.FC = () => {
       due30: customers.filter((c) => dueWithin(c, 30)).length,
       overdue: customers.filter(isOverdue).length,
       unpaid: customers.filter(isUnpaidCustomer).length,
-      mrr: customers.filter((c) => displayedAccountStatus(c) === 'active' && !isTrialCustomer(c)).reduce((sum, c) => sum + Number(c.monthly_price || 0), 0),
+      mrr: customers.filter((c) => displayedAccountStatus(c) === 'active' && !isBillingExcluded(c)).reduce((sum, c) => sum + Number(c.monthly_price || 0), 0),
       paidMonth: payments.filter((p) => ts(p.paid_at) >= monthStart.getTime()).reduce((sum, p) => sum + Number(p.amount || 0), 0),
       followups: reminders.length,
     };
@@ -264,7 +265,7 @@ const CRMOperationsCenter: React.FC = () => {
   const extensionBase = (c: Customer) => new Date(Math.max(Date.now(), ts(c.renewal_at), ts(c.expiration_at)));
 
   const recordPayment = async (c: Customer) => {
-    if (isTrialCustomer(c)) { setError('This is a trial with no payment due. Paid activation is a separate workflow.'); return; }
+    if (isBillingExcluded(c)) { setError('Trials and Preview setups have no live payment due. Paid activation uses its separate workflow.'); return; }
     if (!window.confirm(`Record ${money(c.monthly_price)} payment in the CRM for ${c.customer_name || c.username} and move the stored renewal and expiration forward one month? This does not charge the customer or renew service in Roomba.`)) return;
     setBusy(`pay-${c.id}`);
     setError(null);
@@ -287,7 +288,7 @@ const CRMOperationsCenter: React.FC = () => {
   };
 
   const extendService = async (c: Customer, months: number) => {
-    if (isTrialCustomer(c)) { setError('Trial expiration comes from the confirmed provider record. Paid activation is a separate workflow.'); return; }
+    if (isBillingExcluded(c)) { setError('Trial and Preview setup expiration comes from the confirmed provider record.'); return; }
     setBusy(`extend-${c.id}`);
     setError(null);
     const next = addMonthsSafe(extensionBase(c), months);
@@ -358,6 +359,7 @@ const CRMOperationsCenter: React.FC = () => {
   };
 
   const openEdit = (c: Customer) => {
+    if (isPreviewPaidCustomer(c)) { setError('Verified Preview setup is read-only. Its login stays encrypted and it has no live billing.'); return; }
     setEditing(c);
     setForm({
       external_id: String(c.external_id || ''), customer_name: c.customer_name || '', username: c.username || '', iptv_password: c.iptv_password || '',
@@ -524,10 +526,10 @@ const CRMOperationsCenter: React.FC = () => {
             {filtered.map((c) => { const badge = renewalBadge(c); return (
               <article key={c.id} className="overflow-hidden rounded-2xl border border-gray-700 bg-gray-900/80">
                 <div className="flex items-start justify-between gap-3 border-b border-gray-800 bg-gray-800/70 p-4"><div className="min-w-0"><h2 className="truncate font-semibold text-white">{c.customer_name || c.username}</h2><p className="mt-1 text-xs text-gray-500">Panel ID {c.external_id} · {c.username}</p></div><div className="flex flex-col items-end gap-1.5"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${displayedAccountStatus(c) === 'active' ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'}`}>{displayedAccountStatus(c)}</span><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${badge.cls}`}>{badge.label}</span></div></div>
-                <div className="grid grid-cols-2 gap-3 p-4 text-sm sm:grid-cols-3"><div><p className="text-xs text-gray-500">Package</p><p className="mt-1 text-gray-200">{c.package_name || 'Not assigned'}</p></div><div><p className="text-xs text-gray-500">Monthly Price</p><p className="mt-1 text-gray-200">{isTrialCustomer(c) ? 'No charge' : money(c.monthly_price)}</p></div><div><p className="text-xs text-gray-500">Payment</p><p className={`mt-1 font-semibold ${c.payment_status === 'paid' ? 'text-green-300' : 'text-yellow-300'}`}>{isTrialCustomer(c) ? 'Trial · no payment due' : c.payment_status || 'unpaid'}</p></div><div><p className="text-xs text-gray-500">{isTrialCustomer(c) ? 'Trial expires' : 'Renewal'}</p><p className="mt-1 text-gray-200">{isTrialCustomer(c) ? dateTime(c.expiration_at) : dateOnly(c.renewal_at)}</p></div><div><p className="text-xs text-gray-500">Connections</p><p className="mt-1 text-gray-200">{c.active_connections}/{c.connections_allowed}</p></div><div><p className="text-xs text-gray-500">Device</p><p className="mt-1 truncate text-gray-200">{c.device_name || c.device_type || 'Not recorded'}</p></div></div>
+                <div className="grid grid-cols-2 gap-3 p-4 text-sm sm:grid-cols-3"><div><p className="text-xs text-gray-500">Package</p><p className="mt-1 text-gray-200">{c.package_name || 'Not assigned'}</p></div><div><p className="text-xs text-gray-500">Monthly Price</p><p className="mt-1 text-gray-200">{isPreviewPaidCustomer(c) ? 'Excluded from revenue' : isTrialCustomer(c) ? 'No charge' : money(c.monthly_price)}</p></div><div><p className="text-xs text-gray-500">Payment</p><p className={`mt-1 font-semibold ${c.payment_status === 'paid' ? 'text-green-300' : 'text-yellow-300'}`}>{isPreviewPaidCustomer(c) ? 'Preview · no real charge' : isTrialCustomer(c) ? 'Trial · no payment due' : c.payment_status || 'unpaid'}</p></div><div><p className="text-xs text-gray-500">{isPreviewPaidCustomer(c) ? 'Provider expires' : isTrialCustomer(c) ? 'Trial expires' : 'Renewal'}</p><p className="mt-1 text-gray-200">{isBillingExcluded(c) ? dateTime(c.expiration_at) : dateOnly(c.renewal_at)}</p></div><div><p className="text-xs text-gray-500">Connections</p><p className="mt-1 text-gray-200">{c.active_connections}/{c.connections_allowed}</p></div><div><p className="text-xs text-gray-500">Device</p><p className="mt-1 truncate text-gray-200">{c.device_name || c.device_type || 'Not recorded'}</p></div></div>
                 <div className="border-t border-gray-800 px-4 py-3"><p className="text-xs text-gray-500">IPTV password</p><div className="mt-1 flex items-center gap-2"><code className="min-w-0 flex-1 truncate rounded-lg bg-gray-950 px-2.5 py-1.5 text-xs text-gray-300">{visiblePasswords[c.id] ? c.iptv_password || 'Not set' : '••••••••••'}</code><button onClick={() => setVisiblePasswords((v) => ({ ...v, [c.id]: !v[c.id] }))} className="rounded-lg p-2 text-gray-400">{visiblePasswords[c.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
                 {pendingIds.has(c.id) && <div className="border-t border-gray-800 bg-yellow-500/5 px-4 py-2 text-xs font-medium text-yellow-300"><Bell className="mr-1.5 inline h-3.5 w-3.5" />Renewal follow-up queued</div>}
-                <div className="grid grid-cols-2 gap-2 border-t border-gray-800 p-3 sm:grid-cols-3"><button onClick={() => openEdit(c)} className="inline-flex items-center justify-center rounded-lg bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-200"><Edit3 className="mr-1.5 h-3.5 w-3.5" />Edit</button><button disabled={isTrialCustomer(c) || busy === `pay-${c.id}`} onClick={() => void recordPayment(c)} className="inline-flex items-center justify-center rounded-lg bg-green-500/10 px-3 py-2 text-xs font-semibold text-green-300 disabled:opacity-50"><CreditCard className="mr-1.5 h-3.5 w-3.5" />Record Payment (CRM)</button><button disabled={isTrialCustomer(c)} title={isTrialCustomer(c) ? 'Trial expiration is recorded from Roomba.' : undefined} onClick={() => setExtendCustomer(c)} className="inline-flex items-center justify-center rounded-lg bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"><CalendarDays className="mr-1.5 h-3.5 w-3.5" />Update Dates (CRM)</button><button disabled={busy === `follow-${c.id}`} onClick={() => void queueFollowup(c)} className="inline-flex items-center justify-center rounded-lg bg-yellow-500/10 px-3 py-2 text-xs font-semibold text-yellow-300 disabled:opacity-50"><Bell className="mr-1.5 h-3.5 w-3.5" />Follow Up</button><button onClick={() => void openHistory(c)} className="inline-flex items-center justify-center rounded-lg bg-purple-500/10 px-3 py-2 text-xs font-semibold text-purple-300"><History className="mr-1.5 h-3.5 w-3.5" />History</button><button disabled={!c.xui_line_url} onClick={() => c.xui_line_url && window.open(c.xui_line_url, '_blank', 'noopener,noreferrer')} className="inline-flex items-center justify-center rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 disabled:opacity-40"><ExternalLink className="mr-1.5 h-3.5 w-3.5" />XUI</button></div>
+                <div className="grid grid-cols-2 gap-2 border-t border-gray-800 p-3 sm:grid-cols-3"><button disabled={isPreviewPaidCustomer(c)} onClick={() => openEdit(c)} className="inline-flex items-center justify-center rounded-lg bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-200"><Edit3 className="mr-1.5 h-3.5 w-3.5" />Edit</button><button disabled={isBillingExcluded(c) || busy === `pay-${c.id}`} onClick={() => void recordPayment(c)} className="inline-flex items-center justify-center rounded-lg bg-green-500/10 px-3 py-2 text-xs font-semibold text-green-300 disabled:opacity-50"><CreditCard className="mr-1.5 h-3.5 w-3.5" />Record Payment (CRM)</button><button disabled={isBillingExcluded(c)} title={isTrialCustomer(c) ? 'Trial expiration is recorded from Roomba.' : undefined} onClick={() => setExtendCustomer(c)} className="inline-flex items-center justify-center rounded-lg bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"><CalendarDays className="mr-1.5 h-3.5 w-3.5" />Update Dates (CRM)</button><button disabled={busy === `follow-${c.id}`} onClick={() => void queueFollowup(c)} className="inline-flex items-center justify-center rounded-lg bg-yellow-500/10 px-3 py-2 text-xs font-semibold text-yellow-300 disabled:opacity-50"><Bell className="mr-1.5 h-3.5 w-3.5" />Follow Up</button><button onClick={() => void openHistory(c)} className="inline-flex items-center justify-center rounded-lg bg-purple-500/10 px-3 py-2 text-xs font-semibold text-purple-300"><History className="mr-1.5 h-3.5 w-3.5" />History</button><button disabled={!c.xui_line_url} onClick={() => c.xui_line_url && window.open(c.xui_line_url, '_blank', 'noopener,noreferrer')} className="inline-flex items-center justify-center rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 disabled:opacity-40"><ExternalLink className="mr-1.5 h-3.5 w-3.5" />XUI</button></div>
               </article>
             ); })}
           </div>

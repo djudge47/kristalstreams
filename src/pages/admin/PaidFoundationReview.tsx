@@ -3,12 +3,13 @@ import { Database, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 const PaidFoundationReview: React.FC = () => {
+  const [workerPassed, setWorkerPassed] = useState(false);
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false); const [error, setError] = useState('');
   const request = useRef<AbortController | null>(null); const owner = useRef<string | null>(null);
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (owner.current && session?.user.id !== owner.current) { request.current?.abort(); request.current = null; setConfigured(null); setLoading(false); }
+      if (owner.current && session?.user.id !== owner.current) { request.current?.abort(); request.current = null; setConfigured(null); setWorkerPassed(false); setLoading(false); }
     });
     return () => { subscription.unsubscribe(); request.current?.abort(); request.current = null; };
   }, []);
@@ -16,7 +17,7 @@ const PaidFoundationReview: React.FC = () => {
     if (request.current) return;
     const controller = new AbortController(); request.current = controller;
     const timeout = window.setTimeout(() => controller.abort(), 20000);
-    setLoading(true); setError(''); setConfigured(null);
+    setLoading(true); setError(''); setConfigured(null); setWorkerPassed(false);
     try {
       const { data, error: authError } = await supabase.auth.getSession();
       if (controller.signal.aborted || request.current !== controller) return;
@@ -29,6 +30,11 @@ const PaidFoundationReview: React.FC = () => {
       const f = payload?.foundation;
       if (f?.version !== 1 || f.durableAttempts !== true || f.browserAccessRevoked !== true || f.encryptedLoginTable !== true
         || f.ownerOnlyHandoffImplemented !== true || typeof f.encryptionConfigured !== 'boolean' || f.providerExecutionEnabled !== false || f.liveTestReady !== false) throw new Error('Foundation status could not be verified.');
+      const expectedChecks = ['success','duplicates','timeout','begin_reply','local_retry','changed_review','payment_access','verification','approval'];
+      if (f.atomicPreviewCompletionInstalled !== true || f.resellerDispatchLockInstalled !== true || f.realProviderWrites !== 0
+        || !Array.isArray(f.guardedWorkerChecks) || f.guardedWorkerChecks.length !== expectedChecks.length
+        || !f.guardedWorkerChecks.every((row: { id?: unknown; passed?: unknown }, index: number) => row.id === expectedChecks[index] && row.passed === true)) throw new Error('Guarded activation checks could not be verified.');
+      setWorkerPassed(true);
       setConfigured(f.encryptionConfigured);
     } catch (failure) { if (request.current === controller) setError(controller.signal.aborted ? 'The status check took too long.' : failure instanceof Error ? failure.message : 'Foundation review is unavailable.'); }
     finally { window.clearTimeout(timeout); if (request.current === controller) { request.current = null; setLoading(false); } }
@@ -39,7 +45,8 @@ const PaidFoundationReview: React.FC = () => {
     {configured !== null && <div role="status" className="mt-4 rounded-xl border border-emerald-400/20 bg-gray-900 p-4 text-sm leading-6 text-gray-300">
       <h4 className="font-semibold text-white">Durable setup foundation installed</h4>
       <ul className="mt-3 space-y-2"><li>Persistent attempts and duplicate dispatch guard: installed</li><li>Encrypted login tables and account-only retrieval: installed</li><li>Direct browser table access: blocked</li><li>Server encryption key: <span className={configured ? 'text-emerald-300' : 'text-amber-300'}>{configured ? 'Configured' : 'Needs configuration'}</span></li></ul>
-      <p className="mt-3 text-amber-200">Real activation is still disabled. Live transport, fresh execution checks and separate credit approval are required before a paid test.</p>
+      {workerPassed && <div className="mt-4 border-t border-white/10 pt-4"><h4 className="font-semibold text-emerald-300">Guarded activation: 9 checks passed</h4><p className="mt-2 text-gray-400">Simulated provider responses only. Atomic CRM/order/login completion and a reseller dispatch lock are installed.</p><p className="mt-2 text-gray-400">No real line, credit spend, customer change or message was made by these checks.</p></div>}
+      <p className="mt-3 text-amber-200">Real activation remains disabled. A paid test needs a reviewed new customer, your explicit credit approval and a separately approved release of the activation action.</p>
     </div>}
   </div>;
 };
