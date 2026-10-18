@@ -1,12 +1,13 @@
 import { PaymentError, getPlan, validatePaidSession } from './ks-payment-validation.js';
 
 // Two read-only views share one deployment function; each retains its own auth/environment checks.
-export function createPreviewPaidOrdersRouter({ listHandler, simulationHandler }) {
+export function createPreviewPaidOrdersRouter({ listHandler, simulationHandler, foundationHandler }) {
   return function route(req, res) {
     res.setHeader('Cache-Control', 'private, no-store'); res.setHeader('Vary', 'Authorization');
     const view = req.query?.view;
     if (view === undefined) return listHandler(req, res);
     if (view === 'new-customer-simulation') return simulationHandler(req, res);
+    if (view === 'foundation' && foundationHandler) return foundationHandler(req, res);
     return res.status(400).json({ error: 'Choose a supported payment review.' });
   };
 }

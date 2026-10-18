@@ -3,6 +3,7 @@ import { CheckCircle2, Clock3, Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import TrialUpgradeReview from './TrialUpgradeReview';
 import NewPaidSetupSimulation from './NewPaidSetupSimulation';
+import PaidFoundationReview from './PaidFoundationReview';
 
 type PaidOrder = {
   sessionId: string; userId: string; accountLabel: string; testMode: true;
@@ -67,6 +68,7 @@ const PreviewPaidOrders: React.FC = () => {
       <details className="mt-4 text-xs text-gray-500"><summary className="cursor-pointer font-medium text-gray-400">Account and payment reference</summary><p className="mt-2 break-all">Account ID: {order.userId}</p><p className="mt-2 break-all">Checkout: {order.sessionId}</p><p className="mt-2">The account ID identifies the purchaser. Profile labels are display details, not a match to an existing streaming line.</p></details>
       {order.canReviewTrial && <TrialUpgradeReview sessionId={order.sessionId} />}
       {order.canReviewTrial && <NewPaidSetupSimulation sessionId={order.sessionId} tier={order.tier} connections={order.connections} interval={order.interval} amountCents={order.amountCents} />}
+      {order.canReviewTrial && <PaidFoundationReview />}
     </article>)}</div>}
     <p className="mt-4 text-xs leading-5 text-gray-500">Saved receipts only; this is not a live Stripe or Roomba status check. This Preview queue does not activate service, spend credits or add test payments to live customer revenue.</p>
   </section>;
