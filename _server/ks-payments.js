@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { PaymentError, applyPaidSession } from './ks-payment-validation.js';
+import { queuePreviewPaidOrder } from './ks-preview-paid-orders.js';
 
 export { PaymentError } from './ks-payment-validation.js';
 
@@ -23,6 +24,7 @@ export function runtime() {
   const options = { auth: { persistSession: false, autoRefreshToken: false } };
   return {
     live,
+    environment: process.env.VERCEL_ENV,
     stripe: new Stripe(key, { apiVersion: '2026-08-26.dahlia', timeout: 15000, maxNetworkRetries: 1 }),
     auth: createClient(url, anonKey, options),
     admin: createClient(url, adminKey, options),
@@ -38,12 +40,25 @@ export async function authenticate(req, auth) {
   return data.user;
 }
 
-export function checkoutOrigin() {
-  if (process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL) {
-    if (!/^[A-Za-z0-9.-]+\.vercel\.app$/.test(process.env.VERCEL_URL)) throw new PaymentError(503, 'Preview address is not configured correctly.');
-    return `https://${process.env.VERCEL_URL}`;
+export function checkoutOrigin(req, env = process.env) {
+  if (env.VERCEL_ENV === 'production') return 'https://kristalstream.com';
+  if (env.VERCEL_ENV === 'preview') {
+    // Auth storage belongs to one origin. Preserve the browser's known deployment
+    // or branch address; never trust arbitrary Host/forwarded/body return URLs.
+    const hosts = [env.VERCEL_BRANCH_URL, env.VERCEL_URL].filter(Boolean);
+    if (!hosts.length || hosts.some(host => !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.vercel\.app$/.test(host))) {
+      throw new PaymentError(503, 'Preview address is not configured correctly.');
+    }
+    const allowedOrigins = hosts.map(host => `https://${host.toLowerCase()}`);
+    const origin = req?.headers?.origin;
+    if (origin !== undefined) {
+      if (typeof origin !== 'string' || !allowedOrigins.includes(origin)) {
+        throw new PaymentError(400, 'Open checkout on the current Kristal Streams Preview website and try again.');
+      }
+      return origin;
+    }
+    return allowedOrigins[0];
   }
-  if (process.env.VERCEL_ENV === 'production') return 'https://kristalstream.com';
   return 'http://127.0.0.1:5174';
 }
 
@@ -56,13 +71,14 @@ export function webhookSecret() {
 export async function fulfill(sessionId, context, ownerId) {
   const session = await context.stripe.checkout.sessions.retrieve(sessionId);
   const receipt = await applyPaidSession(session, context.live, ownerId, context.admin);
+  const queued = await queuePreviewPaidOrder(session, context, ownerId);
   const { data: alert, error: alertError } = await context.admin.functions.invoke('ks-order-notification', {
     body: { sessionId: session.id },
   });
   if (alertError || !alert?.success) {
     throw new PaymentError(503, 'Your payment is recorded, but the setup notification needs attention. Please contact support; do not pay again.');
   }
-  return receipt;
+  return { ...receipt, ...queued };
 }
 
 export function respondError(res, error) {

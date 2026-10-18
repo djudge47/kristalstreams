@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo, useCallback } from 'react';
-import { Menu, X, User, Home, ChevronDown, Facebook, Twitter, Instagram, Youtube, Smartphone } from 'lucide-react';
+import { Menu, X, User, Home, ChevronDown, Facebook, Twitter, Instagram, Youtube, Smartphone, Trophy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -119,6 +119,7 @@ const Header: React.FC = memo(() => {
           <div className="container mx-auto px-4 py-4">
             <nav aria-label="Mobile navigation" className="flex flex-col space-y-2">
               <Link to="/" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100 flex items-center" onClick={closeMenu}><Home size={18} className="mr-2" />Home</Link>
+              <Link to="/ppv" className="text-red-300 hover:text-white font-semibold transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center" onClick={closeMenu}><Trophy size={18} className="mr-2" />Sports &amp; PPV</Link>
               <Link to="/pricing" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100" onClick={closeMenu}>Pricing</Link>
               <Link to="/support" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100" onClick={closeMenu}>Support</Link>
               <Link to="/download-app" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100 flex items-center" onClick={closeMenu}><Smartphone size={18} className="mr-2" />Get App</Link>

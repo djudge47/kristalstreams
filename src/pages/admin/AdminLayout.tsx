@@ -4,13 +4,15 @@ import { supabase } from '../../lib/supabase';
 import {
   LayoutDashboard, Users, TicketCheck, BarChart3,
   Image, Film, List, Building2, Handshake,
-  Activity, LogOut, ChevronLeft, Menu
+  Activity, LogOut, ChevronLeft, Menu, Wifi
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'djudge47@gmail.com';
 
 const navItems = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { path: '/admin/roomba', label: 'Roomba Connection', icon: Wifi },
+  { path: '/admin/setup', label: 'Prepare Setup', icon: List },
   { path: '/admin/customers', label: 'Customers', icon: Users },
   { path: '/admin/tickets', label: 'Support Tickets', icon: TicketCheck },
   { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },

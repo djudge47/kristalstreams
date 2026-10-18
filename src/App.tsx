@@ -119,6 +119,8 @@ const clientPages = {
 const adminPages = {
   Layout: lazyRetry(() => import('./pages/admin/AdminLayout')),
   Dashboard: lazyRetry(() => import('./pages/admin/AdminDashboard')),
+  RoombaConnection: lazyRetry(() => import('./pages/admin/RoombaConnection')),
+  PrepareSetup: lazyRetry(() => import('./pages/admin/PrepareSetup')),
   Customers: lazyRetry(() => import('./pages/admin/Customers')),
   Tickets: lazyRetry(() => import('./pages/admin/SupportTickets')),
   Analytics: lazyRetry(() => import('./pages/admin/Analytics')),
@@ -235,6 +237,8 @@ function App() {
           </Route>
           <Route path="admin" element={<A.Layout />}>
             <Route index element={<A.Dashboard />} />
+            <Route path="roomba" element={<A.RoombaConnection />} />
+            <Route path="setup" element={<A.PrepareSetup />} />
             <Route path="customers" element={<A.Customers />} />
             <Route path="tickets" element={<A.Tickets />} />
             <Route path="analytics" element={<A.Analytics />} />
