@@ -40,12 +40,12 @@ export async function authenticate(req, auth) {
   return data.user;
 }
 
-export function checkoutOrigin(req) {
-  if (process.env.VERCEL_ENV === 'production') return 'https://kristalstream.com';
-  if (process.env.VERCEL_ENV === 'preview') {
+export function checkoutOrigin(req, env = process.env) {
+  if (env.VERCEL_ENV === 'production') return 'https://kristalstream.com';
+  if (env.VERCEL_ENV === 'preview') {
     // Auth storage belongs to one origin. Preserve the browser's known deployment
     // or branch address; never trust arbitrary Host/forwarded/body return URLs.
-    const hosts = [process.env.VERCEL_BRANCH_URL, process.env.VERCEL_URL].filter(Boolean);
+    const hosts = [env.VERCEL_BRANCH_URL, env.VERCEL_URL].filter(Boolean);
     if (!hosts.length || hosts.some(host => !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.vercel\.app$/.test(host))) {
       throw new PaymentError(503, 'Preview address is not configured correctly.');
     }

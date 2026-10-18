@@ -3,8 +3,8 @@ import { createGuardedPaidExecutor } from './ks-guarded-paid-executor.js';
 import { createPaidExecutionStore } from './ks-paid-execution-store.js';
 import { createPaidProviderAdapter } from './ks-paid-provider.js';
 
-// Internal constructor only. No deployed route/webhook constructs or invokes this worker.
-// An authenticated, bounded approval entrypoint still needs a separately approved release.
+// Only the separately scoped Preview test control may construct this worker.
+// Checkout, webhooks and ordinary review views never dispatch paid provider work.
 export function createInternalPaidSetupWorker({ admin, env = process.env } = {}) {
   const key = env.STRIPE_SECRET_KEY;
   if (env.VERCEL_ENV !== 'preview' || typeof key !== 'string' || !/^[sr]k_test_[A-Za-z0-9]+$/.test(key)) throw new Error('preview_paid_worker_unavailable');

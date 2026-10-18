@@ -24,8 +24,8 @@ function verifyLine(line, expected, login, now) {
     || Date.parse(line.expiresAt) > now + expected.selected.duration.count * 32 * 86400000) throw new Error('paid_line_requires_reconciliation');
   return line;
 }
-// Internal worker core, deliberately not imported by a deployed API, checkout or webhook.
-// A future entrypoint must independently authenticate/authorize the administrator and be separately approved for release.
+// Worker core. The Preview test control independently authenticates the administrator,
+// enforces its exact server-side scope and requires explicit fresh credit approval.
 export function createGuardedPaidExecutor({ store, provider, payments, env = process.env, now = Date.now } = {}) {
   return async function execute({ attemptId, ownerId, approverId, approvalToken, confirmed = false }) {
     if (env.VERCEL_ENV !== 'preview' || confirmed !== true || !uuid(attemptId) || !uuid(ownerId) || !uuid(approverId)) throw new Error('explicit_preview_credit_approval_required');

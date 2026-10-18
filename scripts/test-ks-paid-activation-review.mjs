@@ -42,6 +42,7 @@ function fixture(patch = {}) {
   const handler = createPaidActivationReviewHandler({ createClient, env, now: () => base.now,
     paymentsFactory: patch.defaultPayments ? undefined : () => ({ async retrieve(id) { calls.payments++; assert.equal(id, order.sessionId); if (patch.paymentFailure) throw new Error('MUST_NOT_LEAK'); return patch.session || base.session; } }),
     providerFactory: () => ({ async snapshot() { calls.provider++; if (patch.providerFailure) throw new Error('MUST_NOT_LEAK'); return patch.snapshot || structuredClone(snapshot); } }),
+    captureVerifiedReview: patch.captureVerifiedReview,
   });
   const request = async (change = {}) => {
     const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
@@ -77,6 +78,13 @@ await check('eligible review reports exact real cost and projected balance but g
   assert.equal(r.databaseWrites, false); assert.equal(r.realProviderWrites, 0); assert.equal(r.canActivate, false); assert.equal(r.approvalTokenIssued, false); assert.equal(r.creditApprovalRecorded, false);
   assert.equal(r.approvalToken, undefined); assert.equal(r.login_envelope, undefined); assert.equal(r.customer.accountId, order.userId); assert.equal(r.adminAccountId, administrator.id);
   assert.deepEqual(parsePaidActivationReview(r, expected, administrator.id).blockers, []); assert.equal(f.calls.provider, 1);
+});
+await check('the private factory capture receives verified identities and catalog while ordinary GET output stays unchanged', async () => {
+  let captured; const f = fixture({ captureVerifiedReview: value => { captured = value; } }); const res = await f.request();
+  assert.equal(res.code, 200); assert.equal(captured.owner.id, order.userId); assert.equal(captured.adminUser.id, administrator.id);
+  assert.equal(captured.payment.sessionId, order.sessionId); assert.equal(captured.currentPackage.id, captured.entry.provider.id);
+  assert.deepEqual(captured.blockers, []); assert.equal(res.body.review.approvalToken, undefined); assert.equal(res.body.review.admin, undefined);
+  assert.equal(res.body.review.databaseWrites, false); assert.equal(res.body.review.realProviderWrites, 0);
 });
 await check('prior trial activity and active website access remain blocked while the price stays visible for review', async () => {
   const f = fixture({ trialRows: [{ admin_id: customer.id, state: 'succeeded' }], eligibilityError: { code: 'P0001', message: 'existing_website_access_requires_review' } });

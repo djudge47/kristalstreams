@@ -3,10 +3,12 @@ import { createPreviewPaidOrdersHandler, createPreviewPaidOrdersRouter } from '.
 import { createPreviewNewPaidSetupHandler } from '../_server/ks-preview-new-paid-setup.js';
 import { createPaidFoundationHandler } from '../_server/ks-paid-foundation.js';
 import { createPaidActivationReviewHandler } from '../_server/ks-paid-activation-review.js';
-export const maxDuration = 60;
+import { createPaidTestControlHandler } from '../_server/ks-paid-test-control.js';
+export const maxDuration = 300;
 export default createPreviewPaidOrdersRouter({
   listHandler: createPreviewPaidOrdersHandler({ createClient }),
   simulationHandler: createPreviewNewPaidSetupHandler({ createClient }),
   foundationHandler: createPaidFoundationHandler({ createClient }),
   activationReviewHandler: createPaidActivationReviewHandler({ createClient }),
+  paidTestControlHandler: createPaidTestControlHandler({ createClient }),
 });

@@ -110,7 +110,7 @@ await check('Preview paid CRM rows are distinct from trials and excluded from bi
   const row = { source: 'roomba_preview_paid', trial: false, payment_status: 'preview_test', account_status: 'active', expiration_at: '2020-01-01', renewal_at: '2020-01-01' };
   assert.equal(isPreviewPaidCustomer(row), true); assert.equal(isBillingExcluded(row), true); assert.equal(isUnpaidCustomer(row), false); assert.equal(isBillingOverdue(row), false); assert.equal(isDueWithin(row, 7), false); assert.equal(displayedAccountStatus(row), 'expired');
 });
-await check('no deployed API or webhook imports the real worker/provider/store; no flags unlock a paid execution route', async () => {
+await check('checkout, webhooks and API entrypoints do not import the real worker directly; Preview-only SDK gates remain intact', async () => {
   const files = (await readdir(new URL('../api/', import.meta.url))).filter(name => /\.(js|ts)$/.test(name)); assert.equal(files.length, 12);
   for (const name of files) { const source = await readFile(new URL(`../api/${name}`, import.meta.url), 'utf8'); assert.doesNotMatch(source, /ks-paid-worker|ks-guarded-paid-executor|ks-paid-provider|ks-paid-execution-store/); }
   for (const patch of [{ VERCEL_ENV: 'production' }, { STRIPE_SECRET_KEY: 'sk_live_synthetic' }]) assert.throws(() => createInternalPaidSetupWorker({ env: { VERCEL_ENV: 'preview', STRIPE_SECRET_KEY: 'sk_test_synthetic', ...patch } }));

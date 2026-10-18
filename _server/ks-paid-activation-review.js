@@ -18,7 +18,7 @@ const defaultPayments = env => {
 
 // GET-only review. Never imports the real POST adapter, execution store or SDK worker constructor.
 export function createPaidActivationReviewHandler({ createClient, env = process.env, now = Date.now,
-  paymentsFactory = defaultPayments, providerFactory = createPaidReadAdapter } = {}) {
+  paymentsFactory = defaultPayments, providerFactory = createPaidReadAdapter, captureVerifiedReview } = {}) {
   const options = { auth: { persistSession: false, autoRefreshToken: false },
     global: { fetch: (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(8000) }) } };
   let active = false, lastStarted = 0;
@@ -100,6 +100,10 @@ export function createPaidActivationReviewHandler({ createClient, env = process.
       if (lock) blockers.push('reseller_dispatch_locked');
       // The final timestamp/age check includes all dependent database reads.
       if (now() - snapshot.checkedAt > 30000) throw new Error('stale_provider_review');
+      // Private factory callback for the separately gated approval control. Its
+      // internal records never become part of this GET response.
+      captureVerifiedReview?.({ admin, adminUser, session, payment, order, owner, snapshot, entry,
+        currentPackage: snapshot.packages.find(row => row.id === entry.provider.id), attempt, blockers: [...new Set(blockers)] });
       return res.status(200).json({ review: { version: 1, adminAccountId: adminUser.id, reference, customer: { accountId: owner.id, email: owner.email },
         plan: { tier: payment.tier, connections: payment.connections, interval: payment.interval, amountCents: payment.cents,
           providerMonths: entry.provider.duration.count, bouquetCount: entry.provider.bouquetIds.length },

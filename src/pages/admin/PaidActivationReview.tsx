@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ClipboardCheck, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { parsePaidActivationReview, formatCreditUnits, paidReviewBlockers, type PaidActivationReview as Review, type PaidReviewExpected } from '../../../_shared/ks-paid-review-response.js';
+import PaidTestControl from './PaidTestControl';
 
 const PaidActivationReview: React.FC<PaidReviewExpected> = ({ reference, customerId, tier, connections, interval, amountCents }) => {
   const [review, setReview] = useState<Review | null>(null), [loading, setLoading] = useState(false), [error, setError] = useState('');
@@ -51,10 +52,11 @@ const PaidActivationReview: React.FC<PaidReviewExpected> = ({ reference, custome
       </dl>
       <p className="mt-3 text-xs text-gray-400">The Stripe payment is a test. A future paid activation would spend real Roomba credits. The balance shown is an estimate, not a reservation.</p>
       {review.blockers.length > 0 && <ul className="mt-4 list-disc space-y-2 pl-5 text-amber-200">{review.blockers.map(reason => <li key={reason}>{paidReviewBlockers[reason]}</li>)}</ul>}
-      <p className="mt-4 font-semibold text-amber-200">Activation is disabled. No spending approval has been recorded.</p>
+      <p className="mt-4 font-semibold text-amber-200">This review does not approve spending or activate service.</p>
       <p className="mt-2 text-gray-400">This review did not reserve an attempt, create or modify a line, change a customer, or send a message.</p>
       <p className="mt-3 text-xs text-gray-500">Checked {new Date(review.checkedAt).toLocaleString()}. Payment, customer and provider details must be rechecked before any separately approved activation.</p>
     </div>}
+    {review && (review.status === 'review_only' || review.blockers.includes('existing_setup_attempt')) && <PaidTestControl reference={reference} customerId={customerId} tier={tier} connections={connections} interval={interval} amountCents={amountCents} />}
   </div>;
 };
 export default PaidActivationReview;

@@ -5,7 +5,7 @@ import { generateStreamingLogin, sealStreamingLogin } from './ks-login-envelope.
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const columns = 'attempt_id,checkout_session_id,user_id,binding_hash,claim_token,state,login_envelope';
-// Internal service-only adapter. Not imported by any paid execution endpoint/webhook.
+// Internal service-only adapter used by the separately scoped Preview test control.
 export async function reserveDurablePaidSetup({ admin, session, ownerId, entry, currentPackage, resellerId,
   newCustomerConfirmed = false, environment, env = process.env }) {
   if (environment !== 'preview' || newCustomerConfirmed !== true || typeof ownerId !== 'string'
