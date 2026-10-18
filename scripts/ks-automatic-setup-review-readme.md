@@ -1,0 +1,30 @@
+# Automatic setup eligibility and credit review
+
+This is a **read-only, unrouted preparation**, not an automatic worker or spending approval. No API calls this reviewer. No policy value, new key, database schema, grant or deployment setting is installed. Every result has `mayDispatch: false`, including `eligible_for_durable_claim_review`. It never reserves credits, claims an order, creates credentials, calls a provider, changes a customer or sends email. A candidate hash binds review evidence; it is not an approval token and must not become a bearer capability.
+
+`_server/ks-automatic-setup-review.js` reads only the proposed server-side `KS_AUTOMATIC_SETUP_REVIEW_POLICY`. An absent policy disables review before touching candidate evidence. The exact schema permits only `mode: review-only`, a matching Preview/Production environment, policy UUID/reseller ID, a review window of at most 24 hours, integer-millionth per-order/daily/minimum-reserve credit values, and an explicit set of tier/connection/package IDs/fingerprints/cost ceilings. It rejects unknown fields, activation modes, invalid/expired windows, duplicate tier/connection rules and invalid limits. **No real policy values or spending limits were approved or installed in this update.**
+
+The input contract is private backend evidence, never a browser-supplied review object. A future loader must authenticate and load each value from authoritative Stripe, Auth/profile, receipt/queue, purchase-intent, history, attempt, provider and budget sources. The function validates:
+
+- A complete paid canonical Checkout Session and expanded succeeded intent/captured, undisputed, unrefunded charge in the correct mode, with exact owner, amount, currency and catalog terms.
+- A matching unactivated receipt and pending queue, plausible immutable timestamps and a purchase created during the policy review window. Historical paid orders do not silently enter a new rollout.
+- A confirmed non-anonymous Auth identity matching its profile, no known website access/active connections/prior service expiry, fresh complete local history with no prior provider line, trial, fulfillment, CRM match or ambiguity, and an explicit bound authenticated new-service declaration.
+- No known or unknown prior attempt. Reserved, dispatching, verified, completed and ambiguous attempts all stop for review; this helper never resumes or repeats a creation.
+- A fresh current reseller/catalog snapshot matching the approved package ID and fingerprint, cost ceiling, duration, allowance and channel groups. All credit comparisons use integer millionths.
+- A fresh policy/environment/reseller/UTC-day budget snapshot, an available reseller dispatch slot, spent plus reserved plus proposed cost within the daily limit, and enough provider balance to preserve the configured minimum after outstanding reservations.
+
+Missing, old or contradictory evidence returns a sanitized review reason. The result excludes emails, passwords, raw provider secrets and arbitrary input fields. Its private candidate binds the owner/order/intent, policy fingerprint, reseller/package fingerprint, cost/balance, observed spent/reserved values, UTC budget day and review timestamp. The explicit mode and `mayDispatch: false` remain unchanged for live-mode fixtures.
+
+The provider documentation does not establish an authoritative global line listing. An authenticated new-service declaration is a declaration, not proof that no unrelated provider account exists. Existing-service, trial conversion, expired renewal or uncertain ownership remains for manual review. The currently running checkout does not capture the new declaration, and no automatic budget ledger exists yet; missing evidence therefore cannot qualify a real order through this preparation.
+
+## Shared settlement check
+
+`_server/ks-paid-settlement.js` extracts the existing pure settlement verifier into a shared module. The current Preview executor re-exports it and retains the test-mode default and Preview-only dispatch gates. The staged reviewer may explicitly validate live-mode evidence without granting execution. The current one-credit control and read-only paid review keep their existing behavior.
+
+## Validation and remaining work
+
+`node scripts/test-ks-automatic-setup-review.mjs` exercises 24 fictional review scenarios, including live/test settlement, refunds/disputes, immutable owner/payment/queue binding, prior access, renewal declarations, existing attempts, freshness, changed packages, exact cost boundaries, reserved credits, daily rollover/policy mismatch, minimum balance, request override rejection and private output. The 22 guarded-executor, 12 read-only activation-review and 19 one-credit-control regressions also passed (77 checks total). No real policy, payment, email, budget reservation, provider request or credit spend was used.
+
+Targeted ESLint and bundling the affected shared paid-order API passed. No API entrypoint was added. The new reviewer is absent from every route/import path; only the shared settlement verifier is reused by the existing Preview path.
+
+The proposed review is not a substitute for a durable atomic budget/order claim. Concurrent workers can pass read-only arithmetic at the same time. Before automatic activation is enabled, implement and verify one transaction that reloads immutable purchase intent, order state, policy version, budget reservations and the reseller lock; it must serialize budget use and make any ambiguous dispatch permanently non-repeatable. Add recovery for local completion without another provider create, live-environment encrypted login/completion/owner handoff, notification/UI integration and a reviewed rollout. General real-credit authorization and any additional real paid test remain separate from this preparation.

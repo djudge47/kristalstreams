@@ -3,18 +3,12 @@ import { validatePaidSession } from './ks-payment-validation.js';
 import { buildPaidPlanMapping, validateMappedPackage } from './ks-roomba-plan-mapping.js';
 import { verifyPaidApproval, creditUnits } from './ks-paid-approval.js';
 import { openStreamingLogin } from './ks-login-envelope.js';
+import { verifySettledPaidIntent } from './ks-paid-settlement.js';
+export { verifySettledPaidIntent } from './ks-paid-settlement.js';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const groups = value => JSON.stringify(value);
-export function verifySettledPaidIntent(session, payment) {
-  const intent = session.payment_intent, charge = intent?.latest_charge;
-  if (!intent || typeof intent !== 'object' || intent.id !== payment.intentId || intent.status !== 'succeeded'
-    || intent.livemode !== false || intent.currency !== 'usd' || intent.amount !== payment.cents || intent.amount_received !== payment.cents
-    || !charge || typeof charge !== 'object' || !/^ch_[A-Za-z0-9]+$/.test(charge.id || '') || charge.livemode !== false
-    || charge.payment_intent !== intent.id || charge.amount !== payment.cents || charge.currency !== 'usd'
-    || charge.paid !== true || charge.captured !== true || charge.refunded !== false || charge.amount_refunded !== 0 || charge.disputed !== false) throw new Error('settled_payment_required');
-}
 function verifyLine(line, expected, login, now) {
   if (!line || !/^[1-9]\d{0,14}$/.test(line.id) || line.username !== login.username
     || line.resellerId !== expected.resellerId || line.packageId !== expected.selected.id
