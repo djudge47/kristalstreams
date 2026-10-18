@@ -40,12 +40,25 @@ export async function authenticate(req, auth) {
   return data.user;
 }
 
-export function checkoutOrigin() {
-  if (process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL) {
-    if (!/^[A-Za-z0-9.-]+\.vercel\.app$/.test(process.env.VERCEL_URL)) throw new PaymentError(503, 'Preview address is not configured correctly.');
-    return `https://${process.env.VERCEL_URL}`;
-  }
+export function checkoutOrigin(req) {
   if (process.env.VERCEL_ENV === 'production') return 'https://kristalstream.com';
+  if (process.env.VERCEL_ENV === 'preview') {
+    // Auth storage belongs to one origin. Preserve the browser's known deployment
+    // or branch address; never trust arbitrary Host/forwarded/body return URLs.
+    const hosts = [process.env.VERCEL_BRANCH_URL, process.env.VERCEL_URL].filter(Boolean);
+    if (!hosts.length || hosts.some(host => !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.vercel\.app$/.test(host))) {
+      throw new PaymentError(503, 'Preview address is not configured correctly.');
+    }
+    const allowedOrigins = hosts.map(host => `https://${host.toLowerCase()}`);
+    const origin = req?.headers?.origin;
+    if (origin !== undefined) {
+      if (typeof origin !== 'string' || !allowedOrigins.includes(origin)) {
+        throw new PaymentError(400, 'Open checkout on the current Kristal Streams Preview website and try again.');
+      }
+      return origin;
+    }
+    return allowedOrigins[0];
+  }
   return 'http://127.0.0.1:5174';
 }
 

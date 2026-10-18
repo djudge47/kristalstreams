@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const user = await authenticate(req, context.auth);
     const { data: profile, error } = await context.admin.from('profiles').select('id').eq('id', user.id).maybeSingle();
     if (error || !profile) throw new PaymentError(409, 'Your account setup needs attention. Contact support before paying.');
-    const origin = checkoutOrigin();
+    const origin = checkoutOrigin(req);
     const suffix = [...randomBytes(8)].map(byte => String.fromCharCode(97 + byte % 26)).join('');
     const session = await context.stripe.checkout.sessions.create({
       mode: 'payment',
