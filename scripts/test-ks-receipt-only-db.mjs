@@ -65,7 +65,60 @@ try {
     const first = await record(); const replay = await record();
     assert.equal(first.replayed, false); assert.equal(replay.replayed, true);
     assert.equal(first.recorded_at, replay.recorded_at);
+    assert.equal(first.queue_replayed, false); assert.equal(replay.queue_replayed, true);
+    assert.equal(first.queued_at, replay.queued_at); assert.equal(replay.order_queued, true);
     assert.equal((await db.query("select count(*)::int as n from public.ks_payment_receipts where checkout_session_id='cs_test_FixtureReceipt'")).rows[0].n, 1);
+    assert.equal((await db.query("select count(*)::int as n from public.ks_setup_order_queue where checkout_session_id='cs_test_FixtureReceipt'")).rows[0].n, 1);
+  });
+  await check('the saved queue binds receipt, intent, purchaser, environment and financial terms', async () => {
+    const row = (await db.query("select * from public.ks_setup_order_queue where checkout_session_id='cs_test_FixtureReceipt'")).rows[0];
+    assert.equal(row.user_id, owner); assert.equal(row.payment_intent_id, 'pi_FixtureReceipt');
+    assert.equal(row.livemode, false); assert.equal(row.tier, 'bronze'); assert.equal(row.connections, 1);
+    assert.equal(row.amount_cents, 2000); assert.equal(row.currency, 'usd'); assert.equal(row.duration_days, 30);
+    await assert.rejects(() => db.query('insert into public.ks_setup_order_queue select checkout_session_id,payment_intent_id,$1,livemode,tier,connections,duration_days,amount_cents,currency,fulfillment_status,queued_at from public.ks_setup_order_queue where checkout_session_id=$2',
+      [other, 'cs_test_FixtureReceipt']), /verified_setup_receipt_required/);
+  });
+  await check('the service cannot rewrite a queue identity, delete its obligation or announce completion', async () => {
+    await assert.rejects(() => db.query("update public.ks_setup_order_queue set user_id=$1 where checkout_session_id='cs_test_FixtureReceipt'", [other]), /permission denied/);
+    await assert.rejects(() => db.exec("delete from public.ks_setup_order_queue where checkout_session_id='cs_test_FixtureReceipt'"), /permission denied/);
+    await assert.rejects(() => db.exec("update public.ks_setup_order_queue set fulfillment_status='setup_complete' where checkout_session_id='cs_test_FixtureReceipt'"));
+  });
+  await check('review decisions survive a repeated payment and cannot be reset', async () => {
+    await record({ id: 'cs_test_ManualReview', intent: 'pi_ManualReview' });
+    await db.exec("update public.ks_setup_order_queue set fulfillment_status='requires_review' where checkout_session_id='cs_test_ManualReview'");
+    const replay = await record({ id: 'cs_test_ManualReview', intent: 'pi_ManualReview' });
+    assert.equal(replay.order_status, 'requires_review'); assert.equal(replay.queue_replayed, true);
+    await assert.rejects(() => db.exec("update public.ks_setup_order_queue set fulfillment_status='awaiting_activation' where checkout_session_id='cs_test_ManualReview'"), /setup_order_review_cannot_be_reset/);
+  });
+  await check('queue guard rejects identity changes and deletion even for the migration owner', async () => {
+    await db.exec('reset role');
+    await assert.rejects(() => db.exec("update public.ks_setup_order_queue set queued_at=now()+interval '1 day' where checkout_session_id='cs_test_FixtureReceipt'"), /setup_order_binding_is_immutable/);
+    await assert.rejects(() => db.exec("delete from public.ks_setup_order_queue where checkout_session_id='cs_test_FixtureReceipt'"), /setup_order_cannot_be_deleted/);
+    await db.exec('set role service_role');
+  });
+  await check('queue failure rolls back a new receipt and the exact retry recovers one order', async () => {
+    await db.exec(`reset role;
+      create function public.ks_test_queue_failure() returns trigger language plpgsql as $fixture$
+        begin if new.checkout_session_id='cs_test_QueueFailure' then raise exception 'synthetic_queue_failure'; end if; return new; end;
+      $fixture$;
+      create trigger ks_test_queue_failure before insert on public.ks_setup_order_queue
+        for each row execute function public.ks_test_queue_failure();
+      set role service_role;`);
+    await assert.rejects(() => record({ id: 'cs_test_QueueFailure', intent: 'pi_QueueFailure' }), /synthetic_queue_failure/);
+    assert.equal((await db.query("select count(*)::int as n from public.ks_payment_receipts where checkout_session_id='cs_test_QueueFailure'")).rows[0].n, 0);
+    assert.equal((await db.query("select count(*)::int as n from public.ks_setup_order_queue where checkout_session_id='cs_test_QueueFailure'")).rows[0].n, 0);
+    await db.exec('reset role; drop trigger ks_test_queue_failure on public.ks_setup_order_queue; set role service_role');
+    const recovered = await record({ id: 'cs_test_QueueFailure', intent: 'pi_QueueFailure' });
+    assert.equal(recovered.replayed, false); assert.equal(recovered.queue_replayed, false);
+    assert.equal((await record({ id: 'cs_test_QueueFailure', intent: 'pi_QueueFailure' })).queue_replayed, true);
+  });
+  await check('a previously saved receipt with no queue is recovered without rewriting it', async () => {
+    await db.query(`insert into public.ks_payment_receipts(checkout_session_id,payment_intent_id,user_id,livemode,tier,connections,duration_days,amount_cents,currency)
+      values ('cs_test_Recovered','pi_Recovered',$1,false,'bronze',1,30,2000,'usd')`, [owner]);
+    const before = (await db.query("select to_jsonb(r) as receipt from public.ks_payment_receipts r where checkout_session_id='cs_test_Recovered'")).rows[0].receipt;
+    const recovered = await record({ id: 'cs_test_Recovered', intent: 'pi_Recovered' });
+    assert.equal(recovered.replayed, true); assert.equal(recovered.queue_replayed, false);
+    assert.deepEqual((await db.query("select to_jsonb(r) as receipt from public.ks_payment_receipts r where checkout_session_id='cs_test_Recovered'")).rows[0].receipt, before);
   });
   await check('same checkout cannot change owner, intent, environment or purchased plan', async () => {
     for (const args of [{ user: other }, { intent: 'pi_Other' }, { live: true },
@@ -95,6 +148,7 @@ try {
     const before = (await db.query("select to_jsonb(r) as receipt from public.ks_payment_receipts r where checkout_session_id='cs_live_Legacy'")).rows[0].receipt;
     const result = await record({ id: 'cs_live_Legacy', intent: 'pi_Legacy', live: true });
     assert.equal(result.order_status, 'requires_review'); assert.equal(result.legacy_website_activated, true);
+    assert.equal((await db.query("select fulfillment_status from public.ks_setup_order_queue where checkout_session_id='cs_live_Legacy'")).rows[0].fulfillment_status, 'requires_review');
     assert.equal(result.activated, false); assert.equal(result.provider_activated, false);
     assert.deepEqual((await db.query("select to_jsonb(r) as receipt from public.ks_payment_receipts r where checkout_session_id='cs_live_Legacy'")).rows[0].receipt, before);
   });
@@ -108,6 +162,17 @@ try {
   await db.exec('reset role; set role authenticated');
   await check('browser role is actually denied by PostgreSQL', async () => {
     await assert.rejects(() => record(), /permission denied/);
+    await assert.rejects(() => db.exec('select * from public.ks_setup_order_queue'), /permission denied/);
+  });
+  await db.exec('reset role');
+  await check('queue RLS is enabled with no browser policies or service DELETE privilege', async () => {
+    const flags = (await db.query(`select relrowsecurity as rls,
+      (select count(*)::int from pg_policies where schemaname='public' and tablename='ks_setup_order_queue') as policies,
+      has_table_privilege('anon','public.ks_setup_order_queue','select') as anon_read,
+      has_table_privilege('authenticated','public.ks_setup_order_queue','select') as browser_read,
+      has_table_privilege('service_role','public.ks_setup_order_queue','delete') as backend_delete
+      from pg_class where oid='public.ks_setup_order_queue'::regclass`)).rows[0];
+    assert.deepEqual(flags, { rls: true, policies: 0, anon_read: false, browser_read: false, backend_delete: false });
   });
   console.log(`${checks} isolated PostgreSQL checks passed. All identities and payments are fictional; no Supabase project was contacted.`);
 } catch (error) {

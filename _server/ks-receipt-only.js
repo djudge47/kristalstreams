@@ -21,6 +21,8 @@ export async function recordPaymentReceipt(session, expectedLive, ownerId, admin
     || data.test_mode !== !expectedLive || data.tier !== payment.tier
     || data.connections_allowed !== payment.connections || data.activated !== false
     || data.provider_activated !== false || typeof data.replayed !== 'boolean'
+    || data.order_queued !== true || typeof data.queue_replayed !== 'boolean'
+    || typeof data.queued_at !== 'string' || !Number.isFinite(Date.parse(data.queued_at))
     || typeof data.legacy_website_activated !== 'boolean'
     || (data.order_status !== 'awaiting_activation' && !review)
     || (data.legacy_website_activated && !review)
@@ -34,6 +36,7 @@ export async function recordPaymentReceipt(session, expectedLive, ownerId, admin
     receipt_reference: payment.sessionId, tier: payment.tier,
     connections_allowed: payment.connections, activated: false,
     provider_activated: false, order_status: data.order_status,
+    order_queued: true, queued_at: data.queued_at, queue_replayed: data.queue_replayed,
     legacy_website_activated: data.legacy_website_activated,
     recorded_at: data.recorded_at, replayed: data.replayed,
   };

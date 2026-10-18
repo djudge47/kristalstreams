@@ -11,6 +11,7 @@ const result = {
   ok: true, payment_recorded: true, test_mode: true, receipt_reference: session.id,
   account_id: owner, tier: 'bronze', connections_allowed: 1, activated: false, provider_activated: false,
   legacy_website_activated: false, order_status: 'awaiting_activation', recorded_at: '2026-10-18T00:00:00Z', replayed: false,
+  order_queued: true, queued_at: '2026-10-18T00:00:00Z', queue_replayed: false,
 };
 let count = 0;
 async function check(label, fn) { await fn(); count++; console.log(`PASS: ${label}`); }
@@ -58,6 +59,16 @@ await check('old website activation requires review without claiming streaming s
 });
 await check('receipt replay is preserved without triggering any other side effect', async () => {
   assert.equal((await recordPaymentReceipt(session, false, owner, backend({ ...result, replayed: true }))).replayed, true);
+});
+await check('a missing, unconfirmed or malformed queue cannot return payment success', async () => {
+  for (const change of [{ order_queued: false }, { order_queued: undefined }, { queue_replayed: null },
+    { queued_at: null }, { queued_at: 'invalid' }]) {
+    await assert.rejects(() => recordPaymentReceipt(session, false, owner, backend({ ...result, ...change })), /do not pay again/);
+  }
+});
+await check('a recovered existing receipt can report its newly saved queue independently', async () => {
+  const recorded = await recordPaymentReceipt(session, false, owner, backend({ ...result, replayed: true, queue_replayed: false }));
+  assert.equal(recorded.replayed, true); assert.equal(recorded.order_queued, true); assert.equal(recorded.queue_replayed, false);
 });
 await check('unknown database fields are excluded from the response', async () => {
   const recorded = await recordPaymentReceipt(session, false, owner, backend({ ...result, password: 'fictional', payment_intent: 'pi_private' }));
