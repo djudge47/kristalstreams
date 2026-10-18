@@ -2,12 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Loader, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { paymentConfirmationView } from '../../_shared/ks-payment-confirmation-view.js';
+import type { PaymentConfirmationView } from '../../_shared/ks-payment-confirmation-view.js';
 
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('session_id');
-  const [status, setStatus] = useState<'checking' | 'success' | 'test' | 'error'>('checking');
+  const [status, setStatus] = useState<'checking' | 'error' | PaymentConfirmationView['kind']>('checking');
+  const [title, setTitle] = useState('Verifying payment');
   const [message, setMessage] = useState('Checking your payment with Stripe...');
   const [attempt, setAttempt] = useState(0);
 
@@ -16,6 +19,7 @@ const PaymentSuccess: React.FC = () => {
     let redirect: number | undefined;
     const confirm = async () => {
       setStatus('checking');
+      setTitle('Verifying payment');
       setMessage('Checking your payment with Stripe...');
       try {
         if (!sessionId) throw new Error('Missing checkout session. Contact support if you completed payment.');
@@ -30,19 +34,17 @@ const PaymentSuccess: React.FC = () => {
         const payload = await response.json().catch(() => ({}));
         if (controller.signal.aborted) return;
         if (!response.ok || !payload.ok) throw new Error(payload.error || 'Payment verification could not finish. Contact support; do not pay again.');
-        if (payload.test_mode === true && payload.activated === false) {
-          setStatus('test');
-          setMessage(payload.order_status === 'awaiting_activation'
-            ? 'Your test payment is confirmed and saved in the CRM as paid — awaiting activation. No real charge or streaming service activation was made.'
-            : 'Your test payment was confirmed and recorded. No real charge or live service activation was made.');
-        } else if (payload.activated === true && payload.test_mode === false) {
-          setStatus('success');
-          setMessage('Your payment is confirmed and your website plan is active. Streaming login and setup instructions are supplied separately. Taking you to your dashboard...');
+        const view = paymentConfirmationView(payload, sessionId);
+        setStatus(view.kind);
+        setTitle(view.title);
+        setMessage(view.message);
+        if (view.kind === 'pending' && payload.test_mode === false && payload.activated === true) {
           redirect = window.setTimeout(() => navigate('/dashboard?payment=success', { replace: true }), 1200);
-        } else throw new Error('Payment is recorded, but activation needs attention. Contact support; do not pay again.');
+        }
       } catch (error) {
         if (controller.signal.aborted) return;
         setStatus('error');
+        setTitle('Verification needs attention');
         setMessage(error instanceof Error ? error.message : 'Unable to verify payment. Please contact support.');
       }
     };
@@ -55,16 +57,20 @@ const PaymentSuccess: React.FC = () => {
       <div className="mx-auto max-w-xl rounded-3xl border border-white/10 bg-dark-100 p-8 text-center shadow-2xl shadow-black/40" role="status" aria-live="polite">
         {status === 'checking' ? <Loader className="mx-auto mb-6 h-14 w-14 animate-spin text-primary" /> :
           status === 'error' ? <AlertCircle className="mx-auto mb-6 h-14 w-14 text-red-500" /> :
+          status === 'review' ? <AlertCircle className="mx-auto mb-6 h-14 w-14 text-amber-400" /> :
           <CheckCircle className="mx-auto mb-6 h-14 w-14 text-green-500" />}
         <h1 className="mb-4 text-3xl font-bold">
-          {status === 'checking' ? 'Verifying payment' : status === 'test' ? 'Test payment confirmed' : status === 'success' ? 'Payment confirmed' : 'Verification needs attention'}
+          {title}
         </h1>
         <p className="mb-8 text-gray-300">{message}</p>
         {status === 'error' && <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button onClick={() => setAttempt(value => value + 1)} className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-red-700">Check Again</button>
           <button onClick={() => navigate('/support')} className="rounded-lg bg-white/10 px-6 py-3 font-medium text-white hover:bg-white/15">Contact Support</button>
         </div>}
-        {status === 'test' && <button onClick={() => navigate('/dashboard')} className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-red-700">Go to Dashboard</button>}
+        {status !== 'checking' && status !== 'error' && <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <button onClick={() => navigate('/dashboard')} className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-red-700">Go to Dashboard</button>
+          {status === 'review' && <button onClick={() => navigate('/support')} className="rounded-lg bg-white/10 px-6 py-3 font-medium text-white hover:bg-white/15">Contact Support</button>}
+        </div>}
       </div>
     </div>
   );

@@ -74,7 +74,7 @@ const CustomerSetupStatus: React.FC<{ accountId: string }> = ({ accountId }) => 
     {view.kind === 'signed_out' && <p className="mt-4 text-sm leading-6 text-gray-300">Your account session changed. <Link to="/login" className="font-semibold text-primary underline underline-offset-4">Sign in again</Link> to reload your own order status.</p>}
     {view.kind === 'error' && <div role="alert" className="mt-4 text-sm leading-6 text-amber-200"><p>{view.message}</p><p className="mt-2">This does not mean your payment failed. If you already paid, please do not pay again. Contact support if you need help.</p></div>}
     {view.kind === 'ready' && <>
-      <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-300">Your payment record is saved. Streaming setup has not been completed for the orders shown below.</p>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-300">Your payment record is saved. Streaming setup has not yet been confirmed in your account for the orders shown below.</p>
       <ol className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Order progress">
         <li className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-4"><CheckCircle2 className="mb-2 h-5 w-5 text-emerald-400" aria-hidden="true" /><p className="text-sm font-semibold text-white">1. Payment received</p><p className="mt-1 text-xs text-emerald-300">Recorded</p></li>
         <li aria-current="step" className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4"><Clock3 className="mb-2 h-5 w-5 text-amber-300" aria-hidden="true" /><p className="text-sm font-semibold text-white">2. Streaming setup</p><p className="mt-1 text-xs text-amber-200">Pending</p></li>
@@ -87,7 +87,7 @@ const CustomerSetupStatus: React.FC<{ accountId: string }> = ({ accountId }) => 
           <div><dt className="text-gray-500">Connections ordered</dt><dd className="mt-1 text-white">{order.connections}</dd></div>
           <div><dt className="text-gray-500">Payment recorded</dt><dd className="mt-1 text-white">{new Date(order.recordedAt).toLocaleString()}</dd></div>
         </dl>
-        <p className="mt-4 text-xs leading-5 text-cyan-200/80">This is a test payment. It did not make a real charge or activate streaming service.</p>
+        <p className="mt-4 text-xs leading-5 text-cyan-200/80">This test payment did not charge your card. Streaming setup has not been confirmed for this order.</p>
         <details className="mt-3 text-xs text-gray-400"><summary className="cursor-pointer font-medium">Order reference for support</summary><p className="mt-2 break-all">{order.reference}</p></details>
       </article>)}</div>
       <p className="mt-4 text-sm leading-6 text-gray-300">Please do not pay again for these orders. Your website plan and any existing streaming access are separate from this pending setup.</p>
