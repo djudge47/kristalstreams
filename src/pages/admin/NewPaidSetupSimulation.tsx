@@ -30,7 +30,7 @@ const NewPaidSetupSimulation: React.FC<Props> = ({ sessionId, tier, connections,
       if (controller.signal.aborted || pending.current !== controller) return;
       if (authError || !data.session?.access_token) throw new Error('Please sign in again to your admin account.');
       owner.current = data.session.user.id;
-      const response = await fetch(`/api/ks-preview-new-paid-setup?sessionId=${encodeURIComponent(sessionId)}`, {
+      const response = await fetch(`/api/ks-preview-paid-orders?view=new-customer-simulation&sessionId=${encodeURIComponent(sessionId)}`, {
         method: 'GET', cache: 'no-store', signal: controller.signal,
         headers: { Authorization: `Bearer ${data.session.access_token}`, Accept: 'application/json' },
       });

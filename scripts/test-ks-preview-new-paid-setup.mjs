@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { createPreviewNewPaidSetupHandler } from '../_server/ks-preview-new-paid-setup.js';
+import { createPreviewPaidOrdersHandler, createPreviewPaidOrdersRouter } from '../_server/ks-preview-paid-orders.js';
+import { readdirSync } from 'node:fs';
 const userId = '00000000-0000-4000-8000-000000000001', checkedAt = '2026-10-18T00:00:00.000Z';
 const env = { VERCEL_ENV: 'preview', VITE_SUPABASE_URL: 'https://synthetic.supabase.co', VITE_SUPABASE_ANON_KEY: 'fake-anon', SUPABASE_SERVICE_ROLE_KEY: 'fake-server' };
 const user = { id: userId, email: 'djudge47@gmail.com', email_confirmed_at: '2026-01-01', is_anonymous: false };
@@ -59,5 +61,31 @@ await check('forged enable flags, target lines, packages, passwords and approval
   assert.equal(res.code, 200); assert.equal(res.body.report.liveExecutionEnabled, false); assert.equal(res.body.report.realProviderWrites, 0);
   const before = [reads, catalogs]; const post = response(); await handler({ ...req, method: 'POST', body: { approved: true } }, post);
   assert.equal(post.code, 405); assert.deepEqual([reads, catalogs], before);
+});
+await check('shared deployment route preserves ordinary order listing and only the explicit view selects the simulator', async () => {
+  let listCalls = 0, simulationCalls = 0;
+  const router = createPreviewPaidOrdersRouter({ listHandler: async (_req, res) => { listCalls++; return res.status(200).json({ mode: 'read-only', orders: [] }); },
+    simulationHandler: make() });
+  const list = response(); await router({ ...req, query: {} }, list); assert.equal(list.code, 200); assert.equal(listCalls, 1);
+  const actualSimulation = make(); const route = createPreviewPaidOrdersRouter({ listHandler: () => { throw new Error('wrong view'); },
+    simulationHandler: async (request, res) => { simulationCalls++; return actualSimulation(request, res); } });
+  const result = response(); await route({ ...req, query: { ...req.query, view: 'new-customer-simulation' } }, result);
+  assert.equal(result.code, 200); assert.equal(simulationCalls, 1); assert.equal(result.body.report.liveExecutionEnabled, false);
+  for (const view of ['create_line', ['new-customer-simulation'], null]) {
+    const invalid = response(); await router({ ...req, query: { ...req.query, view } }, invalid); assert.equal(invalid.code, 400);
+  }
+  assert.equal(listCalls, 1);
+});
+await check('shared route cannot bypass simulation auth, Preview gate or POST rejection', async () => {
+  for (const [patch, request, code] of [[{}, { ...req, headers: {} }, 401], [{ env: { ...env, VERCEL_ENV: 'production' } }, req, 404],
+    [{ user: { ...user, email: 'other@example.invalid' } }, req, 403], [{}, { ...req, method: 'POST' }, 405]]) {
+    const route = createPreviewPaidOrdersRouter({ listHandler: createPreviewPaidOrdersHandler({}), simulationHandler: make(patch) });
+    const res = response(); await route({ ...request, query: { ...req.query, view: 'new-customer-simulation' } }, res);
+    assert.equal(res.code, code);
+  }
+});
+await check('deployment uses twelve API function entrypoints and no separate simulator entrypoint', () => {
+  const entries = readdirSync(new URL('../api/', import.meta.url)).filter(name => /\.(js|ts)$/.test(name));
+  assert.equal(entries.length, 12); assert.ok(!entries.includes('ks-preview-new-paid-setup.js'));
 });
 console.log(`${count} Preview simulation API checks passed. Only synthetic auth/catalog/storage responses were used.`);
