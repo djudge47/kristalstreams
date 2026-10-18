@@ -37,7 +37,7 @@ const Footer: React.FC = memo(() => {
         <div className="grid md:grid-cols-4 gap-8 mb-12">
           <div>
             <div className="flex items-center mb-4">
-              <img src="/logo/ks-mark.png" alt="Kristal Streams" className="h-7 w-auto mr-2" />
+              <img src="/logo/ks-round-black.svg" alt="Kristal Streams" className="h-7 w-[49px] object-contain mr-2" />
               <h3 className="text-xl font-bold text-primary">Kristal Streams</h3>
             </div>
             <p className="text-gray-400 mb-4">
