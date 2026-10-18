@@ -4,9 +4,17 @@ This bridge connects a saved review reservation to the **existing guarded Previe
 
 ## Current installation status
 
-The bridge and its receipt/queue/review prerequisites are **not installed** in the connected project. Two migration requests returned `McpServerError: Invalid or expired requestState`. Read-only checks after both requests confirmed zero new tables, no completion RPC, the same single completed paid test/owner login and no outstanding dispatch. Nothing was partially installed. The connector still supports reads; its migration write operation is blocked. Recheck current schema/migration history before a later retry rather than blindly resubmitting an uncertain request.
+The private database foundation is **installed, empty and unused by running routes**, as verified on October 18, 2026. The earlier combined migration requests failed with `McpServerError: Invalid or expired requestState` and were confirmed to have changed nothing. Three smaller dependency-ordered migration requests subsequently succeeded; this resolves the installation blocker but does not establish its original cause.
 
-The prepared installer combines `ks-receipt-only-schema.sql`, `ks-setup-review-claim-schema.sql` and `ks-reviewed-preview-completion-schema.sql` in one transaction, with a five-second lock timeout and thirty-second statement timeout. It seeds no customer, receipt, policy, package approval, purchase intent, reservation or spending authorization. The individual files are schema source, not CLI-generated migration filenames. Use the Supabase migration tool for connected DDL and retain the resulting migration history entry after installation succeeds.
+The applied migration history is exported verbatim into `supabase/migrations` under the versions actually returned by Supabase:
+
+| Version | Migration |
+| --- | --- |
+| 20261018102053 | add_private_receipt_setup_queue |
+| 20261018102102 | add_private_review_only_setup_claims |
+| 20261018102117 | add_reviewed_preview_completion_bridge |
+
+These were three separately committed migrations, each with a five-second lock timeout and thirty-second statement timeout. Their stored SQL was compared byte-for-byte with the reviewed source before export. They seed no customer, receipt, policy, package approval, purchase intent, reservation or spending authorization. The `scripts/*-schema.sql` files remain review/test source; do not rerun them against the installed objects or resubmit the failed combined installer. Use new reviewed migrations for later changes.
 
 The new server adapter is unrouted and returns disabled unless `VERCEL_ENV=preview` and `KS_REVIEWED_PREVIEW_COMPLETION=enabled-v1`. No flag was configured. Production is always rejected. That flag can enable only this **local completion adapter**; it cannot authorize a provider creation or an extra credit deduction. No current API, checkout, webhook or existing worker imports the adapter.
 
@@ -36,7 +44,11 @@ The server adapter first retrieves expanded settled sandbox payment evidence and
 
 The fixture uses PostgreSQL's native SHA-256 byte function to supply the identical text/SHA-256 overload expected from `extensions.digest`; it does not install pgcrypto or replace a function in the connected project. Set `KS_PGLITE_MODULE` to the temporary **@electric-sql/pglite@0.5.10** `dist/index.js` file URL and run `scripts/test-ks-reviewed-preview-completion-db.mjs`. Run `scripts/test-ks-reviewed-preview-completion.mjs` for the adapter suite. No application dependency changed.
 
-PGlite has one SQL session. These checks prove application-schema constraint/transaction behavior in that engine, not deployed migration compatibility or simultaneous-session lock waiting/deadlocks. Perform those checks on disposable full PostgreSQL before enabling an execution path. Targeted lint and whitespace checks also passed.
+PGlite has one SQL session. These checks prove application-schema constraint/transaction behavior in that engine, not a complete deployed runtime flow or simultaneous-session lock waiting/deadlocks. Perform those checks on disposable full PostgreSQL before enabling an execution path. Targeted lint and whitespace checks also passed.
+
+Connected verification confirmed all eight new tables exist with RLS enabled and no anonymous/browser read grants. Every new table has zero rows. The completion RPC uses invoker privileges, an empty search path, no browser EXECUTE and explicit service EXECUTE. Non-writing guard calls rejected missing reservation details and a missing completion claim. The existing one attempt, one paid fulfillment and one encrypted owner login remain; both before and after installation there are zero old reseller dispatches. No real provider, payment, email, customer record or credit balance was changed.
+
+The post-install security advisor adds eight informational [RLS-with-no-policy notices](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) for these intentionally service-only tables; browser grants are revoked and no browser policies should be added to silence them. The pre-existing [leaked-password-protection warning](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) is unchanged. The migrations' deployed DDL compatibility and missing-input guards are now verified; a successful provider/completion flow and full multi-session contention on the connected project have not been exercised.
 
 ## Remaining rollout work
 
