@@ -61,7 +61,7 @@ const Header: React.FC = memo(() => {
       <div className="container mx-auto px-4 pt-1 lg:pt-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-2">
           <Link to="/" className="flex items-center min-w-0 text-lg lg:text-xl font-bold text-primary">
-            <img src="/logo/ks-round-black.svg" alt="Kristal Streams" className="h-8 w-14 object-contain mr-2 lg:h-9 lg:w-[63px]" />
+            <img src="/logo/ks-mark.png" alt="Kristal Streams" className="h-8 lg:h-9 w-auto mr-2" />
             Kristal Streams
           </Link>
 
