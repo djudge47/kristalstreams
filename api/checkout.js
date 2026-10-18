@@ -16,6 +16,8 @@ export default async function handler(req, res) {
     const suffix = [...randomBytes(8)].map(byte => String.fromCharCode(97 + byte % 26)).join('');
     const session = await context.stripe.checkout.sessions.create({
       mode: 'payment',
+      // Require payment in full; keep eligible cards and wallets available.
+      excluded_payment_method_types: ['affirm', 'afterpay_clearpay', 'alma', 'billie', 'klarna', 'scalapay', 'sunbit', 'zip'],
       integration_identifier: `kristal_streams_${suffix}`,
       customer_email: user.email || undefined,
       client_reference_id: user.id,
