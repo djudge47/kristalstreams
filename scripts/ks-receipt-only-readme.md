@@ -1,0 +1,23 @@
+# Receipt-only recording preparation
+
+This change prepares the first part of payment-to-XUI automation: record a verified payment without granting streaming or website entitlement. It is deliberately **not imported by any running route**, and its SQL has not been installed in the connected Supabase project. The current checkout, webhook, confirmation, notification, existing trial and completed paid test retain their behavior. There is no new function entrypoint, package dependency, environment setting, provider request or credit authorization.
+
+`_server/ks-receipt-only.js` validates the canonical paid Checkout Session, purchaser, mode, amount, currency, plan and duration before calling a separate service-only `ks_record_paid_checkout` function. It checks the returned owner/reference/plan/mode and whitelists response fields. It always reports `activated: false` and `provider_activated: false`; recording a payment cannot claim an XUI line exists.
+
+The proposed SQL only inserts a canonical receipt, or reads an exact replay. It checks all immutable receipt fields, serializes on the profile before locking the receipt, and preserves the original timestamp. It never updates a profile, expires or extends a plan, resets a device counter, changes an existing receipt, creates a CRM row, sends email or invokes a provider. An older activated receipt or one with an existing service expiry returns `requires_review`; existing service remains intact. New receipts return `awaiting_activation`. That response is receipt state, not a durable processing queue.
+
+The function uses SECURITY INVOKER, an empty search path, and explicit service-role-only EXECUTE. No existing function or grant is altered by the proposal. The original `ks_apply_paid_checkout` remains in use and still contains legacy live website activation behavior; this staged module does not fix that deployed behavior until a coordinated rollout replaces its callers.
+
+## Validation
+
+`node scripts/test-ks-receipt-only.mjs` exercises the server boundary with injected RPC results; `node scripts/test-ks-payments.mjs` checks the existing recorder and catalog regression behavior.
+
+`scripts/test-ks-receipt-only-db.mjs` uses **@electric-sql/pglite 0.5.10**, installed in a temporary directory outside this application, to run the proposed SQL in an isolated in-memory PostgreSQL instance. Set `KS_PGLITE_MODULE` to that package's `dist/index.js` file URL before running it. It boots fictional users and profile rows, uses the existing receipt-table DDL, exercises service/browser roles, both payment environments and all twenty plan/connection combinations, then destroys the instance. It has no connection string and does not contact Supabase. It does not prove real multi-session concurrency, deployed migration compatibility or end-to-end automatic activation.
+
+Verified: 9 new server-boundary checks, 12 isolated PostgreSQL scenarios, and 50 affected existing payment/queue/order-email/test-control checks passed (71 total). Targeted ESLint and a full Vite build (10.30 seconds) passed. A read-only project check confirmed that the new SQL function is absent and the existing service role already has the profile permissions required for its row lock. No connected database schema, grants, payment receipt or customer entitlement was changed by this preparation.
+
+## Coordinated rollout still required
+
+Before installing this SQL or routing payments to it, prepare the durable live setup queue and bounded worker policy, distinguish authenticated new purchases from existing-service renewals, generalize encryption/owner status/completion for the live environment, and change order notifications to accept pending receipts without announcing service readiness. The current email handler rejects unactivated live receipts, so changing only the recorder would cause avoidable notification failures. Completion must use provider-confirmed identity, allowance and calendar expiry, and must never resend an ambiguous creation.
+
+Update success/dashboard copy to distinguish recorded payment from completed XUI setup. Keep the automatic worker disabled until the whole path is verified with synthetic/failure/replay checks and a separately authorized deployment/credit policy. Do not silently reinterpret the earlier one-credit approval as authorization for general spending or another real paid test.
