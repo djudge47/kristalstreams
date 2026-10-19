@@ -1,0 +1,13 @@
+{
+  "sourceCommit": "f434a3a2220a0ac09dd83aa367dfb9b78aaaebe3",
+  "files": {
+    "ks-payment-schema.sql": "35d2b7bab8d3eb89b89510a60bf61da482dd2d2f977ce3d8dd78cc54eeb4c688",
+    "ks-preview-paid-orders-schema.sql": "6bc446f85f4412434904354d4755d525be5563c3b456059bedf55d6c5b0803ff",
+    "ks-paid-foundation-schema.sql": "053d89eae0994f66c325d61a4e43e2192bd68eb112fdba37f2d2bcd60bb545fa",
+    "ks-guarded-paid-execution-schema.sql": "8f86670fdaaaf55934166db4c965a6dbbc6b31d4c035c77c6fc4eb7d8cb871b6",
+    "ks-receipt-only-schema.sql": "c1447e27fdaf0fd51bd4a9383934abd2d8179ebf84684619bb1a48ea71e196f5",
+    "ks-setup-review-claim-schema.sql": "9eb115e33f4517b98b86a4bba4bda9d3dedcfaf35897c33a6c5456392db27c2a",
+    "ks-reviewed-preview-completion-schema.sql": "84150882e7e5a33eed48a9c4537031fa68af53d9d6dbf844d30ceaa0296a423e",
+    "ks-reseller-reservation-exclusion-schema.sql": "d6151a938e007c572ea98ce7c6de512558c411664675420c5f053a4d413966f9"
+  }
+}
