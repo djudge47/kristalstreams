@@ -51,18 +51,18 @@ The proposed `ks-live-receipt-rollback-guard.sql` additionally rejects changes t
 activation/expiry on a live receipt already bound to that queue. If older code
 calls the legacy recorder, its receipt update fails and PostgreSQL rolls back
 the profile mutation in that same transaction. Existing account data is not
-rewritten, and prior activated receipts are not revoked. This guard is staged
-SQL, not an installed migration. A read-only connected check on October 20
+rewritten, and prior activated receipts are not revoked. This guard is included
+in the draft migration, which remains uninstalled. A read-only connected check on October 20
 confirmed that both this guard and the pending-alert table are absent. Future provider-confirmed live completion must
 be reviewed against it rather than bypassing or dropping it.
 
 ## Release prerequisites remain open
 
 Do not enable the new flag as part of this preparation. Before any coordinated
-release, review and generate new migrations for the pending-alert SQL and the
-rollback guard; verify them against the current full connected schema. The bounded native
-receipt/alert contention checks below now pass; broader worker/completion
-contention and connected rollout verification remain open. The receipt/queue foundation is already installed;
+release, review the new combined pending-alert/rollback-guard migration and its
+bounded connected dependency checks described below. The exact migration and
+native receipt/alert contention checks pass; broader worker/completion
+contention and connected rollout execution remain open. The receipt/queue foundation is already installed;
 do not rerun its creation script. Preserve deployed legacy email payloads and
 their deduplication history. Deploy the protected notification router and its
 dependencies before enabling the server path.
@@ -99,7 +99,7 @@ actual live owner status or provider activation. 135 checks passed across the li
 
 ## Native database follow-up
 
-`test-ks-live-receipt-native.mjs` and the scoped GitHub Actions workflow prepare
+The initial `test-ks-live-receipt-native.mjs` and scoped GitHub Actions workflow ran
 twelve independent-session checks on a disposable PostgreSQL 17.11 service.
 They load the hash-verified application foundation, installed checkout-binding
 source, legacy email/recorder and proposed pending-alert/rollback-guard SQL.
@@ -124,9 +124,63 @@ The downloaded artifact's SHA-256 was verified against GitHub's digest, then
 its server version, source commit, twelve success results and SQL hashes were
 checked. The retained report is
 [`docs/verification/receipt-native-20261020.json`](../docs/verification/receipt-native-20261020.json).
-Subsequent evidence-only commits do not change the tested harness or SQL.
+The immediate evidence-only follow-up preserved that tested harness and SQL.
+The migration follow-up below expands the harness and tests the combined file.
 
 This fixture database is still not the full connected Supabase project. The
 checks perform no native provider dispatch, live owner/completion flow or
-migration on that project. Connected DDL compatibility and the broader release
-prerequisites above remain open.
+migration on that project. The follow-up below checks current connected
+dependencies without applying DDL; broader release prerequisites remain open.
+
+## CLI-generated migration and connected compatibility follow-up
+
+The reviewed file is
+[`20261020044005_add_live_receipt_pending_alerts_and_rollback_guard.sql`](../supabase/migrations/20261020044005_add_live_receipt_pending_alerts_and_rollback_guard.sql).
+Supabase CLI 2.121.0 generated its empty filename with `migration new`; the
+reviewed SQL was then filled locally. Automatic approval review blocked the
+CLI's unrelated telemetry request after file creation; no telemetry retry was
+needed. No project link, database push or migration apply was performed.
+
+One transaction installs both new SQL sections without recreating the existing
+foundation. Its five-second lock timeout and thirty-second statement timeout
+bound installation. Locks follow receipt → queue → legacy email order before
+DDL, so installation cannot hold queue while waiting for an in-flight receipt
+writer. The preflight rejects existing rollout objects, changed column
+signatures, widened browser permissions, missing RLS/service permissions,
+changed reviewed function bodies/configuration and a missing/disabled queue
+guard. It preserves the queue's column-scoped update permission. Historical
+CRLF is normalized to LF for the body fingerprint; other content is exact.
+
+Read-only catalog checks at **2026-10-20 04:43:37 UTC** passed for all three
+receipt/queue/legacy-alert tables, four function bodies and private grants, and
+the current queue trigger. The connected server reports PostgreSQL **17.6**;
+all five new objects are absent. Existing constraints and column definitions
+were captured in
+[`receipt-migration-connected-20261020.json`](../docs/verification/receipt-migration-connected-20261020.json).
+The security advisor was checked; its existing findings and remediation links
+are recorded there. No policy, grant, Auth setting or customer record changed.
+
+[Actions run 39371053392](https://github.com/djudge47/kristalstreams/actions/runs/39371053392)
+tested the **exact combined migration** on separate disposable PostgreSQL
+**17.6 and 17.11** services. All **18 checks passed on each version**, for source
+`8d0d4ae34335c1a5bdba659ccc2ceab8d5f91e8d` and tree
+`7a2ebd468b0d4f51304be7a60110bd28b9504f2c`. The six new cases prove rejection
+of permission/function/column drift without partial DDL, full rollback on a
+lock timeout, safe installation while a receipt writer finishes, and safe
+rejection of reapplication. The existing twelve contention cases then execute
+against those installed objects. The legacy function fixture uses connected
+CRLF line endings; reviewed-source parity and all SQL hashes are checked.
+
+Both downloaded artifact digests, source commits, actual server versions,
+eighteen results and SQL hashes were independently verified. Retained reports:
+
+- [`receipt-migration-native-170006-20261020.json`](../docs/verification/receipt-migration-native-170006-20261020.json)
+- [`receipt-migration-native-170011-20261020.json`](../docs/verification/receipt-migration-native-170011-20261020.json)
+
+These are bounded catalog compatibility and disposable installation results,
+not an application of DDL to Supabase or a complete live-release verification.
+The rollout remains disabled and production's old recorder remains unchanged.
+Review connected execution and notification deployment with the remaining
+owner/completion/renewal/recovery work before any separate production release.
+Pausing the flag must retain the guard and saved orders; dropping these objects
+is not a safe rollback procedure.

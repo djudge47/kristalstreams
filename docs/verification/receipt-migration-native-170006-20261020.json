@@ -1,0 +1,113 @@
+{
+  "kind": "native-postgresql-receipt-contention",
+  "sourceCommit": "8d0d4ae34335c1a5bdba659ccc2ceab8d5f91e8d",
+  "startedAt": "2026-10-20T04:43:30.444Z",
+  "tests": [
+    {
+      "name": "migration rejects exposed browser permissions without leaving new objects",
+      "passed": true
+    },
+    {
+      "name": "migration rejects function configuration drift without partial DDL",
+      "passed": true
+    },
+    {
+      "name": "migration rejects changed columns without partial DDL",
+      "passed": true
+    },
+    {
+      "name": "exact migration times out behind a writer and leaves all new objects absent",
+      "passed": true
+    },
+    {
+      "name": "migration waits before queue locking so an in-flight receipt can finish",
+      "passed": true
+    },
+    {
+      "name": "reapplying the new migration rejects existing objects and preserves accepted orders",
+      "passed": true
+    },
+    {
+      "name": "three independent native PostgreSQL backends load the current application foundation",
+      "passed": true
+    },
+    {
+      "name": "simultaneous confirmation waits on a real lock, then recovers one receipt and queue",
+      "passed": true
+    },
+    {
+      "name": "rollback of the first confirmation lets the waiting session create exactly one order",
+      "passed": true
+    },
+    {
+      "name": "a shared payment intent cannot become a second checkout under contention",
+      "passed": true
+    },
+    {
+      "name": "simultaneous pending-alert preparation preserves one frozen body and first timestamp",
+      "passed": true
+    },
+    {
+      "name": "rolled-back alert preparation leaves the waiting session one durable alert",
+      "passed": true
+    },
+    {
+      "name": "simultaneous delivery acknowledgements remain final and reject conflicting provider IDs",
+      "passed": true
+    },
+    {
+      "name": "old activation racing an accepted receipt-only order rolls back its profile change",
+      "passed": true
+    },
+    {
+      "name": "lock timeout leaves no partial order and an exact later retry succeeds",
+      "passed": true
+    },
+    {
+      "name": "historical activated access is preserved and adopted only as a review obligation",
+      "passed": true
+    },
+    {
+      "name": "native grants deny browsers and expose no provider dispatch or spending",
+      "passed": true
+    },
+    {
+      "name": "all customer profiles remain byte-equivalent after native races and recovery",
+      "passed": true
+    }
+  ],
+  "sqlSources": {
+    "../supabase/migrations/20261020003225_add_private_checkout_intent_binding.sql": "23afae59897c8e7b2732afcacab20ffd676142a00a2888efbfca1d83ac789834",
+    "ks-payment-schema.sql": "35d2b7bab8d3eb89b89510a60bf61da482dd2d2f977ce3d8dd78cc54eeb4c688",
+    "ks-order-email-schema.sql": "574020129ea7dad71fa978622ec4784e110aeac9e72fed8e5dd784f809c7a182",
+    "../supabase/migrations/20261020044005_add_live_receipt_pending_alerts_and_rollback_guard.sql": "c66b4ef6934867b0e2d7b185ebe25d5a0746d49acf6416828b386bf1d4893abd",
+    "ks-pending-order-email-schema.sql": "31e16b88ab23381e7d3bc28f17ad21a10ce421f348fb03888f31f387c832250a",
+    "ks-live-receipt-rollback-guard.sql": "9e90631164ec8a5d93f586751fac7423fb8fc2f2a8947eb38f96304ac6bd46c6"
+  },
+  "server": {
+    "version": "170006",
+    "database": "ks_receipt_native_test",
+    "isolation": "read committed"
+  },
+  "foundationManifest": {
+    "sourceCommit": "f434a3a2220a0ac09dd83aa367dfb9b78aaaebe3",
+    "files": {
+      "ks-payment-schema.sql": "35d2b7bab8d3eb89b89510a60bf61da482dd2d2f977ce3d8dd78cc54eeb4c688",
+      "ks-preview-paid-orders-schema.sql": "6bc446f85f4412434904354d4755d525be5563c3b456059bedf55d6c5b0803ff",
+      "ks-paid-foundation-schema.sql": "053d89eae0994f66c325d61a4e43e2192bd68eb112fdba37f2d2bcd60bb545fa",
+      "ks-guarded-paid-execution-schema.sql": "8f86670fdaaaf55934166db4c965a6dbbc6b31d4c035c77c6fc4eb7d8cb871b6",
+      "ks-receipt-only-schema.sql": "c1447e27fdaf0fd51bd4a9383934abd2d8179ebf84684619bb1a48ea71e196f5",
+      "ks-setup-review-claim-schema.sql": "9eb115e33f4517b98b86a4bba4bda9d3dedcfaf35897c33a6c5456392db27c2a",
+      "ks-reviewed-preview-completion-schema.sql": "84150882e7e5a33eed48a9c4537031fa68af53d9d6dbf844d30ceaa0296a423e",
+      "ks-reseller-reservation-exclusion-schema.sql": "d6151a938e007c572ea98ce7c6de512558c411664675420c5f053a4d413966f9"
+    }
+  },
+  "passed": true,
+  "finishedAt": "2026-10-20T04:43:37.079Z",
+  "artifactVerification": {
+    "workflowRun": 39371053392,
+    "artifactId": 12241880009,
+    "zipDigest": "sha256:a4fd84bddc42982a6d3666d8195b11171fd626184c26f36cbb659b301679c866",
+    "verifiedSqlSources": true
+  }
+}
