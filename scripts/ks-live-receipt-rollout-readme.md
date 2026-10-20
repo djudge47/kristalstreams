@@ -60,8 +60,9 @@ be reviewed against it rather than bypassing or dropping it.
 
 Do not enable the new flag as part of this preparation. Before any coordinated
 release, review and generate new migrations for the pending-alert SQL and the
-rollback guard; verify them against the current full PostgreSQL schema and
-native concurrent sessions. The receipt/queue foundation is already installed;
+rollback guard; verify them against the current full connected schema. The bounded native
+receipt/alert contention checks below now pass; broader worker/completion
+contention and connected rollout verification remain open. The receipt/queue foundation is already installed;
 do not rerun its creation script. Preserve deployed legacy email payloads and
 their deduplication history. Deploy the protected notification router and its
 dependencies before enabling the server path.
@@ -90,9 +91,10 @@ legacy activation attempt rolled back by the proposed guard. Other checks use
 intercepted Stripe/email transports, real Supabase SDK query construction with
 fictional responses, and static rendering of the actual customer component.
 
-PGlite has one SQL session. These checks do not prove native connection
-contention, deployed Stripe/Resend delivery, actual live owner status, or provider
-activation. 135 checks passed across the listed suites. The Vite build (10.65 seconds) and focused lint pass. TypeScript retains the same
+PGlite has one SQL session. Those embedded checks do not prove native
+contention; the separate native follow-up below supplies bounded receipt/alert
+contention evidence. Neither suite proves deployed Stripe/Resend delivery,
+actual live owner status or provider activation. 135 checks passed across the listed suites. The Vite build (10.65 seconds) and focused lint pass. TypeScript retains the same
 45 baseline diagnostics, with none added; the repository is not type-clean.
 
 ## Native database follow-up
@@ -112,7 +114,19 @@ historical access. Each retained report binds the source commit, SQL hashes and
 native server version to the results. The runner has read-only repository
 permissions, no project secrets, pinned official Actions and an eight-minute cap.
 
-The local workspace has no native PostgreSQL or Docker, so this new native
-suite has not yet run locally. Its workflow result must be inspected before
-claiming native contention passed. This fixture database is still not the full
-connected Supabase project, and no migration is installed by this check.
+The local workspace has no native PostgreSQL or Docker. The suite ran in
+[GitHub Actions run 39370096443](https://github.com/djudge47/kristalstreams/actions/runs/39370096443)
+on October 20, 2026. **All twelve checks passed** on PostgreSQL 17.11, using
+three distinct backends and observed lock waits. The tested source commit is
+`5ed9d589801334a1ffa80d1e39ebe8244e5257bd`; its tested tree matched the local tree.
+
+The downloaded artifact's SHA-256 was verified against GitHub's digest, then
+its server version, source commit, twelve success results and SQL hashes were
+checked. The retained report is
+[`docs/verification/receipt-native-20261020.json`](../docs/verification/receipt-native-20261020.json).
+Subsequent evidence-only commits do not change the tested harness or SQL.
+
+This fixture database is still not the full connected Supabase project. The
+checks perform no native provider dispatch, live owner/completion flow or
+migration on that project. Connected DDL compatibility and the broader release
+prerequisites above remain open.
