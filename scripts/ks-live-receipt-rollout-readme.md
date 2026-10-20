@@ -37,7 +37,7 @@ mode, then independently validate returned ownership, catalog and receipt data.
 Responses expose no credentials, payment-intent ID or invented service expiry.
 The existing customer panel and support context distinguish actual payments
 from Sandbox payments and show pending/review state without a ready claim.
-Preview's pending/completed-payment flow retains its existing behavior.
+Preview still records test payments without website activation. Its completed/expired status and payment rechecks now use the separate proof contract described in `ks-completed-order-status-readme.md`.
 
 ## A paused rollout must preserve accepted orders
 
@@ -206,3 +206,13 @@ reviewed handoff remains a separate isolated rehearsal. Native signed-handoff
 integration, full ownership/time-boundary coverage, live completion/renewal/
 reconciliation, completion-aware receipt/alert/owner status and connected
 release verification remain open. No new execution authority was enabled.
+
+## Completed Preview order follow-up
+
+The new completion proof reader joins saved fulfillment, attempt, receipt, CRM and owner-login bindings without selecting credentials. Completed Preview queues now remain visible with a verified current or expired service period. Shared payment rechecks skip pending/setup notification only after that proof is checked. An existing completed live receipt-only queue preserves payment and returns review instead of inventing live readiness or emitting a pending alert.
+
+Per-order dashboard cards, payment confirmation and the actual support form now distinguish pending, review, confirmed and expired service while preserving payment mode. A receipt or queue flag alone still cannot prove readiness. See `ks-completed-order-status-readme.md` and the retained validation reports.
+
+All 121 focused local checks pass, including real-SDK query construction and twelve actual-component initial renders. Native run 39376156622 passes seventeen cases on each of PostgreSQL 17.6 and 17.11, including lost-reply completion through the proof/status/support/payment layers and the expiry boundary. The receipt/migration suite also passes eighteen cases per version at the same tested source. No SQL migration changed or ran against the connected project.
+
+This closes the bounded completed Preview status/payment-recheck gap. Full live completion and owner credential support, completion-email policy, reviewed handoff integration, renewal/reconciliation and connected browser/release verification remain open. The live rollout flag is absent and general provider activation remains off.

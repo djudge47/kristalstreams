@@ -1,0 +1,100 @@
+{
+  "kind": "local-completed-status-validation",
+  "sourceCommit": "f756b1a4cb78f49c67df909db56ffaa5bfb4efad",
+  "sourceTree": "07758988d64df713d560f22abc902e32c4312eb6",
+  "checks": 121,
+  "suites": [
+    {
+      "file": "scripts/test-ks-completion-status.mjs",
+      "checks": 9,
+      "passed": true,
+      "sha256": "c87a7372a7d9c530feda00926c213c60c4f4e255bb8811c9be82e7e181e52e12"
+    },
+    {
+      "file": "scripts/test-ks-customer-setup.mjs",
+      "checks": 12,
+      "passed": true,
+      "sha256": "94086e2bb48577fa45d843506ced070a7c9b8658585f7c2a58476da70d4572c6"
+    },
+    {
+      "file": "scripts/test-ks-payment-confirmation-view.mjs",
+      "checks": 16,
+      "passed": true,
+      "sha256": "2e61e91fff4ea5d178b6b3bd77bf1a5b8136fdf56e9f862e1c7fb36b4a39c81c"
+    },
+    {
+      "file": "scripts/test-ks-setup-help.mjs",
+      "checks": 6,
+      "passed": true,
+      "sha256": "6991fc8f9c87fdaf3408e7285a848d3c126e6b3563aa4d1a444fdf13c91592f1"
+    },
+    {
+      "file": "scripts/test-ks-receipt-only.mjs",
+      "checks": 12,
+      "passed": true,
+      "sha256": "18311a41d5a133382b9548e3dfb2289d70cca76f0adf0745eb2ffe1f49c4ea53"
+    },
+    {
+      "file": "scripts/test-ks-live-receipt-rollout.mjs",
+      "checks": 12,
+      "passed": true,
+      "sha256": "2db9bd6c475245ded7fb04a16ac39828f0cfb45cc24258a2a6242402cb364ea7"
+    },
+    {
+      "file": "scripts/test-ks-customer-status-view.mjs",
+      "checks": 6,
+      "passed": true,
+      "sha256": "679965f254f611cccc4c292debc14879ee20d70d5b134f7fa55357810fe9bdff"
+    },
+    {
+      "file": "scripts/test-ks-completion-screens.mjs",
+      "checks": 6,
+      "passed": true,
+      "sha256": "9f28bb5fabd34c05b1fafea9f743283fc28ad87710a40f35f2516a293ba4df3d"
+    },
+    {
+      "file": "scripts/test-ks-order-email.mjs",
+      "checks": 12,
+      "passed": true,
+      "sha256": "7c7ae05e691437d9203645ee289412c8c170df096bebe66cbde3f9c4d24f19b0"
+    },
+    {
+      "file": "scripts/test-ks-pending-order-email.mjs",
+      "checks": 15,
+      "passed": true,
+      "sha256": "9e8719d1c195a784169516235b3aa0e094118b7c3a79ac7bdbf8964fd8c71761"
+    },
+    {
+      "file": "scripts/test-ks-preview-paid-orders.mjs",
+      "checks": 6,
+      "passed": true,
+      "sha256": "546473574cb7f2b54bafaa3ac946be771f1140c4b56597de2339ed739a985e48"
+    },
+    {
+      "file": "scripts/test-ks-streaming-login.mjs",
+      "checks": 9,
+      "passed": true,
+      "sha256": "9aeab5c8cdf3d9eaeeee4495c39338d6b8e694c7528bb71324a6773aacc71cfb"
+    }
+  ],
+  "buildSeconds": 11.28,
+  "javascriptLint": {
+    "errors": 0,
+    "files": 8
+  },
+  "reactReview": {
+    "files": [
+      "src/components/CustomerSetupStatus.tsx",
+      "src/pages/PaymentSuccess.tsx",
+      "src/pages/client/NewTicket.tsx"
+    ],
+    "targetedLintPassed": true,
+    "note": "Installed TypeScript ESLint rule requires explicit no-unused-expressions default options; the rule was not disabled."
+  },
+  "typescript": {
+    "diagnostics": 45,
+    "baselineCommit": "0ea797fbc810245a2daa82d8a93e4b1ee176f02d",
+    "identicalToBaseline": true
+  },
+  "scope": "Synthetic/intercepted API and fulfillment tests, real SDK URL construction, and initial render of actual components. No deployed browser or actual provider/payment/email/ticket operation."
+}
