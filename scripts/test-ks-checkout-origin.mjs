@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { checkoutOrigin } from '../_server/ks-payments.js';
+import { checkoutParameters } from '../_server/ks-checkout-intent.js';
+import { getPlan } from '../_server/ks-payment-validation.js';
 
 const names = ['VERCEL_ENV', 'VERCEL_URL', 'VERCEL_BRANCH_URL'];
 const previous = Object.fromEntries(names.map(name => [name, process.env[name]]));
@@ -64,8 +66,10 @@ try {
   const source = await readFile(new URL('../api/checkout.js', import.meta.url), 'utf8');
   check('Checkout uses the validated request origin for both success and cancellation', () => {
     assert.match(source, /const origin = checkoutOrigin\(req\);/);
-    assert.match(source, /success_url: `\$\{origin\}\/payment-success\?session_id=\{CHECKOUT_SESSION_ID\}`/);
-    assert.match(source, /cancel_url: `\$\{origin\}\/pricing\?payment=cancelled`/);
+    assert.match(source, /checkoutParameters\(\{[\s\S]*origin, suffix/);
+    const params = checkoutParameters({ order: getPlan('bronze', 1), userId: 'fixture', email: 'fixture@example.invalid', origin: `https://${branch}`, suffix: 'abcdefgh' });
+    assert.equal(params.success_url, `https://${branch}/payment-success?session_id={CHECKOUT_SESSION_ID}`);
+    assert.equal(params.cancel_url, `https://${branch}/pricing?payment=cancelled`);
   });
 } finally {
   for (const name of names) {

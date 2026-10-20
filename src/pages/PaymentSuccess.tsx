@@ -4,6 +4,7 @@ import { CheckCircle, Loader, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { paymentConfirmationView } from '../../_shared/ks-payment-confirmation-view.js';
 import type { PaymentConfirmationView } from '../../_shared/ks-payment-confirmation-view.js';
+import { completeCheckoutAttempt } from '../lib/checkoutAttempt';
 
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ const PaymentSuccess: React.FC = () => {
         if (controller.signal.aborted) return;
         if (!response.ok || !payload.ok) throw new Error(payload.error || 'Payment verification could not finish. Contact support; do not pay again.');
         const view = paymentConfirmationView(payload, sessionId);
+        try { completeCheckoutAttempt(window.sessionStorage, sessionId); } catch { /* Receipt display must survive unavailable browser storage. */ }
         setStatus(view.kind);
         setTitle(view.title);
         setMessage(view.message);

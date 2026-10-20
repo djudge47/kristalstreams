@@ -1,5 +1,9 @@
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from './supabase';
+import { checkoutAttemptKey, savedCheckoutAttempt, saveCheckoutReference } from './checkoutAttempt';
+import type { PurchaseKind } from './checkoutAttempt';
+
+export const checkoutIntentEnabled = import.meta.env.VITE_KS_CHECKOUT_INTENT_ENABLED === 'true';
 
 const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
@@ -10,7 +14,7 @@ if (!STRIPE_KEY || typeof STRIPE_KEY !== 'string') {
 
 const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null;
 
-export async function createCheckoutSession(plan: string, price: number, interval: string, connections?: number) {
+export async function createCheckoutSession(plan: string, price: number, interval: string, connections?: number, purchaseKind?: PurchaseKind) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
 
@@ -18,13 +22,17 @@ export async function createCheckoutSession(plan: string, price: number, interva
       throw new Error('Please log in before checkout so your subscription can be added to your Kristal Streams dashboard.');
     }
 
+    if (checkoutIntentEnabled && !purchaseKind) throw new Error('Choose the service type before continuing.');
+    const key = checkoutIntentEnabled && purchaseKind ? checkoutAttemptKey(session.user.id, plan, price, interval, connections ?? 1, purchaseKind) : null;
+    const attempt = key ? savedCheckoutAttempt(window.sessionStorage, key) : null;
     const response = await fetch('/api/checkout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ plan, price, interval, connections }),
+      body: JSON.stringify({ plan, price, interval, connections,
+        ...(attempt ? { checkoutRequestId: attempt.requestId, purchaseKind } : {}) }),
     });
 
     if (!response.ok) {
@@ -32,8 +40,9 @@ export async function createCheckoutSession(plan: string, price: number, interva
       throw new Error(errorData.error || 'Checkout failed');
     }
 
-    const { url } = await response.json();
+    const { url, reference } = await response.json();
     if (!url) throw new Error('No checkout URL returned');
+    if (key && attempt) saveCheckoutReference(window.sessionStorage, key, attempt.requestId, reference);
 
     window.location.href = url;
   } catch (error) {
