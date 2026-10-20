@@ -10,6 +10,7 @@ It is not a record of completed deployment or successful live payment testing.
 | Website login return and failed-request handling | Draft PR #13 on `codex/fix-login-return-20261020`, source commit `9145826e9819e389f7428812b721af992c85b38a`. Build, focused lint, isolated routing and seven real-handler/double tests pass; no new TypeScript diagnostics. The matching private Preview was Ready; the user subsequently completed an actual website-account sign-in. | Actual Preview sign-out → protected `/admin/roomba` → website Sign In → automatic return to Roomba connection passed. This patch does not repair Google/Vercel verification. |
 | Roomba connection and package mapping | A fresh private Preview check succeeded through Fixie at October 19, 2026, 11:59:48 PM America/New_York. The screenshot shows 68 available reseller credits and the expected reseller account. Twenty paid combinations loaded in the earlier check. Trial: 36 hours, one connection, zero credits. | The current read-only connection check is complete; execution/setup verification remains separate. Do not reopen old endpoint troubleshooting as if the later successful check never happened. |
 | Checkout intent | Draft PR #12 remains open, stacked on #11; its foundation is recorded as installed. The project had `KS_CHECKOUT_INTENT_ENABLED` but no `VITE_KS_CHECKOUT_INTENT_ENABLED`. The original sensitive server flag's value was unreadable. Both flags were explicitly paired as `true` for Preview branch `codex/fix-login-return-20261020` only; the global setting was left unchanged. Private Preview `dpl_79C8PUBx9EabWenFrWMTwUirgkFm` is Ready. The user signed in, saw all three purchase-purpose choices, selected Help with my account, and reached Stripe Sandbox for Bronze / one connection / $20. Read-only SQL confirmed one test request and one atomically captured matching owner/purpose intent. Browser Back and retry reused the same session fingerprint and kept one request, zero payment receipts and zero provider attempts. | Checkout initiation and same-session retry are verified. Paid-webhook completion and duplicate-event handling remain unverified. The Stripe connector exposes only a live context, so an independent Sandbox session read was unavailable. Do not charge a real card or create a provider line. |
+| Controlled trial draft and saved-attempt guard | Fresh package loading and browser draft review passed: Trial package 1, 36 hours, one connection, zero credits, 107 channel groups. Checking trial details returned the existing-attempt guard. Saved status and read-only SQL agree: exactly one succeeded historical trial, `ks_preview_test`, line 3290515, recorded October 17; saved expiry October 18, 2026 at 1:53:37 PM America/New_York. The new draft did not create a line. | The durable guard and historical status retrieval are verified. The existing expiry is historical saved data, not a fresh provider-status check. Do not reset the durable slot or create another trial as a workaround. CRM linkage, current provider state and playback remain separate checks. |
 | Production payment-only entitlement correction | Explicitly unfinished in PR #12 and the checked-in rollout notes. | Payment alone must not imply verified streaming setup. Prepare and test the coordinated recorder/customer-status/notification change before any production promotion. |
 | Automatic setup and trial upgrade / renewal | Signed handoff work in PR #11 is an isolated rehearsal. General activation remains disabled; trial conversion/renewal behavior remains separately unverified. | Finish reviewed ownership/execution/completion handling and provider-documented conversion rules. Preserve existing logins. Obtain explicit approval for any specific real-credit operation. |
 | Existing Stripe event duplicate verification | Prior request: replay the existing successful $20 Bronze test event once and verify no second order or setup email. No completed replay is recorded; the user previously declined Dashboard resend. | Use an available authorized supported replay path, without a new payment or client line. Keep this open until duplicate-order and duplicate-notification evidence exists. Do not infer that the earlier Dashboard refusal has been reversed. |
@@ -57,6 +58,22 @@ It is not a record of completed deployment or successful live payment testing.
 - Finding Sign Out required scrolling to the page bottom on the long Admin
   dashboard. Keep navigation usability follow-up visible; do not confuse it
   with a failed sign-out or sign-in return.
+
+## Current trial draft and historical saved status
+
+- Loading packages and preparing the new `ks_draft_check_20261020` review
+  showed package 1, Trial, 36 hours, one connection, zero credits and 107 groups.
+  Proposed credentials stayed in page memory; no creation action was taken.
+- Check trial details returned the existing-attempt conflict. Check saved trial
+  status displayed the earlier `ks_preview_test` trial, line 3290515.
+- Read-only SQL confirmed exactly one saved attempt in the trial table, state
+  `succeeded`, last updated October 17, 2026 at 05:53:37 UTC, with saved expiry
+  October 18, 2026 at 17:53:37 UTC (1:53:37 PM America/New_York).
+- This corrects any implication that no provider trial has ever existed: an
+  earlier recorded trial exists. This recovery pass created no new line.
+- The review endpoint rejects an occupied durable slot before any creation.
+  An expired recorded trial does not authorize clearing that slot or retrying
+  creation. Saved status is not a fresh read of the provider line.
 
 ## Actual Preview checkout evidence — October 19, 2026 (America/New_York)
 
