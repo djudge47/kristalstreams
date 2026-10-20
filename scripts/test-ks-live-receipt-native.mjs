@@ -28,6 +28,34 @@ function install(sql){
   return result.stdout.trim();
 }
 
+// ON_ERROR_STOP exits on the first failing migration statement. Closing the
+// connection rolls back its explicit transaction, including every new object.
+function migrate(sql){
+  const state={done:false};
+  const child=spawn(psql,['--no-psqlrc','--quiet','--set=ON_ERROR_STOP=on','--dbname',target],{
+    env:{...process.env,PGAPPNAME:'ks-receipt-native-migration'},stdio:['pipe','pipe','pipe']});
+  state.result=new Promise((resolve,reject)=>{
+    let output='';
+    child.stdout.on('data',chunk=>{output+=chunk.toString();});
+    child.stderr.on('data',chunk=>{output+=chunk.toString();});
+    child.on('error',reject);
+    child.on('exit',code=>{state.done=true;resolve({code,output});});
+    child.stdin.end(sql);
+  });
+  return state;
+}
+
+async function migrationPid(state){
+  const deadline=Date.now()+3000;
+  while(Date.now()<deadline){
+    assert.equal(state.done,false,'migration must still be waiting');
+    const pid=Number(await observer.query("select pid from pg_stat_activity where application_name='ks-receipt-native-migration'"));
+    if(pid)return pid;
+    await delay(20);
+  }
+  throw new Error('No independent migration backend observed');
+}
+
 class Session{
   constructor(name){
     this.pending=null;this.buffer='';
@@ -98,7 +126,7 @@ async function race(first,second,{release='commit',expectedError}={}){
 
 try{
   const identity=JSON.parse(install("select jsonb_build_object('database',current_database(),'version',current_setting('server_version_num'),'isolation',current_setting('transaction_isolation'))"));
-  assert.equal(identity.database,'ks_receipt_native_test');assert.ok(Number(identity.version)>=170000&&Number(identity.version)<180000);
+  assert.equal(identity.database,'ks_receipt_native_test');assert.ok([170006,170011].includes(Number(identity.version)));
   report.server=identity;
   const manifest=await bootstrap({request:async sql=>install(sql)});
   report.foundationManifest=manifest;
@@ -108,19 +136,62 @@ try{
   install(`alter table public.profiles add column subscription_tier text default 'bronze',add column connections_allowed integer default 1,add column stripe_checkout_session_id text,add column stripe_payment_intent_id text;
     insert into auth.users values('${owner}'),('${legacyOwner}');
     insert into public.profiles(id,email) values('${owner}','fictional@example.invalid'),('${legacyOwner}','legacy@example.invalid');`);
-  for(const name of['ks-payment-schema.sql','ks-order-email-schema.sql','ks-pending-order-email-schema.sql','ks-live-receipt-rollback-guard.sql']){
+  for(const name of['ks-payment-schema.sql','ks-order-email-schema.sql']){
     const source=await readFile(new URL(name,import.meta.url),'utf8');report.sqlSources[name]=createHash('sha256').update(source).digest('hex');
-    if(name==='ks-payment-schema.sql')install(source.slice(source.indexOf('CREATE OR REPLACE FUNCTION')).replace('$function$\n\nrevoke','$function$;\n\nrevoke'));
+    if(name==='ks-payment-schema.sql')install(source.slice(source.indexOf('CREATE OR REPLACE FUNCTION')).replace('$function$\n\nrevoke','$function$;\n\nrevoke').replaceAll('\n','\r\n'));
     else install(source);
   }
-  // Prepare a historical activated receipt before it is adopted for review.
-  install(`set role service_role; ${legacy('HistoricalNative',legacyOwner)}; reset role;`);
+  const migrationName='../supabase/migrations/20261020044005_add_live_receipt_pending_alerts_and_rollback_guard.sql';
+  const migration=await readFile(new URL(migrationName,import.meta.url),'utf8');
+  report.sqlSources[migrationName]=createHash('sha256').update(migration).digest('hex');
+  for(const name of ['ks-pending-order-email-schema.sql','ks-live-receipt-rollback-guard.sql']){
+    const source=await readFile(new URL(name,import.meta.url),'utf8');
+    const body=source.match(/\bbegin;\s*([\s\S]*?)\s*commit;\s*$/i)?.[1].trim();
+    assert.ok(body&&migration.includes(body),`generated migration must contain reviewed SQL: ${name}`);
+    report.sqlSources[name]=createHash('sha256').update(source).digest('hex');
+  }
   a=new Session('a');b=new Session('b');observer=new Session('observer');
   for(const client of[a,b,observer]){
     client.pid=Number(await client.query('select pg_backend_pid()'));
     await client.query("set statement_timeout='8s'");
     await client.query("set lock_timeout='6s'");
   }
+  const absent=async()=>assert.deepEqual(await observer.json("select jsonb_build_object('table',to_regclass('public.ks_pending_order_alerts')::text,'guard',to_regprocedure('public.ks_guard_receipt_only_activation()')::text,'prepare',to_regprocedure('public.ks_prepare_pending_order_alert(text,uuid,text)')::text,'complete',to_regprocedure('public.ks_complete_pending_order_alert(text,text)')::text)"),{table:null,guard:null,prepare:null,complete:null});
+  await check('migration rejects exposed browser permissions without leaving new objects',async()=>{
+    await a.query('grant select on public.ks_setup_order_queue to anon');
+    const result=await migrate(migration).result;assert.notEqual(result.code,0);assert.match(result.output,/receipt_rollout_private_table_required/);await absent();
+    await a.query('revoke select on public.ks_setup_order_queue from anon');
+  });
+  await check('migration rejects function configuration drift without partial DDL',async()=>{
+    await a.query("alter function public.ks_record_paid_checkout(text,text,uuid,boolean,text,integer,integer,integer,text) set search_path='public'");
+    const result=await migrate(migration).result;assert.notEqual(result.code,0);assert.match(result.output,/receipt_rollout_function_drift/);await absent();
+    await a.query("alter function public.ks_record_paid_checkout(text,text,uuid,boolean,text,integer,integer,integer,text) set search_path=''");
+  });
+  await check('migration rejects changed columns without partial DDL',async()=>{
+    await a.query('alter table public.ks_setup_order_queue rename column queued_at to changed_at');
+    const result=await migrate(migration).result;assert.notEqual(result.code,0);assert.match(result.output,/receipt_rollout_column_drift/);await absent();
+    await a.query('alter table public.ks_setup_order_queue rename column changed_at to queued_at');
+  });
+  await check('exact migration times out behind a writer and leaves all new objects absent',async()=>{
+    await a.query('begin');await a.query('lock table only public.ks_payment_receipts in row exclusive mode');
+    const state=migrate(migration);await observeBlocked(await migrationPid(state),state);
+    const result=await state.result;assert.notEqual(result.code,0);assert.match(result.output,/lock timeout/);
+    await a.query('rollback');await absent();
+  });
+  await check('migration waits before queue locking so an in-flight receipt can finish',async()=>{
+    await a.query('begin');await a.query('lock table only public.ks_payment_receipts in row exclusive mode');
+    const state=migrate(migration);await observeBlocked(await migrationPid(state),state);
+    await a.query(record('MigrationRaceNative'));await a.query('commit');
+    const result=await state.result;assert.equal(result.code,0,result.output);
+    assert.deepEqual(await observer.json(counts('MigrationRaceNative')),{receipts:1,queue:1,alerts:0});
+  });
+  await check('reapplying the new migration rejects existing objects and preserves accepted orders',async()=>{
+    const before=await observer.json("select to_jsonb(q) from public.ks_setup_order_queue q where checkout_session_id='cs_live_MigrationRaceNative'");
+    const result=await migrate(migration).result;assert.notEqual(result.code,0);assert.match(result.output,/receipt_rollout_objects_already_exist/);
+    assert.deepEqual(await observer.json("select to_jsonb(q) from public.ks_setup_order_queue q where checkout_session_id='cs_live_MigrationRaceNative'"),before);
+  });
+  // Prepare a historical activated receipt before it is adopted for review.
+  install(`set role service_role; ${legacy('HistoricalNative',legacyOwner)}; reset role;`);
   await a.query('set role service_role');await b.query('set role service_role');
   const before=await observer.json('select jsonb_agg(to_jsonb(p) order by id) from public.profiles p');
   await check('three independent native PostgreSQL backends load the current application foundation',async()=>{
@@ -181,6 +252,9 @@ try{
     await b.query('reset role');await b.query('set role authenticated');
     await assert.rejects(()=>b.query(record('BrowserNative')),error=>error.code==='42501');
     await assert.rejects(()=>b.query('select * from public.ks_setup_order_queue'),error=>error.code==='42501');
+    await assert.rejects(()=>b.query('select * from public.ks_pending_order_alerts'),error=>error.code==='42501');
+    await assert.rejects(()=>b.query(pending('DuplicateNative')),error=>error.code==='42501');
+    await assert.rejects(()=>b.query(complete('DuplicateNative')),error=>error.code==='42501');
     await b.query('reset role');await b.query('set role service_role');
     const state=await observer.json("select jsonb_build_object('attempts',(select count(*) from public.ks_preview_provisioning_attempts),'dispatches',(select count(*) from public.ks_preview_reseller_dispatches),'claims',(select count(*) from public.ks_setup_review_claims),'spent',(select coalesce(sum(spent_units),0) from public.ks_setup_review_budgets))");
     assert.deepEqual(state,{attempts:0,dispatches:0,claims:0,spent:0});

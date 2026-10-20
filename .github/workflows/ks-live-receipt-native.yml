@@ -24,9 +24,15 @@ jobs:
   receipt-contention:
     runs-on: ubuntu-24.04
     timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        # 17.6 matches the read-only connected catalog; 17.11 covers the
+        # current patched PostgreSQL release used by the previous fixture run.
+        postgres: ['17.6', '17.11']
     services:
       postgres:
-        image: postgres:17.11-bookworm
+        image: postgres:${{ matrix.postgres }}-bookworm
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: fictional-native-fixture
@@ -63,7 +69,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: native-receipt-result
+          name: native-receipt-result-${{ matrix.postgres }}
           path: ks-native-receipt-report.json
           retention-days: 14
           if-no-files-found: warn
