@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { PaymentError, applyPaidSession } from './ks-payment-validation.js';
 import { queuePreviewPaidOrder } from './ks-preview-paid-orders.js';
+import { verifiedCheckoutIntent } from './ks-checkout-intent.js';
 
 export { PaymentError } from './ks-payment-validation.js';
 
@@ -70,6 +71,7 @@ export function webhookSecret() {
 
 export async function fulfill(sessionId, context, ownerId) {
   const session = await context.stripe.checkout.sessions.retrieve(sessionId);
+  if (session.metadata?.checkout_binding_version !== undefined) await verifiedCheckoutIntent(session, context, ownerId);
   const receipt = await applyPaidSession(session, context.live, ownerId, context.admin);
   const queued = await queuePreviewPaidOrder(session, context, ownerId);
   const { data: alert, error: alertError } = await context.admin.functions.invoke('ks-order-notification', {

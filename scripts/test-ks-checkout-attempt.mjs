@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { checkoutAttemptKey, savedCheckoutAttempt, saveCheckoutReference, completeCheckoutAttempt } from '../src/lib/checkoutAttempt.ts';
+
+function store() {
+  const items=new Map();
+  return { get length(){return items.size;}, key(index){return [...items.keys()][index] ?? null;},
+    getItem:key=>items.get(key)??null,setItem:(key,value)=>items.set(key,value),removeItem:key=>items.delete(key) };
+}
+let passed=0;
+const check=(label,fn)=>{fn();passed++;console.log(`PASS: ${label}`);};
+const key=checkoutAttemptKey('owner','bronze',20,'monthly',1,'new_service');
+check('retry and page reload preserve the original request ID',()=>{
+  const storage=store(),id=randomUUID();
+  assert.equal(savedCheckoutAttempt(storage,key,()=>id).requestId,id);
+  assert.equal(savedCheckoutAttempt(storage,key,()=>{throw new Error('must not replace');}).requestId,id);
+  const afterReload=JSON.parse(storage.getItem(key)); assert.equal(afterReload.requestId,id);
+});
+check('customer, plan, connection count and purchase purpose have separate keys',()=>{
+  for(const args of [['other','bronze',20,'monthly',1,'new_service'],['owner','gold',60,'6 months',1,'new_service'],
+    ['owner','bronze',35,'monthly',2,'new_service'],['owner','bronze',20,'monthly',1,'renewal']]) assert.notEqual(checkoutAttemptKey(...args),key);
+});
+check('an acknowledged session is retained through errors and cancellation',()=>{
+  const storage=store(),id=randomUUID();savedCheckoutAttempt(storage,key,()=>id);
+  saveCheckoutReference(storage,key,id,'cs_test_Saved'); assert.equal(savedCheckoutAttempt(storage,key).reference,'cs_test_Saved');
+  completeCheckoutAttempt(storage,'cs_test_Other');assert.equal(savedCheckoutAttempt(storage,key).requestId,id);
+});
+check('only confirmation of the matching receipt clears the saved attempt',()=>{
+  const storage=store(),id=randomUUID(); savedCheckoutAttempt(storage,key,()=>id);saveCheckoutReference(storage,key,id,'cs_test_Saved');
+  storage.setItem('other-app',JSON.stringify({reference:'cs_test_Saved'}));
+  completeCheckoutAttempt(storage,'cs_test_Saved');assert.equal(storage.getItem(key),null);assert.ok(storage.getItem('other-app'));
+});
+check('corrupt or missing storage never silently starts a replacement request',()=>{
+  const storage=store();for(const value of ['bad','{}','null',JSON.stringify({requestId:'bad'})]){
+    storage.setItem(key,value); assert.throws(()=>savedCheckoutAttempt(storage,key));assert.equal(storage.getItem(key),value);
+  }
+  assert.throws(()=>savedCheckoutAttempt({...storage,getItem:()=>{throw new Error('storage denied');}},key),/storage denied/);
+  assert.throws(()=>savedCheckoutAttempt({...store(),setItem:()=>{throw new Error('storage full');}},key),/storage full/);
+});
+check('a changed attempt ID or a non-test reference cannot replace a saved binding',()=>{
+  const storage=store(),id=randomUUID();savedCheckoutAttempt(storage,key,()=>id);
+  assert.throws(()=>saveCheckoutReference(storage,key,randomUUID(),'cs_test_Saved'));
+  assert.throws(()=>saveCheckoutReference(storage,key,id,'cs_live_Wrong'));assert.equal(savedCheckoutAttempt(storage,key).requestId,id);
+  saveCheckoutReference(storage,key,id,'cs_test_Saved');assert.throws(()=>saveCheckoutReference(storage,key,id,'cs_test_Changed'));
+});
+console.log(`${passed} browser retry checks passed without a browser session or payment request.`);
