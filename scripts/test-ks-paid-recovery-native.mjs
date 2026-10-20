@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { bootstrap, fixture, prepareAttempt, reserveReview, begin, complete, summary, json, literal, adminId } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
-import { createGuardedWorkerFixture } from '../_server/ks-guarded-paid-fixtures.js';
+import { buildPaidPlanMapping } from '../_server/ks-roomba-plan-mapping.js';
 import { createGuardedPaidExecutor } from '../_server/ks-guarded-paid-executor.js';
 import { createPaidExecutionStore } from '../_server/ks-paid-execution-store.js';
 import { issuePaidApproval } from '../_server/ks-paid-approval.js';
@@ -114,16 +114,21 @@ function databaseClient(connection,f,fault='',calls={}){
   };
 }
 async function workerFixture(fault=''){
-  const base=createGuardedWorkerFixture(),env=base.env;
-  const f=await fixture(admin,{fingerprint:base.review.entry.provider.fingerprint,envelopeFactory:value=>sealStreamingLogin({username:value.username,password:base.login.password},
+  const env={VERCEL_ENV:'preview',ROOMBA_PREVIEW_SECRET:'fictional_native_approval_secret_0123456789',KS_LOGIN_ENCRYPTION_KEY:Buffer.alloc(32,7).toString('base64')};
+  const password='fictional_native_password_0123456789';
+  const packages=[1,3,6,12].flatMap((months,i)=>Array.from({length:5},(_,j)=>({id:String(1000+i*5+j),name:`${months} Months + ${j+1} Connections`,maxConnections:j+1,
+    paid:{count:months,unit:'months',credits:(i+1)*(j+1)+0.5},trial:null,bouquets:[13,14],issues:[]})));
+  const entry=buildPaidPlanMapping({schemaVersion:1,readOnly:true,checkedAt:new Date().toISOString(),packages}).entries[0];
+  const f=await fixture(admin,{fingerprint:entry.provider.fingerprint,envelopeFactory:value=>sealStreamingLogin({username:value.username,password},
     {environment:'preview',ownerId:value.owner,sessionId:value.session,attemptId:value.attempt},env)});
   f.bindingHash=createHash('sha256').update(JSON.stringify({sessionId:f.session,ownerId:f.owner,intentId:f.payment,tier:'bronze',connections:1,amountCents:2000,resellerId:f.reseller,packageFingerprint:f.fingerprint})).digest('hex');
   await prepareAttempt(admin,f);
-  const now=Date.now(),session=structuredClone(base.session);
-  session.id=f.session;session.metadata.user_id=f.owner;session.payment_intent.id=f.payment;session.payment_intent.latest_charge.payment_intent=f.payment;
-  const account={...base.review.account,id:f.reseller},line={id:f.line,username:f.username,resellerId:f.reseller,packageId:'1000',connections:1,trial:false,enabled:true,adminEnabled:true,bouquetIds:[13,14],expiresAt:new Date(now+31*86400000).toISOString()};
-  const packages=(await base.provider.snapshot()).packages;
-  const approval=issuePaidApproval({...base.review,session,ownerId:f.owner,approverId:adminId,account,checkedAt:now},env,now);
+  const now=Date.now(),session={id:f.session,livemode:false,mode:'payment',status:'complete',payment_status:'paid',currency:'usd',amount_total:2000,amount_subtotal:2000,
+    payment_intent:{id:f.payment,status:'succeeded',livemode:false,currency:'usd',amount:2000,amount_received:2000,
+      latest_charge:{id:'ch_FictionalNative',payment_intent:f.payment,livemode:false,currency:'usd',amount:2000,paid:true,captured:true,disputed:false,refunded:false,amount_refunded:0}},
+    metadata:{user_id:f.owner,plan:'bronze',connections:'1',interval:'monthly',price:'20',duration_days:'30'}};
+  const account={id:f.reseller,username:'fictional_native_reseller',credits:'100.5'},line={id:f.line,username:f.username,resellerId:f.reseller,packageId:'1000',connections:1,trial:false,enabled:true,adminEnabled:true,bouquetIds:[13,14],expiresAt:new Date(now+31*86400000).toISOString()};
+  const approval=issuePaidApproval({session,ownerId:f.owner,approverId:adminId,entry,currentPackage:packages[0],account,checkedAt:now},env,now);
   const calls={creates:0,lineReads:0,paymentReads:0,rpcs:{}};
   const provider={snapshot:async()=>({account,packages,checkedAt:now}),create:async()=>{calls.creates++;if(fault==='provider_timeout')throw new Error('fictional_provider_reply_uncertain');return structuredClone(line);},line:async()=>{calls.lineReads++;return structuredClone(line);},account:async()=>({...account,credits:'99'})};
   const payments={retrieve:async()=>{calls.paymentReads++;return structuredClone(session);}};
@@ -148,7 +153,7 @@ try{
   const binding=await readFile(new URL('../'+bindingName,import.meta.url),'utf8');
   report.sourceHashes[bindingName]=createHash('sha256').update(binding).digest('hex');
   await admin.request(binding);
-  const sources=['_server/ks-guarded-paid-executor.js','_server/ks-paid-execution-store.js','_server/ks-paid-approval.js','_server/ks-login-envelope.js','_server/ks-guarded-paid-fixtures.js','scripts/fixtures/ks-reviewed-handoff/fixtures.mjs'];
+  const sources=['_server/ks-guarded-paid-executor.js','_server/ks-paid-execution-store.js','_server/ks-paid-approval.js','_server/ks-login-envelope.js','_server/ks-roomba-plan-mapping.js','_server/ks-paid-settlement.js','_server/ks-payment-validation.js','scripts/fixtures/ks-reviewed-handoff/fixtures.mjs'];
   for(const name of sources)report.sourceHashes[name]=createHash('sha256').update(await readFile(new URL('../'+name,import.meta.url))).digest('hex');
   await a.query('set role service_role');await b.query('set role service_role');
   await check('three native backends use the current guarded foundation without installing the handoff prototype',async()=>{
