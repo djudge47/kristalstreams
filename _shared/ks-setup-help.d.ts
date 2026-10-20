@@ -6,8 +6,8 @@ export interface SetupHelpOrder {
   amountCents: number;
   currency: 'usd';
   recordedAt: string;
-  status: 'awaiting_activation';
-  testMode: true;
+  status: 'awaiting_activation' | 'requires_review';
+  testMode: boolean;
   providerActivated: false;
 }
 export function readSetupHelpOrders(payload: unknown, accountId: string): { orders: SetupHelpOrder[]; checkedAt: string };

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { PaymentError, applyPaidSession } from './ks-payment-validation.js';
 import { queuePreviewPaidOrder } from './ks-preview-paid-orders.js';
 import { verifiedCheckoutIntent } from './ks-checkout-intent.js';
+import { recordPaymentReceipt } from './ks-receipt-only.js';
 
 export { PaymentError } from './ks-payment-validation.js';
 
@@ -26,6 +27,7 @@ export function runtime() {
   return {
     live,
     environment: process.env.VERCEL_ENV,
+    receiptOnlyLive: process.env.KS_LIVE_RECEIPT_ONLY_ENABLED === 'true',
     stripe: new Stripe(key, { apiVersion: '2026-08-26.dahlia', timeout: 15000, maxNetworkRetries: 1 }),
     auth: createClient(url, anonKey, options),
     admin: createClient(url, adminKey, options),
@@ -70,8 +72,35 @@ export function webhookSecret() {
 }
 
 export async function fulfill(sessionId, context, ownerId) {
+  if (context.receiptOnlyLive === true && (context.environment !== 'production' || context.live !== true)) {
+    throw new PaymentError(503, 'The receipt-only payment rollout is not configured for this environment.');
+  }
   const session = await context.stripe.checkout.sessions.retrieve(sessionId);
   if (session.metadata?.checkout_binding_version !== undefined) await verifiedCheckoutIntent(session, context, ownerId);
+  let receiptOnly = context.receiptOnlyLive === true;
+  if (!receiptOnly && context.environment === 'production' && context.live === true) {
+    // An accepted receipt-only order stays in that protocol even if the flag
+    // is later disabled. A lookup failure must never fall back to activation.
+    const { data: queued, error } = await context.admin.from('ks_setup_order_queue')
+      .select('checkout_session_id').eq('checkout_session_id', sessionId).eq('livemode', true).maybeSingle();
+    if (error || (queued !== null && queued?.checkout_session_id !== sessionId)) {
+      throw new PaymentError(503, 'Your saved payment protocol could not be checked. If you already paid, do not pay again; contact support.');
+    }
+    receiptOnly = queued !== null;
+  }
+  if (receiptOnly) {
+    const receipt = await recordPaymentReceipt(session, true, ownerId, context.admin);
+    // Preserve legacy delivery identities. Review-blocked receipts are not
+    // eligible for a new pending alert or another activation attempt.
+    if (receipt.order_status === 'requires_review') return receipt;
+    const { data: alert, error: alertError } = await context.admin.functions.invoke('ks-order-notification', {
+      body: { sessionId: session.id, protocol: 'receipt-only-v1' },
+    });
+    if (alertError || alert?.success !== true) {
+      throw new PaymentError(503, 'Your payment is recorded, but the setup notification needs attention. Please contact support; do not pay again.');
+    }
+    return receipt;
+  }
   const receipt = await applyPaidSession(session, context.live, ownerId, context.admin);
   const queued = await queuePreviewPaidOrder(session, context, ownerId);
   const { data: alert, error: alertError } = await context.admin.functions.invoke('ks-order-notification', {

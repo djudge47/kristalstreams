@@ -14,7 +14,7 @@ function fixture(patch={}){
   // Real SDK constructs the PostgREST URL; fetch is intercepted before network.
   const admin=realCreateClient(env.VITE_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:async(input,options)=>{
     const url=new URL(typeof input==='string'?input:input.url);calls.requests.push({url,options});
-    assert.equal(options.method,'GET');assert.equal(url.pathname,'/rest/v1/ks_preview_paid_orders');
+    assert.equal(options.method,'GET');assert.equal(url.pathname,patch.env?.VERCEL_ENV==='production'?'/rest/v1/ks_setup_order_queue':'/rest/v1/ks_preview_paid_orders');
     return new Response(JSON.stringify(patch.storageError?{message:'SERVER_SECRET',code:'DB_UNAVAILABLE'}:patch.rows===undefined?[row]:patch.rows),{status:patch.storageError?503:200,headers:{'Content-Type':'application/json'}});
   }}});
   const createClient=(_url,key)=>{
@@ -29,7 +29,7 @@ function fixture(patch={}){
 }
 let checks=0;async function check(name,fn){await fn();checks++;console.log(`PASS: ${name}`);}
 await check('environment, method and bearer checks run before service data access',async()=>{
-  for(const envPatch of[{VERCEL_ENV:'production'},{VERCEL_ENV:'development'},{VERCEL_ENV:undefined}]){const f=fixture({env:envPatch});assert.equal((await f.request()).code,404);assert.equal(f.calls.auth,0);assert.equal(f.calls.service,0);}
+  for(const envPatch of[{VERCEL_ENV:'development'},{VERCEL_ENV:undefined}]){const f=fixture({env:envPatch});assert.equal((await f.request()).code,404);assert.equal(f.calls.auth,0);assert.equal(f.calls.service,0);}
   for(const method of['POST','PATCH','DELETE','OPTIONS']){const f=fixture();const res=await f.request({method});assert.equal(res.code,405);assert.equal(res.headers.Allow,'GET');assert.equal(f.calls.service,0);}
   for(const authorization of['','Bearer','Bearer fake token']){const f=fixture();assert.equal((await f.request({headers:{authorization}})).code,401);assert.equal(f.calls.service,0);}
   const f=fixture({env:{SUPABASE_SERVICE_ROLE_KEY:''}});assert.equal((await f.request()).code,503);assert.equal(f.calls.service,0);
@@ -59,5 +59,26 @@ await check('empty, duplicate, oversized and credential-bearing results are hand
 });
 await check('storage errors never imply missing payment, service readiness or a second payment request',async()=>{
   const res=await fixture({storageError:true}).request();assert.equal(res.code,503);assert.equal(res.body.orders,undefined);assert.ok(res.body.error.includes('do not pay again'));
+});
+await check('opt-in live pending status is scoped to the authenticated owner and excludes Sandbox orders',async()=>{
+  const liveReceipt={...receipt,checkout_session_id:'cs_live_customerSetup1',livemode:true};
+  const liveRow={...row,checkout_session_id:liveReceipt.checkout_session_id,receipt:liveReceipt};
+  const f=fixture({env:{VERCEL_ENV:'production',KS_LIVE_RECEIPT_ONLY_ENABLED:'true'},rows:[liveRow]});
+  const res=await f.request();assert.equal(res.code,200);assert.equal(res.body.testMode,false);
+  assert.equal(res.body.orders[0].status,'awaiting_activation');assert.equal(res.body.orders[0].providerActivated,false);
+  const url=f.calls.requests[0].url;assert.equal(url.searchParams.get('receipt.user_id'),`eq.${owner}`);
+  assert.equal(url.searchParams.get('receipt.livemode'),'eq.true');assert.equal(url.searchParams.get('fulfillment_status'),'in.(awaiting_activation,requires_review)');
+  assert.equal(url.searchParams.get('receipt.activated'),null);assert.equal(url.searchParams.get('limit'),'5');
+  assert.throws(()=>customerSetupSnapshot([row],owner,true));
+  assert.throws(()=>customerSetupSnapshot([{...liveRow,receipt:{...liveReceipt,user_id:other}}],owner,true));
+});
+await check('live legacy entitlements require review and never become a provider-ready signal',async()=>{
+  const legacy={...row,checkout_session_id:'cs_live_Legacy',fulfillment_status:'requires_review',receipt:{...receipt,checkout_session_id:'cs_live_Legacy',livemode:true,activated:true,expires_at:'2026-11-01T00:00:00Z'}};
+  const result=customerSetupSnapshot([legacy],owner,true)[0];assert.equal(result.status,'requires_review');assert.equal(result.providerActivated,false);assert.equal(result.expiresAt,undefined);
+  assert.throws(()=>customerSetupSnapshot([{...legacy,fulfillment_status:'awaiting_activation'}],owner,true));
+  assert.throws(()=>customerSetupSnapshot([{...legacy,fulfillment_status:'setup_complete'}],owner,true));
+});
+await check('an accepted live order stays readable when the new-order rollout flag is paused',async()=>{
+  for(const flag of[undefined,'false','1','TRUE']){const f=fixture({env:{VERCEL_ENV:'production',KS_LIVE_RECEIPT_ONLY_ENABLED:flag},rows:[]});assert.equal((await f.request()).code,200);assert.equal(f.calls.service,1);}
 });
 console.log(`${checks} customer setup checks passed. Real SDK query construction with synthetic auth/storage only; no network, charges, provider calls or database mutations.`);

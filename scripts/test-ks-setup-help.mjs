@@ -10,7 +10,7 @@ await check('owned response becomes bounded whitelisted support context without 
  assert.deepEqual(orders,[{...order,recordedAt:'2026-10-17T12:00:00.000Z'}]);assert.equal(checkedAt,'2026-10-17T13:00:00.000Z');
  const output=JSON.stringify(orders);for(const value of['SECRET_PASSWORD','SECRET_KEY','PRIVATE_EMAIL',other,'create_line'])assert.ok(!output.includes(value));
 });
-await check('another displayed account, live responses and unconfirmed modes cannot supply context',()=>{
+await check('another displayed account and mismatched response modes cannot supply context',()=>{
  for(const change of[{accountId:other},{mode:'write'},{testMode:false},{checkedAt:'bad'},{orders:null}])assert.throws(()=>readSetupHelpOrders({...payload,...change},owner));
  for(const accountId of[other,'invalid',null])assert.throws(()=>readSetupHelpOrders(payload,accountId));
 });

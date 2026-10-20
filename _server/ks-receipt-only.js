@@ -1,7 +1,7 @@
 import { PaymentError, validatePaidSession } from './ks-payment-validation.js';
 
-// Rollout preparation only: no checkout, webhook or confirmation handler imports
-// this module. Recording money must not grant website or provider entitlement.
+// The opt-in live rollout uses this recorder. Recording money must not grant
+// website or provider entitlement. The rollout flag remains off by default.
 export async function recordPaymentReceipt(session, expectedLive, ownerId, admin) {
   const payment = validatePaidSession(session, expectedLive, ownerId);
   const { data, error } = await admin.rpc('ks_record_paid_checkout', {
