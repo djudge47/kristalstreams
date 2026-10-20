@@ -94,3 +94,25 @@ PGlite has one SQL session. These checks do not prove native connection
 contention, deployed Stripe/Resend delivery, actual live owner status, or provider
 activation. 135 checks passed across the listed suites. The Vite build (10.65 seconds) and focused lint pass. TypeScript retains the same
 45 baseline diagnostics, with none added; the repository is not type-clean.
+
+## Native database follow-up
+
+`test-ks-live-receipt-native.mjs` and the scoped GitHub Actions workflow prepare
+twelve independent-session checks on a disposable PostgreSQL 17.11 service.
+They load the hash-verified application foundation, installed checkout-binding
+source, legacy email/recorder and proposed pending-alert/rollback-guard SQL.
+The harness accepts only a specifically named loopback fixture database with
+an explicit disposable acknowledgement. It never reads `DATABASE_URL` or uses
+Supabase, Stripe, email or reseller credentials.
+
+The cases observe real backend lock waits before commit/rollback, then check
+duplicate receipts and payment intents, frozen alert preparation, final delivery
+acknowledgements, lock timeout recovery, legacy activation rollback and preserved
+historical access. Each retained report binds the source commit, SQL hashes and
+native server version to the results. The runner has read-only repository
+permissions, no project secrets, pinned official Actions and an eight-minute cap.
+
+The local workspace has no native PostgreSQL or Docker, so this new native
+suite has not yet run locally. Its workflow result must be inspected before
+claiming native contention passed. This fixture database is still not the full
+connected Supabase project, and no migration is installed by this check.

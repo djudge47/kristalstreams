@@ -1,0 +1,198 @@
+import assert from 'node:assert/strict';
+import { spawn, spawnSync } from 'node:child_process';
+import { readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
+import { bootstrap, literal } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
+
+// Only a disposable loopback database is accepted. Never use DATABASE_URL,
+// Supabase, a production secret, provider transport or an application endpoint.
+const target=process.env.KS_NATIVE_PG_URL;
+assert.equal(process.env.KS_NATIVE_DISPOSABLE_ACK,'receipt-only-fixtures');
+const address=new URL(target);
+assert.ok(['postgres:','postgresql:'].includes(address.protocol));
+assert.ok(['127.0.0.1','localhost','[::1]'].includes(address.hostname));
+assert.equal(address.pathname,'/ks_receipt_native_test');
+assert.equal(address.search,'');
+assert.equal(address.hash,'');
+const psql=process.env.KS_NATIVE_PSQL||'psql';
+const owner='00000000-0000-4000-8000-000000000001';
+const legacyOwner='00000000-0000-4000-8000-000000000002';
+const report={kind:'native-postgresql-receipt-contention',sourceCommit:spawnSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).stdout.trim(),startedAt:new Date().toISOString(),tests:[],sqlSources:{}};
+const clients=[];
+let serial=0;
+
+function install(sql){
+  const result=spawnSync(psql,['--no-psqlrc','--quiet','--no-align','--tuples-only','--set=ON_ERROR_STOP=on','--dbname',target],{input:sql,encoding:'utf8',timeout:20000});
+  if(result.error||result.status!==0)throw new Error(`Disposable database bootstrap failed: ${result.stderr||result.error?.message}`);
+  return result.stdout.trim();
+}
+
+class Session{
+  constructor(name){
+    this.pending=null;this.buffer='';
+    // A single ordered pipe keeps a rejected statement's ERROR text before
+    // its SQLSTATE marker. Arguments are passed separately, never interpolated.
+    this.child=spawn('bash',['-c','exec "$@" 2>&1','ks-native-psql',psql,'--no-psqlrc','--quiet','--no-align','--tuples-only','--set=ON_ERROR_STOP=off','--dbname',target],{env:{...process.env,PGAPPNAME:`ks-receipt-native-${name}`},stdio:['pipe','pipe','pipe']});
+    this.child.on('error',error=>this.fail(error));
+    this.child.on('exit',code=>this.fail(new Error(`Disposable psql session exited (${code})`)));
+    this.child.stdout.on('data',chunk=>{
+      this.buffer+=chunk.toString();let index;
+      while((index=this.buffer.indexOf('\n'))>=0){const line=this.buffer.slice(0,index).replace(/\r$/,'');this.buffer=this.buffer.slice(index+1);const pending=this.pending;
+        if(!pending)continue;
+        if(line.startsWith(`${pending.marker} `)){
+          clearTimeout(pending.timer);this.pending=null;const code=line.slice(pending.marker.length+1).trim();
+          if(code==='00000')pending.resolve(pending.output.join('\n').trim());
+          else{const error=new Error(pending.error.trim()||`SQL rejected (${code})`);error.code=code;pending.reject(error);}
+        }else if(/^(ERROR|FATAL):/.test(line))pending.error+=line+'\n';
+        else pending.output.push(line);
+      }
+    });
+    this.child.stderr.on('data',chunk=>{if(this.pending)this.pending.error+=chunk.toString();});
+    clients.push(this);
+  }
+  fail(error){if(this.pending){clearTimeout(this.pending.timer);this.pending.reject(error);this.pending=null;}}
+  query(sql){
+    assert.equal(this.pending,null,'one request at a time per independent psql connection');
+    return new Promise((resolve,reject)=>{
+      const marker=`KS_NATIVE_DONE_${++serial}`;
+      const timer=setTimeout(()=>{this.fail(new Error('Disposable database request timed out'));this.child.kill('SIGTERM');},12000);
+      this.pending={resolve,reject,marker,timer,output:[],error:''};
+      this.child.stdin.write(`${sql.trim().replace(/;$/,'')};\n\\echo ${marker} :SQLSTATE\n`);
+    });
+  }
+  async json(sql){return JSON.parse(await this.query(sql));}
+  stop(){this.child.kill('SIGTERM');}
+}
+
+const record=(suffix,options={})=>`select public.ks_record_paid_checkout(${literal(`cs_live_${suffix}`)},${literal(options.intent||`pi_${suffix}`)},${literal(options.owner||owner)},true,'bronze',1,30,2000,'usd')`;
+const pending=(suffix,email='fictional@example.invalid')=>`select public.ks_prepare_pending_order_alert(${literal(`cs_live_${suffix}`)},${literal(owner)},${literal(email)})`;
+const complete=(suffix,emailId='mail_native')=>`select public.ks_complete_pending_order_alert(${literal(`cs_live_${suffix}`)},${literal(emailId)})`;
+const legacy=(suffix,user=owner)=>`select public.ks_apply_paid_checkout(${literal(`cs_live_${suffix}`)},${literal(`pi_${suffix}`)},${literal(user)},true,'bronze',1,30,2000,'usd')`;
+const counts=suffix=>`select jsonb_build_object('receipts',(select count(*) from public.ks_payment_receipts where checkout_session_id=${literal(`cs_live_${suffix}`)}),'queue',(select count(*) from public.ks_setup_order_queue where checkout_session_id=${literal(`cs_live_${suffix}`)}),'alerts',(select count(*) from public.ks_pending_order_alerts where checkout_session_id=${literal(`cs_live_${suffix}`)}))`;
+let a,b,observer;
+
+async function check(name,fn){await fn();report.tests.push({name,passed:true});console.log(`PASS: ${name}`);}
+async function observeBlocked(pid,state){
+  const deadline=Date.now()+4000;
+  while(Date.now()<deadline){
+    if(state.done)throw state.error||new Error('The competing statement finished before a database lock was observed');
+    const row=await observer.json(`select coalesce((select jsonb_build_object('wait',wait_event_type,'state',state) from pg_stat_activity where pid=${pid}), '{}'::jsonb)`);
+    if(row.wait==='Lock'&&row.state==='active')return;
+    await delay(20);
+  }
+  throw new Error('No native lock wait observed for the competing session');
+}
+function competing(sql){
+  const state={done:false};
+  state.result=b.query(sql).then(value=>{state.done=true;return{value};},error=>{state.done=true;state.error=error;return{error};});
+  return state;
+}
+async function race(first,second,{release='commit',expectedError}={}){
+  await a.query('begin');const firstValue=await a.query(first);const state=competing(second);
+  await observeBlocked(b.pid,state);await a.query(release);const result=await state.result;
+  if(expectedError){assert.equal(result.error?.code,expectedError);return{first:firstValue,error:result.error};}
+  if(result.error)throw result.error;
+  return{first:firstValue,second:result.value};
+}
+
+try{
+  const identity=JSON.parse(install("select jsonb_build_object('database',current_database(),'version',current_setting('server_version_num'),'isolation',current_setting('transaction_isolation'))"));
+  assert.equal(identity.database,'ks_receipt_native_test');assert.ok(Number(identity.version)>=170000&&Number(identity.version)<180000);
+  report.server=identity;
+  const manifest=await bootstrap({request:async sql=>install(sql)});
+  report.foundationManifest=manifest;
+  const bindingName='../supabase/migrations/20261020003225_add_private_checkout_intent_binding.sql';
+  const binding=await readFile(new URL(bindingName,import.meta.url),'utf8');
+  report.sqlSources[bindingName]=createHash('sha256').update(binding).digest('hex');install(binding);
+  install(`alter table public.profiles add column subscription_tier text default 'bronze',add column connections_allowed integer default 1,add column stripe_checkout_session_id text,add column stripe_payment_intent_id text;
+    insert into auth.users values('${owner}'),('${legacyOwner}');
+    insert into public.profiles(id,email) values('${owner}','fictional@example.invalid'),('${legacyOwner}','legacy@example.invalid');`);
+  for(const name of['ks-payment-schema.sql','ks-order-email-schema.sql','ks-pending-order-email-schema.sql','ks-live-receipt-rollback-guard.sql']){
+    const source=await readFile(new URL(name,import.meta.url),'utf8');report.sqlSources[name]=createHash('sha256').update(source).digest('hex');
+    if(name==='ks-payment-schema.sql')install(source.slice(source.indexOf('CREATE OR REPLACE FUNCTION')).replace('$function$\n\nrevoke','$function$;\n\nrevoke'));
+    else install(source);
+  }
+  // Prepare a historical activated receipt before it is adopted for review.
+  install(`set role service_role; ${legacy('HistoricalNative',legacyOwner)}; reset role;`);
+  a=new Session('a');b=new Session('b');observer=new Session('observer');
+  for(const client of[a,b,observer]){
+    client.pid=Number(await client.query('select pg_backend_pid()'));
+    await client.query("set statement_timeout='8s'");
+    await client.query("set lock_timeout='6s'");
+  }
+  await a.query('set role service_role');await b.query('set role service_role');
+  const before=await observer.json('select jsonb_agg(to_jsonb(p) order by id) from public.profiles p');
+  await check('three independent native PostgreSQL backends load the current application foundation',async()=>{
+    assert.equal(new Set([a.pid,b.pid,observer.pid]).size,3);
+    assert.equal(await observer.query("select count(*) from pg_extension where extname='pgcrypto'"),'1');
+    assert.equal(await observer.query('show transaction_isolation'),'read committed');
+  });
+  await check('simultaneous confirmation waits on a real lock, then recovers one receipt and queue',async()=>{
+    const result=await race(record('DuplicateNative'),record('DuplicateNative'));
+    assert.equal(JSON.parse(result.first).replayed,false);assert.equal(JSON.parse(result.second).replayed,true);
+    assert.deepEqual(await observer.json(counts('DuplicateNative')),{receipts:1,queue:1,alerts:0});
+  });
+  await check('rollback of the first confirmation lets the waiting session create exactly one order',async()=>{
+    const result=await race(record('RollbackNative'),record('RollbackNative'),{release:'rollback'});
+    assert.equal(JSON.parse(result.second).replayed,false);assert.deepEqual(await observer.json(counts('RollbackNative')),{receipts:1,queue:1,alerts:0});
+  });
+  await check('a shared payment intent cannot become a second checkout under contention',async()=>{
+    const result=await race(record('IntentWinnerNative',{intent:'pi_SharedNative'}),record('IntentLoserNative',{intent:'pi_SharedNative'}),{expectedError:'P0001'});
+    assert.match(result.error.message,/payment_intent_already_recorded/);
+    assert.deepEqual(await observer.json(counts('IntentLoserNative')),{receipts:0,queue:0,alerts:0});
+  });
+  await check('simultaneous pending-alert preparation preserves one frozen body and first timestamp',async()=>{
+    const result=await race(pending('DuplicateNative'),pending('DuplicateNative','changed@example.invalid'));
+    assert.deepEqual(JSON.parse(result.second),JSON.parse(result.first));
+    assert.deepEqual(await observer.json(counts('DuplicateNative')),{receipts:1,queue:1,alerts:1});
+  });
+  await check('rolled-back alert preparation leaves the waiting session one durable alert',async()=>{
+    const result=await race(pending('RollbackNative'),pending('RollbackNative','after-rollback@example.invalid'),{release:'rollback'});
+    assert.equal(JSON.parse(result.second).send_payload.reply_to,'after-rollback@example.invalid');
+    assert.deepEqual(await observer.json(counts('RollbackNative')),{receipts:1,queue:1,alerts:1});
+  });
+  await check('simultaneous delivery acknowledgements remain final and reject conflicting provider IDs',async()=>{
+    const result=await race(complete('DuplicateNative'),complete('DuplicateNative'));
+    assert.equal(JSON.parse(result.first).status,'sent');assert.equal(JSON.parse(result.second).status,'sent');
+    await assert.rejects(()=>b.query(complete('DuplicateNative','mail_conflict')),error=>error.code==='P0001'&&/pending_alert_delivery_conflict/.test(error.message));
+    assert.equal(JSON.parse(await a.query(pending('DuplicateNative'))).status,'already_sent');
+  });
+  await check('old activation racing an accepted receipt-only order rolls back its profile change',async()=>{
+    const result=await race(record('LegacyRaceNative'),legacy('LegacyRaceNative'),{expectedError:'P0001'});
+    assert.match(result.error.message,/receipt_only_order_cannot_use_legacy_activation/);
+    assert.equal(await observer.query("select activated from public.ks_payment_receipts where checkout_session_id='cs_live_LegacyRaceNative'"),'f');
+    assert.deepEqual(await observer.json('select jsonb_agg(to_jsonb(p) order by id) from public.profiles p'),before);
+  });
+  await check('lock timeout leaves no partial order and an exact later retry succeeds',async()=>{
+    await a.query('begin');await a.query(`select id from public.profiles where id=${literal(owner)} for update`);
+    await b.query("set lock_timeout='150ms'");
+    await assert.rejects(()=>b.query(record('TimeoutNative')),error=>error.code==='55P03');
+    assert.deepEqual(await observer.json(counts('TimeoutNative')),{receipts:0,queue:0,alerts:0});
+    await a.query('rollback');await b.query("set lock_timeout='6s'");
+    assert.equal(JSON.parse(await b.query(record('TimeoutNative'))).replayed,false);
+  });
+  await check('historical activated access is preserved and adopted only as a review obligation',async()=>{
+    const value=JSON.parse(await a.query(record('HistoricalNative',{owner:legacyOwner})));
+    assert.equal(value.legacy_website_activated,true);assert.equal(value.order_status,'requires_review');assert.equal(value.provider_activated,false);
+    assert.deepEqual(await observer.json('select jsonb_agg(to_jsonb(p) order by id) from public.profiles p'),before);
+  });
+  await check('native grants deny browsers and expose no provider dispatch or spending',async()=>{
+    await b.query('reset role');await b.query('set role authenticated');
+    await assert.rejects(()=>b.query(record('BrowserNative')),error=>error.code==='42501');
+    await assert.rejects(()=>b.query('select * from public.ks_setup_order_queue'),error=>error.code==='42501');
+    await b.query('reset role');await b.query('set role service_role');
+    const state=await observer.json("select jsonb_build_object('attempts',(select count(*) from public.ks_preview_provisioning_attempts),'dispatches',(select count(*) from public.ks_preview_reseller_dispatches),'claims',(select count(*) from public.ks_setup_review_claims),'spent',(select coalesce(sum(spent_units),0) from public.ks_setup_review_budgets))");
+    assert.deepEqual(state,{attempts:0,dispatches:0,claims:0,spent:0});
+  });
+  await check('all customer profiles remain byte-equivalent after native races and recovery',async()=>{
+    assert.deepEqual(await observer.json('select jsonb_agg(to_jsonb(p) order by id) from public.profiles p'),before);
+  });
+  report.passed=true;
+  console.log(`${report.tests.length} native PostgreSQL checks passed. Fictional loopback database only; no Supabase, Stripe, email or provider calls.`);
+}catch(error){report.passed=false;report.failure={message:error.message,code:error.code||null};console.error('Native receipt checks failed:',report.failure);process.exitCode=1;
+}finally{
+  for(const client of clients)client.stop();
+  report.finishedAt=new Date().toISOString();
+  if(process.env.KS_NATIVE_REPORT)await writeFile(process.env.KS_NATIVE_REPORT,JSON.stringify(report,null,2)+'\n');
+}
