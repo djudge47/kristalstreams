@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { hasSupabaseConfig, supabase } from '../lib/supabase';
+import { loginDestination } from '../lib/loginDestination';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -21,38 +22,53 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (loading) return;
+    if (!hasSupabaseConfig) {
+      setError('Account sign-in is unavailable on this preview. Please contact support.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setNotice(null);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-
-    if (signInError) {
-      setError(signInError.message === 'Invalid login credentials' ? 'Invalid email or password.' : signInError.message);
-      return;
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError(signInError.message === 'Invalid login credentials' ? 'Invalid email or password.' : signInError.message);
+        return;
+      }
+      if (!data.session) {
+        setError('Sign-in did not complete. Please try again.');
+        return;
+      }
+      navigate(loginDestination((location.state as { from?: unknown } | null)?.from), { replace: true });
+    } catch {
+      setError('Could not connect to account sign-in. Check your connection and try again.');
+    } finally {
+      setLoading(false);
     }
-
-    const destination = (location.state as { from?: unknown } | null)?.from === '/free-trial' ? '/free-trial' : '/dashboard';
-    navigate(destination, { replace: true });
   };
 
   const handleForgotPassword = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (resetLoading) return;
+    if (!hasSupabaseConfig) {
+      setResetMessage('Account recovery is unavailable on this preview. Please contact support.');
+      return;
+    }
     setResetLoading(true);
     setResetMessage(null);
 
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-
-    setResetLoading(false);
-    if (resetError) {
-      setResetMessage(resetError.message);
-      return;
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      setResetMessage(resetError ? resetError.message : 'Password reset email sent. Check your inbox.');
+    } catch {
+      setResetMessage('Could not connect to account recovery. Check your connection and try again.');
+    } finally {
+      setResetLoading(false);
     }
-
-    setResetMessage('Password reset email sent. Check your inbox.');
   };
 
   return (

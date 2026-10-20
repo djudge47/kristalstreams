@@ -35,17 +35,28 @@ const AdminLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
 
   useEffect(() => {
+    let active = true;
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email === ADMIN_EMAIL) {
-        setAuthorized(true);
-      } else {
-        navigate('/login');
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!active) return;
+        if (user?.email === ADMIN_EMAIL) {
+          setAuthorized(true);
+        } else {
+          navigate('/login', { replace: true, state: { from: returnTo } });
+        }
+      } catch {
+        if (active) navigate('/login', { replace: true, state: {
+          from: returnTo, message: 'Your account could not be checked. Please sign in again.',
+        } });
+      } finally {
+        if (active) setLoading(false);
       }
-      setLoading(false);
     };
-    checkAuth();
-  }, [navigate]);
+    void checkAuth();
+    return () => { active = false; };
+  }, [navigate, location.pathname, location.search, location.hash]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
