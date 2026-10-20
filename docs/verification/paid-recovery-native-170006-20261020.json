@@ -1,0 +1,105 @@
+{
+  "kind": "native-paid-worker-recovery",
+  "sourceCommit": "770c9291774a4cf2fe4a5dcc057844e77823fa53",
+  "startedAt": "2026-10-20T05:25:35.589Z",
+  "tests": [
+    {
+      "name": "three native backends use the current guarded foundation without installing the handoff prototype",
+      "passed": true
+    },
+    {
+      "name": "ordinary worker recovery preserves one native attempt and no duplicate fictional create",
+      "passed": true
+    },
+    {
+      "name": "lost_begin worker recovery preserves one native attempt and no duplicate fictional create",
+      "passed": true
+    },
+    {
+      "name": "provider_timeout worker recovery preserves one native attempt and no duplicate fictional create",
+      "passed": true
+    },
+    {
+      "name": "lost_verified worker recovery preserves one native attempt and no duplicate fictional create",
+      "passed": true
+    },
+    {
+      "name": "lost_complete worker recovery preserves one native attempt and no duplicate fictional create",
+      "passed": true
+    },
+    {
+      "name": "a native completion failure after CRM writes rolls back and retries without a second create",
+      "passed": true
+    },
+    {
+      "name": "two real executor callers sharing native SQL create and complete at most once",
+      "passed": true
+    },
+    {
+      "name": "same-attempt approved begin waits on a native row lock and grants one dispatch decision",
+      "passed": true
+    },
+    {
+      "name": "rolled-back approved begin allows the waiting caller one fresh dispatch decision",
+      "passed": true
+    },
+    {
+      "name": "native simultaneous local completions commit one CRM, fulfillment and encrypted owner binding",
+      "passed": true
+    },
+    {
+      "name": "review reservation blocks the actual signed executor before any fictional provider creation",
+      "passed": true
+    },
+    {
+      "name": "uncommitted review ownership rejects approved begin immediately, then remains exclusive after commit",
+      "passed": true
+    },
+    {
+      "name": "uncommitted dispatch ownership rejects review reservation and rollback restores eligibility",
+      "passed": true
+    },
+    {
+      "name": "browser roles cannot read owner envelopes or execute dispatch/completion RPCs",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "supabase/migrations/20261020003225_add_private_checkout_intent_binding.sql": "23afae59897c8e7b2732afcacab20ffd676142a00a2888efbfca1d83ac789834",
+    "_server/ks-guarded-paid-executor.js": "bae978f9b4b957bbe7f4060b3fa8d9a883c067ad141bd116fe28466ac7eec98e",
+    "_server/ks-paid-execution-store.js": "f3cc319c14ca91233c3421d960108cc81c5ec5522797a5835e6208672e1c8f02",
+    "_server/ks-paid-approval.js": "cf3c0f9625c9099c404e67af158d555e705707e83b7d5e1bdf68b7242176a0c1",
+    "_server/ks-login-envelope.js": "4af38a8b26a7a8fc73e2a9579db3bb51e77891bfe0d9afc39c39808ce5262ffd",
+    "_server/ks-roomba-plan-mapping.js": "97c54b4ef2858b49e09e00126dcf4b7180c5e541d2e6bc45694b42ccdc578348",
+    "_server/ks-paid-settlement.js": "f7a78c804f17db21efc4529616de7b6a5669defcc07579d764341b02de11bbda",
+    "_server/ks-payment-validation.js": "e950320e25a5aa97fb18205a37919863906980703edea0e04e908157798e602e",
+    "scripts/fixtures/ks-reviewed-handoff/fixtures.mjs": "27361480f9a0f603b534db81a960d829aa726c9c74376121b808dba29ae7b73b"
+  },
+  "server": {
+    "version": "170006",
+    "database": "ks_paid_recovery_native_test",
+    "isolation": "read committed"
+  },
+  "foundationManifest": {
+    "sourceCommit": "f434a3a2220a0ac09dd83aa367dfb9b78aaaebe3",
+    "files": {
+      "ks-payment-schema.sql": "35d2b7bab8d3eb89b89510a60bf61da482dd2d2f977ce3d8dd78cc54eeb4c688",
+      "ks-preview-paid-orders-schema.sql": "6bc446f85f4412434904354d4755d525be5563c3b456059bedf55d6c5b0803ff",
+      "ks-paid-foundation-schema.sql": "053d89eae0994f66c325d61a4e43e2192bd68eb112fdba37f2d2bcd60bb545fa",
+      "ks-guarded-paid-execution-schema.sql": "8f86670fdaaaf55934166db4c965a6dbbc6b31d4c035c77c6fc4eb7d8cb871b6",
+      "ks-receipt-only-schema.sql": "c1447e27fdaf0fd51bd4a9383934abd2d8179ebf84684619bb1a48ea71e196f5",
+      "ks-setup-review-claim-schema.sql": "9eb115e33f4517b98b86a4bba4bda9d3dedcfaf35897c33a6c5456392db27c2a",
+      "ks-reviewed-preview-completion-schema.sql": "84150882e7e5a33eed48a9c4537031fa68af53d9d6dbf844d30ceaa0296a423e",
+      "ks-reseller-reservation-exclusion-schema.sql": "d6151a938e007c572ea98ce7c6de512558c411664675420c5f053a4d413966f9"
+    }
+  },
+  "passed": true,
+  "finishedAt": "2026-10-20T05:25:36.283Z",
+  "artifactVerification": {
+    "workflowRun": 39374779188,
+    "artifactId": 12243395715,
+    "zipDigest": "sha256:3f7f9566732e4d8ad24ed552ced52195115470407b5f71282f613c24da7e9c28",
+    "verifiedSourceHashes": true,
+    "verifiedFoundationHashes": true
+  }
+}

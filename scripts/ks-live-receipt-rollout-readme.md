@@ -184,3 +184,25 @@ Review connected execution and notification deployment with the remaining
 owner/completion/renewal/recovery work before any separate production release.
 Pausing the flag must retain the guard and saved orders; dropping these objects
 is not a safe rollback procedure.
+
+## Guarded worker recovery follow-up
+
+Native worker testing exposed a real recovery defect: a saved PostgreSQL expiry
+using `+00:00` was rejected against the provider's equivalent `Z` timestamp.
+The source worker now compares expiry instants while still rejecting a changed
+line or invalid/changed expiry. A lost provider-result acknowledgement can
+therefore recover local completion without creating another line.
+
+Fifteen native worker/recovery/ownership cases passed on each of PostgreSQL
+17.6 and 17.11 in
+[run 39374779188](https://github.com/djudge47/kristalstreams/actions/runs/39374779188).
+They execute the actual worker/store code with fictional Auth, Stripe and
+provider responses, native SQL commits and observed independent backend locks.
+See [`ks-paid-recovery-native-readme.md`](ks-paid-recovery-native-readme.md)
+for the bounded cases, source/artifact verification and retained reports.
+
+These results cover selected existing-worker recovery and lock orders. The
+reviewed handoff remains a separate isolated rehearsal. Native signed-handoff
+integration, full ownership/time-boundary coverage, live completion/renewal/
+reconciliation, completion-aware receipt/alert/owner status and connected
+release verification remain open. No new execution authority was enabled.
