@@ -1,0 +1,102 @@
+{
+  "kind": "isolated-admin-navigation-browser-check",
+  "viewports": [
+    {
+      "width": 320,
+      "height": 568,
+      "passed": true,
+      "topSignOutStayedVisible": true,
+      "menuFooterVisible": true,
+      "navigationScroll": {
+        "height": 378,
+        "scroll": 632
+      },
+      "fictionalSignOutCalls": 1
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "passed": true,
+      "topSignOutStayedVisible": true,
+      "menuFooterVisible": true,
+      "navigationScroll": {
+        "height": 654,
+        "scroll": 654
+      },
+      "fictionalSignOutCalls": 1
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "passed": true,
+      "topSignOutStayedVisible": true,
+      "menuFooterVisible": true,
+      "navigationScroll": {
+        "height": 454,
+        "scroll": 632
+      },
+      "fictionalSignOutCalls": 1
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "passed": true,
+      "topSignOutStayedVisible": true,
+      "menuFooterVisible": true,
+      "navigationScroll": {
+        "height": 622,
+        "scroll": 632
+      },
+      "fictionalSignOutCalls": 1
+    }
+  ],
+  "externalRequestsBlocked": [
+    "fonts.googleapis.com",
+    "fonts.googleapis.com",
+    "fonts.googleapis.com",
+    "fonts.googleapis.com"
+  ],
+  "limits": [
+    "Actual AdminLayout and generated production CSS, fictional Auth and long outlet content.",
+    "No live login/sign-out or protected deployed Preview was tested."
+  ],
+  "passed": true,
+  "verifiedAt": "2026-10-20T06:04:17.498947+00:00",
+  "baseCommit": "2c6c13a080c0c2d3eb0d14c5f5a3c4d8581ac655",
+  "sourceHashes": {
+    "src/pages/admin/AdminLayout.tsx": "c2db63cbeed0ba2d5530d301ed5ea48b943aab60f608ef9d9d5488258719ac42"
+  },
+  "build": {
+    "command": "npm run build",
+    "passed": true,
+    "seconds": 10.97
+  },
+  "lint": {
+    "passed": true,
+    "scope": "AdminLayout.tsx; installed no-unused-expressions rule supplied explicit default options, not disabled."
+  },
+  "typeCheck": {
+    "command": "tsc -p tsconfig.app.json --noEmit --pretty false",
+    "baselineIdentical": true,
+    "existingDiagnostics": 45
+  },
+  "regressions": {
+    "loginRouting": true,
+    "actualLoginHandlersWithDoubles": 7
+  },
+  "visualReview": [
+    "320px top bar after long-page scroll",
+    "320px fully opened/scrolled drawer with Sign Out and Back to Site",
+    "1366px collapsed sidebar with top Sign Out"
+  ],
+  "browser": {
+    "engine": "Chromium",
+    "package": "@sparticuz/chromium@153.0.0",
+    "temporaryOnly": true
+  },
+  "notes": [
+    "Auth getUser/signOut were mocked. Each viewport sign-out used the unchanged handler and called fictional signOut once before homepage navigation.",
+    "External requests were blocked. No connected login, customer mutation or real sign-out occurred.",
+    "Browser QA script and downloaded browser were temporary; no project dependency or lockfile changed."
+  ]
+}
