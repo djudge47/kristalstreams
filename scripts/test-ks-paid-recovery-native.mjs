@@ -3,7 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { bootstrap, fixture, prepareAttempt, reserveReview, begin, complete, summary, json, literal, adminId } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
+import { bootstrap, fixture, prepareAttempt, reserveAttempt, reserveReview, begin, complete, summary, json, literal, adminId } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
 import { buildPaidPlanMapping } from '../_server/ks-roomba-plan-mapping.js';
 import { createGuardedPaidExecutor } from '../_server/ks-guarded-paid-executor.js';
 import { createPaidExecutionStore } from '../_server/ks-paid-execution-store.js';
@@ -122,6 +122,7 @@ async function workerFixture(fault=''){
   const f=await fixture(admin,{fingerprint:entry.provider.fingerprint,envelopeFactory:value=>sealStreamingLogin({username:value.username,password},
     {environment:'preview',ownerId:value.owner,sessionId:value.session,attemptId:value.attempt},env)});
   f.bindingHash=createHash('sha256').update(JSON.stringify({sessionId:f.session,ownerId:f.owner,intentId:f.payment,tier:'bronze',connections:1,amountCents:2000,resellerId:f.reseller,packageFingerprint:f.fingerprint})).digest('hex');
+  if(fault==='review')await json(a,reserveReview(f));
   await prepareAttempt(admin,f);
   const now=Date.now(),session={id:f.session,livemode:false,mode:'payment',status:'complete',payment_status:'paid',currency:'usd',amount_total:2000,amount_subtotal:2000,
     payment_intent:{id:f.payment,status:'succeeded',livemode:false,currency:'usd',amount:2000,amount_received:2000,
@@ -220,19 +221,29 @@ try{
     const s=await summary(admin,f);assert.equal(s.crm,1);assert.equal(s.logins,1);assert.equal(s.fulfillments,1);assert.equal(s.dispatchSlots,0);assert.equal(s.receiptActivated,false);assert.deepEqual(await profileSnapshot(),before);
   });
   await check('review reservation blocks the actual signed executor before any fictional provider creation',async()=>{
-    const t=await workerFixture();await json(a,reserveReview(t.f));const before=await summary(admin,t.f);
+    const t=await workerFixture('review');const before=await summary(admin,t.f);
     await assert.rejects(()=>t.run(t.input));assert.equal(t.calls.creates,0);assert.deepEqual(await summary(admin,t.f),before);
   });
   await check('uncommitted review ownership rejects approved begin immediately, then remains exclusive after commit',async()=>{
-    const f=await prepareAttempt(admin,await fixture(admin));await a.query('begin');await json(a,reserveReview(f));
-    await assert.rejects(()=>b.query(`select ${begin(f)}`),error=>error.code==='P0001'&&/reseller_reservation_busy/.test(error.message));
-    await a.query('commit');await assert.rejects(()=>b.query(`select ${begin(f)}`),error=>error.code==='P0001'&&/reseller_reserved_for_setup_review/.test(error.message));
-    const s=await summary(admin,f);assert.equal(s.attemptState,'reserved');assert.equal(s.reviewSlots,1);assert.equal(s.dispatchSlots,0);
+    const work=await fixture(admin),review=await fixture(admin,{reseller:work.reseller});
+    // The worker reservation is initially invisible to the other transaction.
+    // Each order has its own owner/profile/receipt, but the physical reseller
+    // key remains shared. The existing guard is neither replaced nor bypassed.
+    await b.query('begin');work.token=(await json(b,reserveAttempt(work))).claimToken;
+    await a.query('begin');await json(a,reserveReview(review));await b.query('commit');
+    await assert.rejects(()=>b.query(`select ${begin(work)}`),error=>error.code==='P0001'&&/reseller_reservation_busy/.test(error.message));
+    await a.query('commit');await assert.rejects(()=>b.query(`select ${begin(work)}`),error=>error.code==='P0001'&&/reseller_reserved_for_setup_review/.test(error.message));
+    const s=await summary(admin,work);assert.equal(s.attemptState,'reserved');assert.equal(s.reviewSlots,1);assert.equal(s.dispatchSlots,0);
   });
   await check('uncommitted dispatch ownership rejects review reservation and rollback restores eligibility',async()=>{
-    const f=await prepareAttempt(admin,await fixture(admin));await a.query('begin');assert.equal(await json(a,begin(f)),true);
-    await assert.rejects(()=>b.query(`select ${reserveReview(f)}`),error=>error.code==='P0001'&&/reseller_reservation_busy/.test(error.message));
-    await a.query('rollback');await json(b,reserveReview(f));const s=await summary(admin,f);assert.equal(s.attemptState,'reserved');assert.equal(s.reviewSlots,1);assert.equal(s.dispatchSlots,0);
+    const work=await fixture(admin),review=await fixture(admin,{reseller:work.reseller});
+    // SQL-only race: no provider adapter runs inside this uncommitted test
+    // transaction. A rollback removes both its attempt and dispatch claim.
+    await a.query('begin');work.token=(await json(a,reserveAttempt(work))).claimToken;
+    assert.equal(await json(a,begin(work)),true);
+    await assert.rejects(()=>b.query(`select ${reserveReview(review)}`),error=>error.code==='P0001'&&/reseller_reservation_busy/.test(error.message));
+    await a.query('rollback');await json(b,reserveReview(review));const s=await summary(admin,work);
+    assert.equal(s.attemptState,null);assert.equal(s.reviewSlots,1);assert.equal(s.dispatchSlots,0);
   });
   await check('browser roles cannot read owner envelopes or execute dispatch/completion RPCs',async()=>{
     const f=await fixture(admin);await b.query('reset role');await b.query('set role authenticated');
