@@ -16,6 +16,10 @@ on:
       - '_server/ks-guarded-paid-fixtures.js'
       - '_server/ks-roomba-plan-mapping.js'
       - '_server/ks-payment-validation.js'
+      - '_server/ks-preview-completion-status.js'
+      - '_server/ks-customer-setup.js'
+      - '_shared/ks-setup-help.js'
+      - '_shared/ks-payment-confirmation-view.js'
 
 permissions:
   contents: read

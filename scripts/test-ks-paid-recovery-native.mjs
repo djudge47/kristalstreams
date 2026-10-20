@@ -9,6 +9,10 @@ import { createGuardedPaidExecutor } from '../_server/ks-guarded-paid-executor.j
 import { createPaidExecutionStore } from '../_server/ks-paid-execution-store.js';
 import { issuePaidApproval } from '../_server/ks-paid-approval.js';
 import { sealStreamingLogin } from '../_server/ks-login-envelope.js';
+import { loadPreviewCompletions } from '../_server/ks-preview-completion-status.js';
+import { customerSetupSnapshot } from '../_server/ks-customer-setup.js';
+import { readSetupHelpOrders, setupHelpDetails } from '../_shared/ks-setup-help.js';
+import { paymentConfirmationView } from '../_shared/ks-payment-confirmation-view.js';
 
 // This harness cannot target Supabase or construct a real provider adapter.
 assert.equal(process.env.KS_NATIVE_DISPOSABLE_ACK,'paid-recovery-fixtures');
@@ -161,6 +165,36 @@ async function completed(t){
   assert.deepEqual(await admin.json(`select to_jsonb(login_envelope) from public.ks_preview_provisioning_attempts where attempt_id=${literal(t.f.attempt)}`),t.f.envelope);
 }
 
+function nativeCompletionClient(){
+  return {from(table){
+    assert.equal(table,'ks_preview_paid_fulfillments');const filters=new Map();let refs;
+    return {select(columns){assert.ok(!columns.includes('login_envelope'));return this;},eq(key,value){filters.set(key,value);return this;},in(key,values){assert.equal(key,'checkout_session_id');refs=values;return this;},async limit(limit){
+      const owner=filters.get('user_id');
+      for(const key of ['attempt.user_id','login.user_id','receipt.user_id'])assert.equal(filters.get(key),owner);
+      assert.equal(filters.get('receipt.livemode'),false);assert.equal(limit,refs.length+1);
+      const data=await admin.json(`select coalesce(jsonb_agg(to_jsonb(proof)),'[]'::jsonb) from (
+        select f.attempt_id,f.checkout_session_id,f.user_id,f.crm_customer_id,f.completed_at,
+          to_jsonb(a) as attempt,to_jsonb(l) as login,to_jsonb(r) as receipt,to_jsonb(c) as customer
+        from public.ks_preview_paid_fulfillments f join public.ks_preview_provisioning_attempts a using(attempt_id)
+        join public.ks_preview_streaming_logins l using(attempt_id) join public.ks_payment_receipts r on r.checkout_session_id=f.checkout_session_id
+        join public.iptv_customers c on c.id=f.crm_customer_id
+        where f.user_id=${literal(owner)} and a.user_id=${literal(owner)} and l.user_id=${literal(owner)} and r.user_id=${literal(owner)} and r.livemode=false
+          and f.checkout_session_id in (${refs.map(literal).join(',')}) limit ${limit}) proof`);
+      return {data,error:null};
+    }};
+  }};
+}
+
+async function completedOwnerView(t,now=Date.now()){
+  const row=await admin.json(`select jsonb_build_object('checkout_session_id',q.checkout_session_id,'fulfillment_status',q.fulfillment_status,'queued_at',q.queued_at,'receipt',to_jsonb(r))
+    from public.ks_preview_paid_orders q join public.ks_payment_receipts r using(checkout_session_id) where q.checkout_session_id=${literal(t.f.session)}`);
+  const proofs=await loadPreviewCompletions(nativeCompletionClient(),t.f.owner,[row.receipt],now);
+  const orders=customerSetupSnapshot([row],t.f.owner,false,proofs);
+  const parsed=readSetupHelpOrders({accountId:t.f.owner,mode:'read-only',testMode:true,orders,checkedAt:new Date(now).toISOString()},t.f.owner);
+  return {order:parsed.orders[0],help:setupHelpDetails(parsed.orders[0],parsed.checkedAt),view:paymentConfirmationView({ok:true,test_mode:true,activated:false,
+    order_status:parsed.orders[0].status,provider_activated:parsed.orders[0].providerActivated,setup_expires_at:parsed.orders[0].expiresAt,setup_checked_at:parsed.checkedAt},t.f.session)};
+}
+
 try{
   admin=new Session('admin');a=new Session('a');b=new Session('b');
   for(const client of [admin,a,b]){client.request=client.query.bind(client);client.pid=Number(await client.query('select pg_backend_pid()'));await client.query("set statement_timeout='8s'");await client.query("set lock_timeout='6s'");}
@@ -171,7 +205,7 @@ try{
   const binding=await readFile(new URL('../'+bindingName,import.meta.url),'utf8');
   report.sourceHashes[bindingName]=createHash('sha256').update(binding).digest('hex');
   await admin.request(binding);
-  const sources=['_server/ks-guarded-paid-executor.js','_server/ks-paid-execution-store.js','_server/ks-paid-approval.js','_server/ks-login-envelope.js','_server/ks-roomba-plan-mapping.js','_server/ks-paid-settlement.js','_server/ks-payment-validation.js','scripts/fixtures/ks-reviewed-handoff/fixtures.mjs'];
+  const sources=['_server/ks-guarded-paid-executor.js','_server/ks-paid-execution-store.js','_server/ks-paid-approval.js','_server/ks-login-envelope.js','_server/ks-roomba-plan-mapping.js','_server/ks-paid-settlement.js','_server/ks-payment-validation.js','_server/ks-preview-completion-status.js','_server/ks-customer-setup.js','_shared/ks-setup-help.js','_shared/ks-payment-confirmation-view.js','scripts/fixtures/ks-reviewed-handoff/fixtures.mjs'];
   for(const name of sources)report.sourceHashes[name]=createHash('sha256').update(await readFile(new URL('../'+name,import.meta.url))).digest('hex');
   await a.query('set role service_role');await b.query('set role service_role');
   await check('three native backends use the current guarded foundation without installing the handoff prototype',async()=>{
@@ -249,6 +283,19 @@ try{
     const f=await fixture(admin);await b.query('reset role');await b.query('set role authenticated');
     for(const sql of ['select * from public.ks_preview_streaming_logins','select * from public.ks_preview_provisioning_attempts',`select ${begin({...f,token:adminId})}`,`select ${complete({...f,token:adminId})}`])await assert.rejects(()=>b.query(sql),error=>error.code==='42501');
     await b.query('reset role');await b.query('set role service_role');
+  });
+  let completedStatusFixture;
+  await check('native completed setup survives a lost reply and reaches verified owner/payment/support status once',async()=>{
+    const t=completedStatusFixture=await workerFixture('lost_complete'),before=await profileSnapshot();
+    assert.equal((await t.run(t.input)).state,'completion_pending');assert.equal((await t.other(t.input)).state,'credentials_ready');
+    const result=await completedOwnerView(t);assert.equal(result.order.status,'setup_complete');assert.equal(result.order.providerActivated,true);assert.equal(result.view.kind,'ready');assert.match(result.help,/setup confirmed/);
+    assert.ok(!JSON.stringify(result).includes(t.f.envelope.ciphertext));await completed(t);assert.deepEqual(await profileSnapshot(),before);
+  });
+  await check('native completion becomes expired at its saved boundary without another setup or billing claim',async()=>{
+    const t=completedStatusFixture;const before=await summary(admin,t.f);
+    const expiry=await admin.query(`select extract(epoch from provider_expires_at)*1000 from public.ks_preview_provisioning_attempts where attempt_id=${literal(t.f.attempt)}`);
+    const result=await completedOwnerView(t,Number(expiry));assert.equal(result.order.status,'setup_expired');assert.equal(result.order.providerActivated,false);assert.equal(result.view.kind,'expired');assert.match(result.help,/service period ended/);
+    assert.deepEqual(await summary(admin,t.f),before);assert.equal(t.calls.creates,1);
   });
   report.passed=true;
   console.log(`${report.tests.length} native worker recovery checks passed. Provider/Auth/Stripe are fictional; only the named loopback database was used.`);

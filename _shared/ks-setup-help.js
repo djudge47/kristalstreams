@@ -12,13 +12,15 @@ function cleanOrder(value) {
     || !Number.isInteger(value.connections) || value.connections < 1 || value.connections > 5
     || !Number.isSafeInteger(value.amountCents) || value.amountCents <= 0 || value.amountCents > 100000000
     || value.currency !== 'usd' || !validDate(value.recordedAt)
-    || !['awaiting_activation', 'requires_review'].includes(value.status)
-    || (value.testMode && value.status !== 'awaiting_activation')
-    || value.providerActivated !== false) throw new Error('Order details could not be verified.');
+    || !['awaiting_activation', 'requires_review', 'setup_complete', 'setup_expired'].includes(value.status)
+    || (value.status === 'setup_complete' || value.status === 'setup_expired'
+      ? value.testMode !== true || !validDate(value.expiresAt) || value.providerActivated !== (value.status === 'setup_complete')
+      : value.providerActivated !== false || value.expiresAt !== undefined)) throw new Error('Order details could not be verified.');
   return {
     reference: value.reference, tier: value.tier, interval: value.interval, connections: value.connections,
     amountCents: value.amountCents, currency: 'usd', recordedAt: new Date(value.recordedAt).toISOString(),
-    status: value.status, testMode: value.testMode, providerActivated: false,
+    status: value.status, testMode: value.testMode, providerActivated: value.providerActivated,
+    ...(['setup_complete', 'setup_expired'].includes(value.status) ? { expiresAt: new Date(value.expiresAt).toISOString() } : {}),
   };
 }
 
@@ -27,15 +29,23 @@ export function readSetupHelpOrders(payload, accountId) {
     || typeof payload.testMode !== 'boolean' || !Array.isArray(payload.orders) || payload.orders.length > 5
     || !validDate(payload.checkedAt)) throw new Error('Order details could not be verified.');
   const orders = payload.orders.map(cleanOrder);
+  for (const order of orders) checkExpiry(order, payload.checkedAt);
   if (orders.some(order => order.testMode !== payload.testMode)) throw new Error('Order details could not be verified.');
   if (new Set(orders.map(order => order.reference)).size !== orders.length) throw new Error('Order details could not be verified.');
   return { orders, checkedAt: new Date(payload.checkedAt).toISOString() };
+}
+
+function checkExpiry(order, checkedAt) {
+  if (order.expiresAt !== undefined && (Date.parse(order.expiresAt) > Date.parse(checkedAt)) !== (order.status === 'setup_complete')) {
+    throw new Error('Order details could not be verified.');
+  }
 }
 
 // This text is a support snapshot, never payment/provisioning authorization.
 export function setupHelpDetails(order, checkedAt) {
   const safe = cleanOrder(order);
   if (!validDate(checkedAt)) throw new Error('Order details could not be verified.');
+  checkExpiry(safe, checkedAt);
   const tier = safe.tier[0].toUpperCase() + safe.tier.slice(1);
   return [
     safe.testMode ? '--- Saved test-order details for support ---' : '--- Saved paid-order details for support ---',
@@ -44,9 +54,13 @@ export function setupHelpDetails(order, checkedAt) {
     `Connections ordered: ${safe.connections}`,
     `${safe.testMode ? 'Test amount' : 'Paid amount'}: ${(safe.amountCents / 100).toFixed(2)} USD`,
     `Payment recorded: ${safe.recordedAt}`,
-    `Saved setup status: ${safe.status === 'requires_review' ? 'requires review' : 'awaiting activation'}`,
+    `Saved setup status: ${{ awaiting_activation: 'awaiting activation', requires_review: 'requires review', setup_complete: 'setup confirmed', setup_expired: 'service period ended' }[safe.status]}`,
+    ...(safe.expiresAt ? [`Saved service expiry: ${safe.expiresAt}`] : []),
     `Details checked: ${new Date(checkedAt).toISOString()}`,
-    safe.testMode ? 'Preview test payment only. No real charge or streaming activation was made.'
-      : 'Payment recorded. Streaming setup is not confirmed for this order. Do not pay again.',
+    safe.testMode ? 'Preview test payment only. No real card charge was made.' : 'Payment recorded.',
+    safe.status === 'setup_complete' ? 'Saved streaming setup is confirmed. Open your dashboard for your saved streaming login.'
+      : safe.status === 'setup_expired' ? 'The saved service period has ended. Contact support about renewal; do not pay again for this order.'
+        : safe.status === 'requires_review' ? 'Streaming setup needs review. Do not pay again.'
+          : 'Streaming setup is pending confirmation. Do not pay again.',
   ].join('\n');
 }

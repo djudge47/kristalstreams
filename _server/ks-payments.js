@@ -1,9 +1,10 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { PaymentError, applyPaidSession } from './ks-payment-validation.js';
+import { PaymentError, applyPaidSession, validatePaidSession } from './ks-payment-validation.js';
 import { queuePreviewPaidOrder } from './ks-preview-paid-orders.js';
 import { verifiedCheckoutIntent } from './ks-checkout-intent.js';
 import { recordPaymentReceipt } from './ks-receipt-only.js';
+import { loadPreviewCompletions } from './ks-preview-completion-status.js';
 
 export { PaymentError } from './ks-payment-validation.js';
 
@@ -103,6 +104,21 @@ export async function fulfill(sessionId, context, ownerId) {
   }
   const receipt = await applyPaidSession(session, context.live, ownerId, context.admin);
   const queued = await queuePreviewPaidOrder(session, context, ownerId);
+  if (queued?.order_status === 'setup_complete') {
+    const payment = validatePaidSession(session, false, ownerId);
+    const now = Date.now();
+    try {
+      const expected = { checkout_session_id: payment.sessionId, user_id: payment.userId, livemode: false,
+        tier: payment.tier, connections: payment.connections, duration_days: payment.days, amount_cents: payment.cents,
+        currency: 'usd', activated: false, expires_at: null, payment_intent_id: payment.intentId };
+      const completion = (await loadPreviewCompletions(context.admin, payment.userId, [expected], now)).get(session.id);
+      // A completed payment recheck never starts another pending/setup email.
+      return { ...receipt, order_status: completion.status, provider_activated: completion.providerActivated,
+        setup_expires_at: completion.expiresAt, setup_checked_at: new Date(now).toISOString() };
+    } catch {
+      throw new PaymentError(503, 'Your payment is recorded, but the completed setup needs verification. Contact support; do not pay again.');
+    }
+  }
   const { data: alert, error: alertError } = await context.admin.functions.invoke('ks-order-notification', {
     body: { sessionId: session.id },
   });

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createClient as realCreateClient } from '@supabase/supabase-js';
+import { completionFixture } from './fixtures/ks-completion-status.mjs';
 import { createCustomerSetupHandler, customerSetupSnapshot } from '../_server/ks-customer-setup.js';
 
 const owner='00000000-0000-4000-8000-000000000001';
@@ -14,7 +15,9 @@ function fixture(patch={}){
   // Real SDK constructs the PostgREST URL; fetch is intercepted before network.
   const admin=realCreateClient(env.VITE_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:async(input,options)=>{
     const url=new URL(typeof input==='string'?input:input.url);calls.requests.push({url,options});
-    assert.equal(options.method,'GET');assert.equal(url.pathname,patch.env?.VERCEL_ENV==='production'?'/rest/v1/ks_setup_order_queue':'/rest/v1/ks_preview_paid_orders');
+    assert.equal(options.method,'GET');const proof=url.pathname==='/rest/v1/ks_preview_paid_fulfillments';
+    if(!proof)assert.equal(url.pathname,patch.env?.VERCEL_ENV==='production'?'/rest/v1/ks_setup_order_queue':'/rest/v1/ks_preview_paid_orders');
+    if(proof){assert.ok(patch.proofs!==undefined);return Response.json(patch.proofs);}
     return new Response(JSON.stringify(patch.storageError?{message:'SERVER_SECRET',code:'DB_UNAVAILABLE'}:patch.rows===undefined?[row]:patch.rows),{status:patch.storageError?503:200,headers:{'Content-Type':'application/json'}});
   }}});
   const createClient=(_url,key)=>{
@@ -38,7 +41,7 @@ await check('a confirmed customer can read their orders without administrator pr
   const f=fixture();const res=await f.request();assert.equal(res.code,200);assert.equal(res.headers['Cache-Control'],'private, no-store');assert.equal(res.headers.Vary,'Authorization');
   assert.equal(res.body.accountId,owner);assert.equal(res.body.mode,'read-only');assert.equal(res.body.testMode,true);assert.equal(res.body.orders.length,1);
   assert.deepEqual(res.body.orders[0],{reference:receipt.checkout_session_id,tier:'bronze',interval:'monthly',connections:1,amountCents:2000,currency:'usd',recordedAt:receipt.recorded_at,status:'awaiting_activation',testMode:true,providerActivated:false});
-  const url=f.calls.requests[0].url;assert.equal(url.searchParams.get('receipt.user_id'),`eq.${owner}`);assert.equal(url.searchParams.get('receipt.livemode'),'eq.false');assert.equal(url.searchParams.get('receipt.activated'),'eq.false');assert.equal(url.searchParams.get('receipt.expires_at'),'is.null');assert.equal(url.searchParams.get('fulfillment_status'),'eq.awaiting_activation');assert.equal(url.searchParams.get('limit'),'5');assert.equal(url.searchParams.get('order'),'queued_at.desc,checkout_session_id.asc');
+  const url=f.calls.requests[0].url;assert.equal(url.searchParams.get('receipt.user_id'),`eq.${owner}`);assert.equal(url.searchParams.get('receipt.livemode'),'eq.false');assert.equal(url.searchParams.get('receipt.activated'),'eq.false');assert.equal(url.searchParams.get('receipt.expires_at'),'is.null');assert.equal(url.searchParams.get('fulfillment_status'),'in.(awaiting_activation,setup_complete)');assert.equal(url.searchParams.get('limit'),'5');assert.equal(url.searchParams.get('order'),'queued_at.desc,checkout_session_id.asc');
   const selection=url.searchParams.get('select');assert.ok(selection.includes('receipt:ks_payment_receipts!inner('));assert.ok(!selection.includes('*'));assert.ok(!selection.includes('payment_intent_id'));assert.ok(!url.toString().includes(other));
 });
 await check('expired, unconfirmed, anonymous and malformed identities cannot read service data',async()=>{
@@ -67,7 +70,7 @@ await check('opt-in live pending status is scoped to the authenticated owner and
   const res=await f.request();assert.equal(res.code,200);assert.equal(res.body.testMode,false);
   assert.equal(res.body.orders[0].status,'awaiting_activation');assert.equal(res.body.orders[0].providerActivated,false);
   const url=f.calls.requests[0].url;assert.equal(url.searchParams.get('receipt.user_id'),`eq.${owner}`);
-  assert.equal(url.searchParams.get('receipt.livemode'),'eq.true');assert.equal(url.searchParams.get('fulfillment_status'),'in.(awaiting_activation,requires_review)');
+  assert.equal(url.searchParams.get('receipt.livemode'),'eq.true');assert.equal(url.searchParams.get('fulfillment_status'),'in.(awaiting_activation,requires_review,setup_complete)');
   assert.equal(url.searchParams.get('receipt.activated'),null);assert.equal(url.searchParams.get('limit'),'5');
   assert.throws(()=>customerSetupSnapshot([row],owner,true));
   assert.throws(()=>customerSetupSnapshot([{...liveRow,receipt:{...liveReceipt,user_id:other}}],owner,true));
@@ -76,9 +79,25 @@ await check('live legacy entitlements require review and never become a provider
   const legacy={...row,checkout_session_id:'cs_live_Legacy',fulfillment_status:'requires_review',receipt:{...receipt,checkout_session_id:'cs_live_Legacy',livemode:true,activated:true,expires_at:'2026-11-01T00:00:00Z'}};
   const result=customerSetupSnapshot([legacy],owner,true)[0];assert.equal(result.status,'requires_review');assert.equal(result.providerActivated,false);assert.equal(result.expiresAt,undefined);
   assert.throws(()=>customerSetupSnapshot([{...legacy,fulfillment_status:'awaiting_activation'}],owner,true));
-  assert.throws(()=>customerSetupSnapshot([{...legacy,fulfillment_status:'setup_complete'}],owner,true));
+  assert.equal(customerSetupSnapshot([{...legacy,fulfillment_status:'setup_complete'}],owner,true)[0].status,'requires_review');
 });
 await check('an accepted live order stays readable when the new-order rollout flag is paused',async()=>{
   for(const flag of[undefined,'false','1','TRUE']){const f=fixture({env:{VERCEL_ENV:'production',KS_LIVE_RECEIPT_ONLY_ENABLED:flag},rows:[]});assert.equal((await f.request()).code,200);assert.equal(f.calls.service,1);}
+});
+await check('completed and expired owner orders require independently bound proof and remain distinct from pending orders',async()=>{
+  const f=completionFixture(Date.parse('2026-10-17T14:00:00Z'));
+  const completed={checkout_session_id:f.reference,fulfillment_status:'setup_complete',queued_at:f.receipt.recorded_at,receipt:f.receipt};
+  const client=fixture({rows:[row,completed],proofs:[f.row]});const res=await client.request();
+  assert.equal(res.code,200);assert.equal(res.body.orders[0].status,'awaiting_activation');assert.equal(res.body.orders[1].status,'setup_complete');assert.equal(res.body.orders[1].providerActivated,true);assert.equal(res.body.orders[1].expiresAt,f.expiresAt);assert.equal(client.calls.requests.length,2);
+  f.row.completed_at=f.receipt.recorded_at=new Date(f.now-32*86400000).toISOString();
+  f.row.attempt.provider_expires_at=f.row.customer.expiration_at=new Date(f.now-86400000).toISOString();
+  const expired=await fixture({rows:[completed],proofs:[f.row]}).request();assert.equal(expired.code,200);assert.equal(expired.body.orders[0].status,'setup_expired');assert.equal(expired.body.orders[0].providerActivated,false);
+});
+await check('missing or foreign completion proof never hides a completed queue as an empty or pending result',async()=>{
+  const f=completionFixture(Date.parse('2026-10-17T14:00:00Z'));
+  const completed={checkout_session_id:f.reference,fulfillment_status:'setup_complete',queued_at:f.receipt.recorded_at,receipt:f.receipt};
+  for(const proofs of [[],[{...f.row,user_id:other}],[{...f.row,login:{...f.row.login,user_id:other}}]]){
+    const res=await fixture({rows:[completed],proofs}).request();assert.equal(res.code,503);assert.equal(res.body.orders,undefined);assert.ok(res.body.error.includes('do not pay again'));
+  }
 });
 console.log(`${checks} customer setup checks passed. Real SDK query construction with synthetic auth/storage only; no network, charges, provider calls or database mutations.`);

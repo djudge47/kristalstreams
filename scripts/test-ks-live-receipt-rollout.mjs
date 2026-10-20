@@ -80,4 +80,8 @@ await check('unknown protocols and caller-supplied recipients cannot send an ema
 await check('legacy requests retain the existing unactivated-live guard and do not switch email identities',async()=>{
   const f=notificationFixture();const res=await routeOrderNotification(request({sessionId:session.id}),f.options);assert.equal(res.status,409);assert.equal(f.calls.sends,0);assert.equal(f.calls.rpc.length,0);
 });
+await check('a completed live queue recheck preserves payment and skips pending email without inferring live readiness',async()=>{
+  const f=fixture({receipt:{order_status:'setup_complete',replayed:true,queue_replayed:true}});
+  const result=await fulfill(session.id,f.context,owner);assert.equal(result.order_status,'requires_review');assert.equal(result.provider_activated,false);assert.equal(f.calls.notifications.length,0);
+});
 console.log(`${checks} live receipt rollout checks passed with fictional payments and intercepted notification transport. No external requests or mutations.`);
