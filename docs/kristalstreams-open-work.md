@@ -160,3 +160,10 @@ the login patch must add none. Do not call the repository type-clean.
 - Both artifact digests, source/version, seventeen successes and execution/foundation hashes were independently verified; retained reports are `docs/verification/completed-status-native-170006-20261020.json` and `completed-status-native-170011-20261020.json`. The eighteen-case receipt/migration suite passed on both versions at this source in run 39376156645.
 - Connected FK names and existing service SELECT/RLS permissions were checked read-only and retained in `docs/verification/completion-relationships-20261020.json`. No schema, grant, policy or Auth setting changed.
 - This closes bounded completed Preview status and payment-recheck handling, not full live fulfillment, deployed provider/payment/email verification, playback, renewal/reconciliation, signed handoff integration or production rollout. The earlier Stripe event replay and other postponed items remain open.
+
+## Native signed handoff work — October 20, 2026
+
+- Added an isolated PostgreSQL 17.6/17.11 workflow for the actual signed rehearsal and unchanged disposable atomic-transfer prototype. It targets only the named loopback fixture database; it is not a connected migration or a real execution adapter.
+- Extracted shared fictional signed fixtures/scenarios so native and PGlite exercise the same actual approval/envelope/rehearsal behavior. All forty existing local PGlite checks still pass, including lost replies, deferred failure and completion replay.
+- Native cases add observed row-lock commit/rollback races, independent signed callers, actual deferred expiry, advisory-lock retention, wrong-database refusal, browser denial, isolation restriction and unchanged website entitlements. Results are pending; do not treat the new coverage as passed until the retained native reports are verified.
+- This work does not enable general activation or finish the connected server authorization, full UTC/lock-order lifecycle, renewal/trial conversion, reconciliation, live completion/notification policy or release verification. The original paid/trial saved scopes remain intact.

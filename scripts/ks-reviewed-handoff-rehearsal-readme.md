@@ -76,17 +76,52 @@ PGlite has one SQL session. JavaScript overlap is **not** independent PostgreSQL
 contention or deadlock evidence. The simulated day advance does not establish
 native midnight rollover behavior; stale-day and freshness checks can both stop
 that case. The earlier owner-executed 50 native cases remain separate evidence
-for the unchanged SQL prototype, not this new JavaScript integration.
+for the unchanged SQL prototype. The new native signed integration is described below.
 
 Also run the existing setup execution rehearsal, guarded paid execution and
 bounded paid-test-control suites. No dependency or lockfile change is required.
+
+## Native signed integration
+
+`test-ks-reviewed-handoff-native.mjs` uses three persistent, independent `psql`
+connections against **only** a loopback database named
+`ks_disposable_handoff_test`, with `KS_NATIVE_DISPOSABLE_ACK=reviewed-handoff-fixtures`.
+It installs the original hash-checked prototype without removing its safety
+check and verifies all eight historical foundation hashes. A separate process
+with `ON_ERROR_STOP=on` proves the unmodified prototype rejects the `postgres`
+database before creating either prototype table.
+
+The shared signed fixtures/scenarios run the actual HMAC approval, AES envelope
+and rehearsal module with fictional settled payment/package/account data. They
+import no provider transport or application simulation fixture. Every SQL adapter
+resolves only after the implicit transaction and deferred checks finish. The
+PGlite runner retains all forty earlier checks; its overlapping callers remain
+single-session evidence.
+
+The new workflow runs PostgreSQL 17.6 and 17.11 with no project secrets or npm
+application dependencies. Besides the recovered SQL and shared signed cases,
+it observes a real competing backend's row-lock wait through `pg_stat_activity`:
+commit produces replay only; rollback lets the waiting transaction win. The
+rollback test's initial SQL row is provisional and never reaches the JavaScript
+rehearsal. A native one-second approval expiry rejects deferred commit and
+restores the exact source reservation. Two independently connected signed
+callers synchronize after loading the reserved attempt and receive at most one
+committed fictional decision. Additional cases check the shared advisory lock,
+browser denials, isolation restrictions and unchanged website entitlement
+fields. External `fetch` throws and no provider-create dependency exists.
+
+Reports bind the exact tested commit, PostgreSQL version, every named result,
+the prototype/integration sources and foundation hashes. Native midnight
+rollover, all cross-protocol lock orders and a real authenticated server adapter
+remain outside this bounded test. Native run results must be recorded before
+claiming this integration verified.
 
 ## Remaining workflow integration
 
 This closes the isolated signed-approval-to-handoff test gap. It does not make
 general activation ready. Still required are real server authorization and
 bounded execution policy, trusted checkout-intent capture, a reviewed connected
-ownership lifecycle/adapter, native time and lock-order coverage, completion-aware
-receipts/notifications and customer status, and correction of legacy production
-payment-only entitlement activation. No real policy, spent test scope,
+ownership lifecycle/adapter, complete native time and lock-order coverage, the live completion/notification
+and ownership lifecycle, and release of the prepared correction to legacy
+production payment-only entitlement activation. No real policy, spent test scope,
 encryption key, route, connected schema or production setting is changed here.
