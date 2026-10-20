@@ -130,10 +130,26 @@ async function workerFixture(fault=''){
   const account={id:f.reseller,username:'fictional_native_reseller',credits:'100.5'},line={id:f.line,username:f.username,resellerId:f.reseller,packageId:'1000',connections:1,trial:false,enabled:true,adminEnabled:true,bouquetIds:[13,14],expiresAt:new Date(now+31*86400000).toISOString()};
   const approval=issuePaidApproval({session,ownerId:f.owner,approverId:adminId,entry,currentPackage:packages[0],account,checkedAt:now},env,now);
   const calls={creates:0,lineReads:0,paymentReads:0,rpcs:{}};
+  let arrivals=0,release;
+  const bothLoaded=new Promise(resolve=>{release=resolve;});
   const provider={snapshot:async()=>({account,packages,checkedAt:now}),create:async()=>{calls.creates++;if(fault==='provider_timeout')throw new Error('fictional_provider_reply_uncertain');return structuredClone(line);},line:async()=>{calls.lineReads++;return structuredClone(line);},account:async()=>({...account,credits:'99'})};
   const payments={retrieve:async()=>{calls.paymentReads++;return structuredClone(session);}};
   const input={attemptId:f.attempt,ownerId:f.owner,approverId:adminId,approvalToken:approval.token,confirmed:true};
-  const make=connection=>createGuardedPaidExecutor({store:createPaidExecutionStore(databaseClient(connection,f,fault,calls.rpcs),env),provider,payments,env,now:()=>now});
+  const make=connection=>{
+    const store=createPaidExecutionStore(databaseClient(connection,f,fault,calls.rpcs),env);
+    if(fault==='concurrent'){
+      const load=store.load.bind(store);
+      store.load=async(...args)=>{
+        const row=await load(...args);
+        if(arrivals<2){
+          assert.equal(row?.state,'reserved');if(++arrivals===2)release();
+          await bothLoaded;
+        }
+        return row;
+      };
+    }
+    return createGuardedPaidExecutor({store,provider,payments,env,now:()=>now});
+  };
   return {f,input,calls,run:make(a),other:make(b)};
 }
 const profileSnapshot=()=>admin.json('select jsonb_agg(to_jsonb(p) order by id) from public.profiles p');
@@ -141,6 +157,7 @@ async function completed(t){
   const s=await summary(admin,t.f);
   assert.equal(s.attemptState,'credentials_ready');assert.equal(s.crm,1);assert.equal(s.logins,1);assert.equal(s.fulfillments,1);assert.equal(s.dispatchSlots,0);assert.equal(s.receiptActivated,false);assert.equal(s.previewQueue,'setup_complete');
   assert.equal(t.calls.creates,1);
+  assert.deepEqual(await admin.json(`select to_jsonb(login_envelope) from public.ks_preview_provisioning_attempts where attempt_id=${literal(t.f.attempt)}`),t.f.envelope);
 }
 
 try{
@@ -163,7 +180,10 @@ try{
   for(const fault of ['', 'lost_begin','provider_timeout','lost_verified','lost_complete']){
     await check(`${fault||'ordinary'} worker recovery preserves one native attempt and no duplicate fictional create`,async()=>{
       const t=await workerFixture(fault),before=await profileSnapshot();
-      if(fault==='lost_begin')await assert.rejects(()=>t.run(t.input));else await t.run(t.input);
+      if(fault==='lost_begin')await assert.rejects(()=>t.run(t.input));else{
+        const first=await t.run(t.input);
+        assert.equal(first.state,fault==='provider_timeout'||fault==='lost_verified'?'reconciliation_required':fault==='lost_complete'?'completion_pending':'credentials_ready');
+      }
       const result=await t.other(t.input),s=await summary(admin,t.f);
       if(fault==='lost_begin'||fault==='provider_timeout'){
         assert.equal(result.state,'reconciliation_required');assert.equal(s.dispatchSlots,1);assert.equal(s.crm,0);assert.equal(s.logins,0);assert.equal(s.fulfillments,0);assert.equal(t.calls.creates,fault==='lost_begin'?0:1);
@@ -181,8 +201,9 @@ try{
     assert.equal((await t.other(t.input)).state,'credentials_ready');await completed(t);assert.deepEqual(await profileSnapshot(),before);
   });
   await check('two real executor callers sharing native SQL create and complete at most once',async()=>{
-    const t=await workerFixture(),before=await profileSnapshot();
-    await Promise.allSettled([t.run(t.input),t.other(t.input)]);
+    const t=await workerFixture('concurrent'),before=await profileSnapshot();
+    const results=await Promise.race([Promise.allSettled([t.run(t.input),t.other(t.input)]),delay(6000).then(()=>{throw new Error('Concurrent executor fixture timed out');})]);
+    assert.ok(results.some(result=>result.status==='fulfilled'&&result.value.state==='credentials_ready'));
     assert.equal((await t.run(t.input)).state,'credentials_ready');await completed(t);assert.deepEqual(await profileSnapshot(),before);
   });
   await check('same-attempt approved begin waits on a native row lock and grants one dispatch decision',async()=>{
