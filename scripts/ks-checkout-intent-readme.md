@@ -1,4 +1,4 @@
-# Authenticated checkout intent — prepared, disabled
+# Authenticated checkout intent — installed, disabled
 
 A checkout must identify the authenticated purchaser, canonical plan and declared
 service purpose before its Stripe payment URL is returned. This change adds that
@@ -36,9 +36,13 @@ binding for a separately gated Preview checkout. It authorizes no Roomba work.
 
 ## Rollout boundary
 
-The migration was generated with Supabase CLI 2.121.0 and tested only in an isolated
-PGlite database. It has **not** been applied to the connected project. No environment
-variable was set, no deployment promoted and no activation policy created.
+The migration was generated with Supabase CLI 2.121.0, tested in an isolated
+PGlite database and applied to the connected project with user authorization on
+October 19, 2026 (EDT). Its recorded migration version is `20261020003225`; the
+repository filename matches that version. The applied SQL exactly matches the
+tested source, including its original preparation comment. No environment variable
+was set, no deployment promoted and no activation policy created. See
+[connected verification](ks-checkout-intent-connected-verification.md).
 
 Both `KS_CHECKOUT_INTENT_ENABLED=true` on the server and
 `VITE_KS_CHECKOUT_INTENT_ENABLED=true` at client build time are required for the new
@@ -55,8 +59,9 @@ server's verified Auth response; SQL separately matches its profile/email.
 The SQL request row is locked for binding and is unique by owner/request; session
 IDs are also unique. A bound row cannot be rebound, reset or deleted. The existing
 purchase-intent immutability guard remains unchanged. No historical intent is
-backfilled. Before a later Preview enablement, connected schema/ACL verification
-and an approved Stripe test with actual webhooks/browser behavior remain needed.
+backfilled. Connected schema/ACL and actual role-denial checks now pass. Before a
+later Preview enablement, an approved Stripe test with actual webhooks/browser
+behavior remains needed.
 
 General automatic activation, trial conversion, renewal execution, real-credit
 authorization and the production payment-only entitlement correction remain

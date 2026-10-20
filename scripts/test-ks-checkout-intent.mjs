@@ -10,7 +10,7 @@ const { PGlite } = await import(process.env.KS_PGLITE_MODULE || '@electric-sql/p
 const db = new PGlite();
 const env = { VERCEL_ENV: 'preview', KS_CHECKOUT_INTENT_ENABLED: 'true' };
 const origin = 'https://ks-fixture.vercel.app';
-const migration = await readFile(new URL('../supabase/migrations/20261020001805_add_private_checkout_intent_binding.sql', import.meta.url), 'utf8');
+const migration = await readFile(new URL('../supabase/migrations/20261020003225_add_private_checkout_intent_binding.sql', import.meta.url), 'utf8');
 const adminSql = { request: sql => db.exec(sql) };
 let passed = 0, sequence = 0;
 const check = async (label, fn) => { await fn(); passed++; console.log(`PASS: ${label}`); };
