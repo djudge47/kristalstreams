@@ -113,8 +113,23 @@ fields. External `fetch` throws and no provider-create dependency exists.
 Reports bind the exact tested commit, PostgreSQL version, every named result,
 the prototype/integration sources and foundation hashes. Native midnight
 rollover, all cross-protocol lock orders and a real authenticated server adapter
-remain outside this bounded test. Native run results must be recorded before
-claiming this integration verified.
+remain outside this bounded test. Actions run `39377445650` passed all **48 checks on each version** for source
+`d9cd67baaffa4aff06eced08e7d18d141972be46`, tree
+`fa0e1b7033aea385d29babefd20341aa1513cb76`. The ZIP digests, exact source,
+server versions, results, thirteen integration hashes and eight foundation hashes
+were independently verified and retained in
+`docs/verification/signed-handoff-native-170006-20261020.json` and
+`signed-handoff-native-170011-20261020.json`.
+
+All forty local PGlite checks and 24 guarded-worker, 9 completion-adapter and
+19 bounded-control regressions also passed (92 total). Four edited test modules
+pass focused JavaScript lint; YAML parsing and whitespace checks pass. No
+application runtime or SQL prototype changed, so this follow-up required no new
+application build or connected database check. The first native run identified
+only the test adapter's blank SQL NULL output; explicit `psql` null formatting
+corrected the adapter. Both final native suites pass with the original SQL.
+The existing worker (17 cases) and receipt/migration (18 cases) suites also pass
+on both versions at this source in runs `39377445606` and `39377445695`.
 
 ## Remaining workflow integration
 
