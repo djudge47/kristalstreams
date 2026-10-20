@@ -26,7 +26,7 @@ class Session{
     this.pending=null;this.buffer='';
     // A single ordered pipe keeps a rejected statement's ERROR text before
     // its SQLSTATE marker. Arguments are passed separately, never interpolated.
-    this.child=spawn('bash',['-c','exec "$@" 2>&1','ks-native-psql',psql,'--no-psqlrc','--quiet','--no-align','--tuples-only','--set=ON_ERROR_STOP=off','--dbname',target],{env:{...process.env,PGAPPNAME:`ks-reviewed-handoff-native-${name}`},stdio:['pipe','pipe','pipe']});
+    this.child=spawn('bash',['-c','exec "$@" 2>&1','ks-native-psql',psql,'--no-psqlrc','--quiet','--no-align','--tuples-only','--pset=null=null','--set=ON_ERROR_STOP=off','--dbname',target],{env:{...process.env,PGAPPNAME:`ks-reviewed-handoff-native-${name}`},stdio:['pipe','pipe','pipe']});
     this.child.on('error',error=>this.fail(error));
     this.child.on('exit',code=>this.fail(new Error(`Disposable psql session exited (${code})`)));
     this.child.stdout.on('data',chunk=>{
