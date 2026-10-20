@@ -58,7 +58,7 @@
   ],
   "limits": [
     "Actual AdminLayout and generated production CSS, fictional Auth and long outlet content.",
-    "No live login/sign-out or protected deployed Preview was tested."
+    "The isolated automation did not test live login/sign-out or the protected deployment; the separate user-reported Preview check is recorded below."
   ],
   "passed": true,
   "verifiedAt": "2026-10-20T06:04:17.498947+00:00",
@@ -96,7 +96,21 @@
   },
   "notes": [
     "Auth getUser/signOut were mocked. Each viewport sign-out used the unchanged handler and called fictional signOut once before homepage navigation.",
-    "External requests were blocked. No connected login, customer mutation or real sign-out occurred.",
+    "In isolated automation, external requests were blocked; no connected login, customer mutation or real sign-out occurred.",
     "Browser QA script and downloaded browser were temporary; no project dependency or lockfile changed."
-  ]
+  ],
+  "userPreviewVerification": {
+    "reportedAt": "2026-10-20T02:07:25-04:00",
+    "source": "User replies in this chat; not a remote automated browser observation.",
+    "deploymentId": "dpl_7794w6mDW8Ymrbrgcn2EtQpj6nK4",
+    "deploymentState": "READY",
+    "environment": "preview",
+    "sourceCommit": "3ea83e9e2f4fe7c28c4ccbf5e1711217e2a82a27",
+    "url": "https://kristalstreams-hzpjnlncv-djudge47-7683s-projects.vercel.app/admin/roomba",
+    "topSignOutAvailable": true,
+    "requestedAction": "Click the top-right Sign Out and check that it returns to the homepage.",
+    "userResult": "worked",
+    "passed": true,
+    "scope": "Admin navigation/sign-out on this private Preview; not production or Android verification."
+  }
 }
