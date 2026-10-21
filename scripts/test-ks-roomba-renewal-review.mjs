@@ -126,6 +126,8 @@ function fixture(settings = {}) {
     assert.equal(req.method, 'GET'); calls.actions.push(settings.readAction);
     if (state.wait) await state.wait;
     const common = { mode: 'read-only', databaseWrites: false, transport: 'fixie' };
+    if (state.readFailure?.action === settings.readAction) return res.status(state.readFailure.code || 502)
+      .json({ ...common, status: 'connection_failed', ...state.readFailure.body });
     if (settings.readAction === 'user_info') return res.status(200).json({ ...common, status: 'connected', account: { id: '12', credits: 68 } });
     if (settings.readAction === 'get_line') {
       assert.equal(settings.lineId, '123'); return res.status(200).json({ ...common, status: 'line_ready', line: { ...line, ...state.line, password: 'sensitive-password' } });
@@ -284,7 +286,26 @@ try {
   await test('failed refresh removes a previous ready review and shows an alert instead', async () => {
     const f = fixture(); connect(f); await click(); assert.ok(renderToStaticMarkup(render()).includes('Current package reviewed'));
     f.state.now += 61000; f.state.packageFails = true; await click(); const markup = renderToStaticMarkup(render());
-    assert.ok(markup.includes('role="alert"')); assert.ok(markup.includes('could not be verified')); assert.ok(!markup.includes('Current package reviewed'));
+    assert.ok(markup.includes('role="alert"')); assert.ok(markup.includes('package list check could not reach XUI')); assert.ok(!markup.includes('Current package reviewed'));
+  });
+  await test('actual client shows the failed package timeout without exposing provider error text', async () => {
+    const f = fixture({ readFailure: { action: 'packages', body: { reason: 'TIMEOUT', error: 'sensitive-provider-error-with-key' } } });
+    connect(f); await click(); const markup = renderToStaticMarkup(render());
+    assert.ok(markup.includes('The XUI package list check timed out.')); assert.ok(markup.includes('Saved CRM records have not changed'));
+    assert.ok(!markup.includes('sensitive-')); assert.ok(!markup.includes('Renewal approval preview'));
+  });
+  await test('each failed read reports only its fixed stage and sanitized reason, with no customer override', async () => {
+    for (const [action, body, step, reason] of [
+      ['user_info', { reason: 'PROXY_HTTP_429' }, 'account', 'rate_limited'],
+      ['get_line', { upstreamStatus: 403 }, 'line', 'provider_refused'],
+      ['packages', { reason: 'KS_INVALID_JSON' }, 'packages', 'invalid_response'],
+      ['packages', { reason: 'sensitive-custom-error', error: 'sensitive-provider-error' }, 'packages', 'connection_failed'],
+    ]) {
+      const f = fixture({ readFailure: { action, body } }); const r = await f.request();
+      assert.equal(r.code, 502); assert.deepEqual(r.body.diagnostic, { step, reason });
+      assert.equal(r.body.line, undefined); assert.ok(r.body.error.includes('Saved CRM records have not changed'));
+      assert.ok(!JSON.stringify(r.body).includes('sensitive-'));
+    }
   });
   const savingFixture = settings => httpFixture({ now, customer: { id: customerId, external_id: 123,
     username: line.username, expiration_at: '2026-11-20T16:30:00.000Z' }, ...settings });

@@ -97,4 +97,40 @@ await test('storage uncertainty is explicit and never treated as a saved approva
   const f = httpFixture({ rpcFails: true }); const review = await f.review(); const r = await f.save(review);
   assert.equal(r.code, 503); assert.equal(r.body.statusUnknown, true); assert.equal(f.calls.rpc.length, 1); assert.equal(f.state.approvals.size, 0);
 });
+await test('save read failures identify the exact stage and fixed reason without leaking provider data or reserving', async () => {
+  const warnings = []; const originalWarn = console.warn; console.warn = (...args) => warnings.push(args);
+  try {
+    for (const [action, step, code, body, reason] of [
+      ['user_info','account',502,{ reason: 'PROXY_HTTP_407', error: 'sensitive-proxy-url' },'proxy_refused'],
+      ['get_line','line',502,{ upstreamStatus: 403, error: 'sensitive-api-key' },'provider_refused'],
+      ['packages','packages',502,{ reason: 'KS_RESPONSE_TIMEOUT', error: 'sensitive-password' },'timeout'],
+      ['packages','packages',502,{ status: 'unexpected_response', error: 'sensitive-token' },'invalid_response'],
+    ]) {
+      const f = httpFixture(); const review = await f.review();
+      f.state.providerReply = current => current === action ? { code, body } : null;
+      const r = await f.save(review);
+      assert.equal(r.code, 409); assert.deepEqual(r.body.diagnostic, { step, reason });
+      assert.match(r.body.error, /No test approval was saved/); assert.equal(r.body.statusUnknown, undefined);
+      assert.equal(f.calls.rpc.length, 0); assert.equal(f.state.approvals.size, 0);
+    }
+    assert.ok(!JSON.stringify(warnings).includes('sensitive-'));
+    assert.ok(warnings.every(([event, data]) => event === 'ks_crm_xui_read_failed'
+      && Object.keys(data).sort().join(',') === 'reason,step,view' && data.view === 'test-approval'));
+  } finally { console.warn = originalWarn; }
+});
+await test('customer and plan verification failures remain fixed categories and never write', async () => {
+  const originalWarn = console.warn; console.warn = () => {};
+  try {
+    for (const [step, reason, mutate] of [
+      ['saved_customer','verification_failed', state => state.customer.external_id = 'invalid'],
+      ['plan','identity_changed', state => state.line.resellerId = '99'],
+      ['plan','credits_unavailable', state => state.account.credits = 0],
+    ]) {
+      const f = httpFixture(); const review = await f.review(); mutate(f.state);
+      const r = await f.save(review); assert.equal(r.code, 409);
+      assert.deepEqual(r.body.diagnostic, { step, reason });
+      assert.equal(f.calls.rpc.length, 0);
+    }
+  } finally { console.warn = originalWarn; }
+});
 console.log(`${checks} test approval HTTP checks passed. Synthetic dependencies only; no connected records or provider writes.`);

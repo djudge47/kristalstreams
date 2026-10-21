@@ -8,6 +8,31 @@ import { issueRenewalTestReview } from './ks-crm-renewal-test-review.js';
 const options = { auth: { persistSession: false, autoRefreshToken: false } };
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const lineId = value => ['string', 'number'].includes(typeof value) && /^[1-9]\d{0,14}$/.test(String(value));
+const readLabels = { account: 'account check', line: 'customer line check', packages: 'package list check' };
+const timeoutReasons = new Set(['TIMEOUT','KS_RESPONSE_TIMEOUT','UND_ERR_CONNECT_TIMEOUT','UND_ERR_HEADERS_TIMEOUT','UND_ERR_BODY_TIMEOUT','ETIMEDOUT']);
+class StatusReadFailure extends Error {
+  constructor(step, reason) { super('xui_read_failed'); this.step = step; this.reason = reason; }
+}
+function readFailure(step, code, body) {
+  const reason = timeoutReasons.has(body?.reason) ? 'timeout'
+    : body?.upstreamStatus === 429 || body?.reason === 'PROXY_HTTP_429' || code === 429 ? 'rate_limited'
+      : body?.upstreamStatus === 403 ? 'provider_refused'
+        : code === 503 ? 'configuration_unavailable'
+          : body?.status === 'unexpected_response' || ['KS_INVALID_JSON','KS_HTML_RESPONSE','KS_RESPONSE_TOO_LARGE','KS_RESPONSE_COMPLEXITY','NON_JSON_RESPONSE'].includes(body?.reason) ? 'invalid_response'
+            : 'connection_failed';
+  return new StatusReadFailure(step, reason);
+}
+function failureReply(error, reviewRenewal) {
+  if (!(error instanceof StatusReadFailure)) return { error: reviewRenewal
+    ? 'The renewal review could not be verified. Saved CRM records have not changed.'
+    : 'The matching XUI line could not be verified. Saved CRM records have not changed.' };
+  const description = { timeout: 'timed out', rate_limited: 'was rate-limited by the connection',
+    provider_refused: 'was refused by XUI', configuration_unavailable: 'could not connect with the configured settings',
+    invalid_response: 'returned incomplete or unreadable details', connection_failed: 'could not reach XUI',
+    identity_mismatch: 'did not match the saved customer and reseller', verification_failed: 'returned details that could not be verified' };
+  return { error: `The XUI ${readLabels[error.step]} ${description[error.reason]}. Saved CRM records have not changed.`,
+    diagnostic: { step: error.step, reason: error.reason } };
+}
 
 // Only the CRM UUID crosses the browser boundary. The server selects the line
 // reference, verifies the current reseller, and never persists provider data.
@@ -29,12 +54,14 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
   const cache = new Map();
   let pending;
   let retryAt = 0;
-  async function read(handler) {
+  async function read(handler, step) {
     let code; let body;
-    await handler({ method: 'GET', headers: { authorization: `Bearer ${env.ROOMBA_PREVIEW_SECRET}` } }, {
-      setHeader() {}, status(value) { code = value; return this; }, json(value) { body = value; return this; },
-    });
-    if (code !== 200 || body?.transport !== 'fixie' || body.mode !== 'read-only' || body.databaseWrites !== false) throw new Error('read_failed');
+    try {
+      await handler({ method: 'GET', headers: { authorization: `Bearer ${env.ROOMBA_PREVIEW_SECRET}` } }, {
+        setHeader() {}, status(value) { code = value; return this; }, json(value) { body = value; return this; },
+      });
+    } catch { throw new StatusReadFailure(step, 'connection_failed'); }
+    if (code !== 200 || body?.transport !== 'fixie' || body.mode !== 'read-only' || body.databaseWrites !== false) throw readFailure(step, code, body);
     return body;
   }
   const snapshot = entry => ({
@@ -101,19 +128,21 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
         retryAt = now() + 30000;
         const promise = (async () => {
           const startedAt = new Date(now()).toISOString();
-          const account = await read(accountHandler);
-          if (account.status !== 'connected' || !lineId(account.account?.id)) throw new Error('reseller_unverified');
-          const result = await read(factory({ readAction: 'get_line', lineId: String(customer.external_id) }));
+          const account = await read(accountHandler, 'account');
+          if (account.status !== 'connected' || !lineId(account.account?.id)) throw new StatusReadFailure('account', 'verification_failed');
+          const result = await read(factory({ readAction: 'get_line', lineId: String(customer.external_id) }), 'line');
           const line = result.line;
           if (result.status !== 'line_ready' || line?.id !== String(customer.external_id)
-            || line.username !== customer.username || line.resellerId !== String(account.account.id)) throw new Error('identity_conflict');
+            || line.username !== customer.username || line.resellerId !== String(account.account.id)) throw new StatusReadFailure('line', 'identity_mismatch');
           if (!Number.isFinite(Date.parse(line.expiresAt)) || !Number.isInteger(line.connections) || line.connections < 1 || line.connections > 32
-            || ![line.trial, line.enabled, line.adminEnabled].every(value => typeof value === 'boolean')) throw new Error('invalid_line');
+            || ![line.trial, line.enabled, line.adminEnabled].every(value => typeof value === 'boolean')) throw new StatusReadFailure('line', 'verification_failed');
           let renewalContext;
           if (reviewRenewal) {
-            const catalog = await read(factory({ readAction: 'packages' }));
-            if (catalog.status !== 'packages_ready' || !Array.isArray(catalog.packages)) throw new Error('packages_unverified');
-            const packages = buildPackageSummary(catalog.packages, startedAt).packages;
+            const catalog = await read(factory({ readAction: 'packages' }), 'packages');
+            if (catalog.status !== 'packages_ready' || !Array.isArray(catalog.packages)) throw new StatusReadFailure('packages', 'verification_failed');
+            let packages;
+            try { packages = buildPackageSummary(catalog.packages, startedAt).packages; }
+            catch { throw new StatusReadFailure('packages', 'verification_failed'); }
             const { id, username, resellerId, packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds } = line;
             renewalContext = { line: { id, username, resellerId, packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds },
               account: { id: String(account.account.id), credits: account.account.credits }, packages, checkedAt: startedAt };
@@ -136,10 +165,10 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
         void promise.finally(() => { pending = null; }).catch(() => {});
       }
       return reply(200, { mode: 'read-only', databaseWrites: false, cached: false, ...content(await pending.promise, customer, actorId) });
-    } catch {
-      return reply(502, { error: reviewRenewal
-        ? 'The renewal review could not be verified. Saved CRM records have not changed.'
-        : 'The matching XUI line could not be verified. Saved CRM records have not changed.', retryAfterSeconds: 30 });
+    } catch (error) {
+      const safe = failureReply(error, reviewRenewal);
+      if (safe.diagnostic) console.warn('ks_crm_xui_read_failed', { view: reviewRenewal ? 'renewal' : 'status', ...safe.diagnostic });
+      return reply(502, { ...safe, retryAfterSeconds: 30 });
     }
   };
 }
