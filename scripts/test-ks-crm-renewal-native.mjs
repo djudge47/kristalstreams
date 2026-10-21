@@ -106,7 +106,9 @@ try{
     await a.request('begin');try{assert.equal(await json(a,begin(f)),true);
       await assert.rejects(()=>json(b,begin(g)),/reseller_reservation_busy/);await a.request('commit');
     }finally{await a.request('rollback');}
-    await assert.rejects(()=>json(b,begin(g)),/reseller_reserved_for_other_work/);
+    // Same-table contention is enforced by the durable primary key; the shared
+    // trigger gives a separate fixed error for conflicts with other protocols.
+    await assert.rejects(()=>json(b,begin(g)),/ks_proto_renewal_reseller_slots_pkey/);
     assert.equal((await summary(admin,g)).versions,0);
   });
   for(const renewalFirst of [true,false])await check(`renewal and existing paid setup share the native lock (${renewalFirst?'renewal':'setup'} first)`,async()=>{
