@@ -29,3 +29,15 @@ mapping, refusal/rate-limit distinctions, removal of a previous ready review,
 and exclusion of arbitrary provider errors. Existing status/test-approval checks
 also pass. A deployed signed-in retry is still needed to observe the current
 external failure with the new diagnostic.
+
+The connected retry succeeded after the exhausted Fixie allowance was increased,
+but saving the test approval returned the older generic pre-reservation error.
+A SELECT-only read confirmed no test approval/operation for the selected customer,
+the corrected expiration unchanged, and live execution still disabled. The save
+handler now reports fixed categories for its saved-customer, account, line,
+package and plan verification steps as well. Proxy refusal (including HTTP 407)
+does not claim whether authentication or allowance caused it. Planner failures
+are mapped from an explicit allowlist; arbitrary exception text stays private.
+Post-reservation uncertainty still requires checking the same immutable attempt,
+and is never reported as a definite failed save. No freshness window, identity
+check, database write, retry or execution behavior was changed.

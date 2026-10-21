@@ -51,6 +51,8 @@ export function httpFixture(settings = {}) {
     assert.equal(req.method, 'GET'); assert.ok(['user_info','get_line','packages'].includes(settings.readAction));
     calls.reads.push(settings.readAction);
     if (state.providerFails) throw Error('sensitive-provider-error');
+    const override = state.providerReply?.(settings.readAction);
+    if (override) return res.status(override.code).json(override.body);
     const content = settings.readAction === 'user_info' ? { status: 'connected', account: state.account }
       : settings.readAction === 'get_line' ? { status: 'line_ready', line: { ...state.line, password: 'sensitive-provider-password' } }
         : { status: 'packages_ready', packages: state.packages };
