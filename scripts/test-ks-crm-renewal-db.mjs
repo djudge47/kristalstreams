@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { bootstrap } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
+import { runSequential } from './fixtures/ks-crm-renewal/scenarios.mjs';
+import { runWorkflowChecks } from './fixtures/ks-crm-renewal/workflow.mjs';
+
+const { PGlite }=await import(process.env.KS_PGLITE_MODULE||'@electric-sql/pglite');
+const dataDir=await mkdtemp(join(tmpdir(),'ks-renewal-preflight-'));
+let db=new PGlite({dataDir});
+globalThis.fetch=()=>{throw Error('External transport forbidden in disposable renewal checks');};
+const session=role=>({async request(sql){
+  const results=await db.exec(/^\s*(begin|commit|rollback)\b/i.test(sql)?sql:`set role ${role};${sql}`);
+  return results.flatMap(r=>r.rows).map(row=>{
+    const [column,value]=Object.entries(row)[0];return column==='to_jsonb'||typeof value==='object'?JSON.stringify(value):String(value);
+  }).join('\n');
+}});
+const admin=session('postgres'),worker=session('service_role');let checks=0;
+const check=async(name,fn)=>{await fn();checks++;console.log(`PASS: ${name}`);};
+try{
+  const source=await readFile(new URL('./fixtures/ks-crm-renewal/prototype.sql',import.meta.url),'utf8');
+  await check('unchanged installation SQL refuses the wrong database before creating anything',async()=>{
+    await assert.rejects(()=>db.exec(source),/disposable_crm_renewal_database_required/);
+    assert.equal((await db.query("select to_regclass('public.ks_proto_renewal_approvals') as target")).rows[0].target,null);
+  });
+  await db.exec('create database ks_disposable_crm_renewal_test');await db.close();
+  db=new PGlite({dataDir,database:'ks_disposable_crm_renewal_test'});
+  await bootstrap(admin,{pglitePreflight:true});
+  // Both runners execute untouched installation SQL, including its DB guard.
+  await admin.request(source);
+  await runSequential({admin,worker,check});
+  await runWorkflowChecks({admin,worker,check});
+  console.log(`${checks} isolated SQL renewal checks passed. PGlite is single-session preflight, not native contention evidence. No connected database or provider was used.`);
+}catch(error){console.error('Renewal SQL preflight failed',{message:error.message,code:error.code,where:error.where});process.exitCode=1;}
+finally{await db.close();await rm(dataDir,{recursive:true,force:true});}
