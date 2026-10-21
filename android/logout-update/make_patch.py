@@ -18,7 +18,7 @@ from pathlib import Path
 PACKAGE = "com.gearzoneiptv.gearzoneiptviptvbox"
 DEX_SHA = "23674b1585afee49576a95a189857a6dc4b004a6ebfb4509f8a7bc5b5b884227"
 CERT_SHA = "459b8227b6f703202277cbb8aca96c33f968fbfc45b2000cf115d6d1cb6dfe57"
-TARGET_VERSION = 2026102001
+TARGET_VERSION = 2026102002
 
 
 def sha(data: bytes) -> str:
@@ -104,6 +104,7 @@ class Dex:
 class Code:
     def __init__(self, dex):
         self.dex, self.words, self.labels, self.fixups = dex, [], {}, []
+        self.data_fixups = []
 
     def emit(self, *words):
         self.words.extend(words)
@@ -133,9 +134,20 @@ class Code:
     def result(self, register, object_=False):
         self.emit((0x0C if object_ else 0x0A) | register << 8)
 
+    def filled_array(self, type_name, register):
+        self.emit(0x1024, self.dex.types.index(type_name), register)
+
+    def fill_chars(self, register, label):
+        pos = len(self.words)
+        self.emit(0x26 | register << 8, 0, 0)
+        self.data_fixups.append((pos, label))
+
     def finish(self):
         for pos, label in self.fixups:
             self.words[pos + 1] = (self.labels[label] - pos) & 65535
+        for pos, label in self.data_fixups:
+            offset = self.labels[label] - pos
+            self.words[pos + 1:pos + 3] = [offset & 65535, offset >> 16]
         return struct.pack("<" + "H" * len(self.words), *self.words)
 
 
@@ -146,6 +158,10 @@ def logout_code(dex):
     code = Code(dex)
     context, zero = 6, 2
     code.branch_zero(context, "done")
+    activity_type = dex.types.index("Landroid/app/Activity;")
+    code.emit(0x20 | context << 12, activity_type)  # instance-of v0, v6, Activity
+    code.branch_zero(0, "failure")
+    code.emit(0x1F | context << 8, activity_type)  # check-cast for finishAffinity
     code.const4(zero, 0)
     code.emit(0x62, dex.fields.index("Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;"))
     code.emit(0x69, dex.fields.index("Lf/e/a/h/i/a;->y:Ljava/lang/Boolean;"))
@@ -176,11 +192,31 @@ def logout_code(dex):
         code.result(0)
         code.branch_zero(0, "failure")
     code.emit(0x22 | 1 << 8, dex.types.index("Landroid/content/Intent;"))
-    code.emit(0x1C | 4 << 8, dex.types.index("Lcom/gearzoneiptv/gearzoneiptviptvbox/view/activity/MultiUserActivity;"))
-    code.invoke(0x70, "Landroid/content/Intent;-><init>(Landroid/content/Context;Ljava/lang/Class;)V", [1, context, 4])
-    code.emit(0x14 | zero << 8, 0x8000, 0x1000)  # NEW_TASK | CLEAR_TASK
+    code.string(4, "android.intent.action.MAIN")
+    code.invoke(0x70, "Landroid/content/Intent;-><init>(Ljava/lang/String;)V", [1, 4])
+    # addCategory is a public Android method absent from the existing method IDs.
+    # Use existing reflection references rather than reindex unrelated DEX code.
+    # HOME is built from a local char-array payload; no old string is overwritten.
+    code.emit(0x1C, dex.types.index("Landroid/content/Intent;"))
+    code.string(3, "addCategory")
+    code.emit(0x1C | 4 << 8, dex.types.index("Ljava/lang/String;"))
+    code.filled_array("[Ljava/lang/Class;", 4)
+    code.result(4, True)
+    code.invoke(0x6E, "Ljava/lang/Class;->getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;", [0, 3, 4])
+    code.result(0, True)
+    home_category = "android.intent.category.HOME"
+    code.emit(0x13 | 4 << 8, len(home_category))  # const/16 v4, length
+    code.emit(0x23 | 4 << 8 | 4 << 12, dex.types.index("[C"))
+    code.fill_chars(4, "home_chars")
+    code.emit(0x22 | 3 << 8, dex.types.index("Ljava/lang/String;"))
+    code.invoke(0x70, "Ljava/lang/String;-><init>([C)V", [3, 4])
+    code.filled_array("[Ljava/lang/Object;", 3)
+    code.result(4, True)
+    code.invoke(0x6E, "Ljava/lang/reflect/Method;->invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;", [0, 1, 4])
+    code.emit(0x14 | zero << 8, 0, 0x1000)  # NEW_TASK; never clear the launcher's task
     code.invoke(0x6E, "Landroid/content/Intent;->setFlags(I)Landroid/content/Intent;", [1, zero])
     code.invoke(0x6E, "Landroid/content/Context;->startActivity(Landroid/content/Intent;)V", [context, 1])
+    code.invoke(0x6E, "Landroid/app/Activity;->finishAffinity()V", [context])
     code.emit(0x0E)
     code.label("failure")
     code.string(1, "Error")
@@ -190,6 +226,10 @@ def logout_code(dex):
     code.invoke(0x6E, "Landroid/widget/Toast;->show()V", [0])
     code.label("done")
     code.emit(0x0E)
+    if len(code.words) % 2:
+        code.emit(0)  # array-data payloads require four-byte alignment
+    code.label("home_chars")
+    code.emit(0x0300, 2, len(home_category), 0, *map(ord, home_category))
     return code.finish()
 
 
@@ -330,8 +370,11 @@ def generate(apk: Path, destination: Path):
                                 "replacementBase64": base64.b64encode(replacement).decode()})
     if len(layouts) != 8:
         raise ValueError(f"Unexpected account-layout count: {len(layouts)}")
+    previous = json.loads(Path(__file__).with_name("previous_logout.json").read_text())
     result = {"package": PACKAGE, "certificateSha256": CERT_SHA,
-              "targetVersionCode": TARGET_VERSION, "sourceVersions": [2026101902, 2026101903],
+              "targetVersionCode": TARGET_VERSION, "sourceVersions": [2026101902, 2026101903, previous["versionCode"]],
+              "sourceDexVariants": [{"sha256": sha(dex), "methodHex": method["originalHex"]},
+                                    {"sha256": previous["sha256"], "methodHex": previous["methodHex"]}],
               "dexSha256": sha(dex), "patchedDexSha256": sha(changed),
               "method": {"signature": LOGOUT_SIGNATURE, **method}, "layouts": layouts}
     destination.write_text(json.dumps(result, indent=2) + "\n")

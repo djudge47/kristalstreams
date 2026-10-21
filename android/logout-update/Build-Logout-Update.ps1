@@ -25,11 +25,13 @@ function Convert-HexBytes([string]$Hex) {
 }
 
 function Update-LogoutDex([byte[]]$Data) {
-  if ((Get-BytesHash $Data) -ne $patch.dexSha256) {
+  $sourceDexHash = Get-BytesHash $Data
+  $variant = @($patch.sourceDexVariants | Where-Object { $_.sha256 -eq $sourceDexHash })
+  if ($variant.Count -ne 1) {
     throw 'This APK has different app code. No output was created. Send the APK filename shown above so its logout code can be reviewed; do not substitute an older app.'
   }
   [int]$offset = $patch.method.offset
-  [byte[]]$before = Convert-HexBytes $patch.method.originalHex
+  [byte[]]$before = Convert-HexBytes $variant[0].methodHex
   [byte[]]$after = Convert-HexBytes $patch.method.replacementHex
   if ($before.Length -ne $after.Length -or $offset -lt 112 -or $offset + $before.Length -gt $Data.Length) { throw 'Invalid bounded code patch.' }
   for ($i = 0; $i -lt $before.Length; $i++) {
@@ -67,9 +69,9 @@ function Invoke-KsLogoutBuild {
   try {
     Add-Type -AssemblyName System.IO.Compression
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    Write-Host 'Kristal Streams - Visible Log Out update' -ForegroundColor Cyan
+    Write-Host 'Kristal Streams - Log Out to Onn Home update' -ForegroundColor Cyan
     if (-not $ApkPath) {
-      foreach ($family in @('*2026101903-WORKING-BASE-*.apk', '*2026101902-APPROVED-ARTWORK-*.apk')) {
+      foreach ($family in @('*2026102001-LOGOUT-*.apk', '*2026101903-WORKING-BASE-*.apk', '*2026101902-APPROVED-ARTWORK-*.apk')) {
         $candidates = @(Get-ChildItem -LiteralPath "$env:USERPROFILE\Downloads" -File -Filter $family -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
         if ($candidates.Count) { $ApkPath = $candidates[0].FullName; break }
       }
@@ -77,7 +79,7 @@ function Invoke-KsLogoutBuild {
     if (-not $ApkPath) {
       Add-Type -AssemblyName System.Windows.Forms
       $dialog = New-Object Windows.Forms.OpenFileDialog
-      $dialog.Title = 'Choose the current APPROVED-ARTWORK or WORKING-BASE APK installed on your Onn'
+      $dialog.Title = 'Choose your current Kristal Streams APK (LOGOUT, WORKING-BASE or APPROVED-ARTWORK)'
       $dialog.InitialDirectory = "$env:USERPROFILE\Downloads"
       $dialog.Filter = 'Android APK (*.apk)|*.apk'
       if ($dialog.ShowDialog() -ne 'OK') { throw 'No current APK selected.' }
@@ -102,11 +104,11 @@ function Invoke-KsLogoutBuild {
       [byte[]]$manifest = $replacementBytes['AndroidManifest.xml']
       $versionOffset = Find-ManifestVersionOffset $manifest
       $sourceVersion = Read-U32 $manifest $versionOffset
-      if ($patch.sourceVersions -notcontains $sourceVersion) { throw 'Choose your current 2026101902 APPROVED-ARTWORK or 2026101903 WORKING-BASE APK. The older launcher-only APK is not accepted.' }
+      if ($patch.sourceVersions -notcontains $sourceVersion) { throw 'Choose your current 2026102001 LOGOUT, 2026101903 WORKING-BASE or 2026101902 APPROVED-ARTWORK APK. The older launcher-only APK is not accepted.' }
       $replacementBytes['classes.dex'] = Update-LogoutDex $replacementBytes['classes.dex']
       foreach ($layout in $patch.layouts) {
         $entry = $sourceZip.GetEntry($layout.entry)
-        if (-not $entry -or (Get-ZipEntryHash $entry) -ne $layout.originalSha256) { throw "Unreviewed account layout: $($layout.entry). No older layout will be substituted." }
+        if (-not $entry -or @($layout.originalSha256, $layout.replacementSha256) -notcontains (Get-ZipEntryHash $entry)) { throw "Unreviewed account layout: $($layout.entry). No older layout will be substituted." }
         [byte[]]$bytes = [Convert]::FromBase64String($layout.replacementBase64)
         if ((Get-BytesHash $bytes) -ne $layout.replacementSha256) { throw 'Logout layout checksum failed.' }
         $replacementBytes[$layout.entry] = $bytes
@@ -169,7 +171,7 @@ function Invoke-KsLogoutBuild {
     $aligned = Join-Path $work 'logout-aligned.apk'
     $null = Invoke-CheckedTool $aligner @('-f', '-p', '4', $unsigned, $aligned)
     $null = Test-OrRepairLayout -Data ([IO.File]::ReadAllBytes($aligned))
-    $pendingOutput = Join-Path "$env:USERPROFILE\Downloads" ('KristalStreams-' + $patch.targetVersionCode + '-LOGOUT-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8) + '.apk')
+    $pendingOutput = Join-Path "$env:USERPROFILE\Downloads" ('KristalStreams-' + $patch.targetVersionCode + '-LOGOUT-ONN-HOME-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8) + '.apk')
     $null = Invoke-CheckedTool $signer @('sign', '--ks', $KeyStorePath, '--ks-key-alias', $KeyAlias, '--ks-pass', 'env:KS_APK_REPAIR_STORE_PASS', '--key-pass', 'env:KS_APK_REPAIR_KEY_PASS', '--out', $pendingOutput, $aligned)
     $verified = Invoke-CheckedTool $signer @('verify', '--verbose', '--print-certs', $pendingOutput)
     if (((($verified -join '') -replace '[^a-zA-Z0-9]', '').ToLowerInvariant()) -notlike "*$($patch.certificateSha256)*") { throw 'Final signing certificate mismatch.' }
@@ -177,7 +179,7 @@ function Invoke-KsLogoutBuild {
     $null = Test-OrRepairLayout -Data ([IO.File]::ReadAllBytes($pendingOutput))
     $original = [IO.Compression.ZipFile]::OpenRead($ApkPath)
     $final = [IO.Compression.ZipFile]::OpenRead($pendingOutput)
-    $checked = 0; $changed = 0; $native = 0; $artwork = 0
+    $checked = 0; $changed = 0; $replaced = 0; $native = 0; $artwork = 0
     try {
       $originalPayload = @($original.Entries | Where-Object { $_.FullName -notmatch '^META-INF/(MANIFEST\.MF|[^/]+\.(SF|RSA|DSA|EC))$' })
       $finalPayload = @($final.Entries | Where-Object { $_.FullName -notmatch '^META-INF/(MANIFEST\.MF|[^/]+\.(SF|RSA|DSA|EC))$' })
@@ -185,21 +187,24 @@ function Invoke-KsLogoutBuild {
       foreach ($entry in $originalPayload) {
         $other = $final.GetEntry($entry.FullName)
         if (-not $other) { throw "App file lost: $($entry.FullName)" }
-        $expected = if ($replacementHashes.ContainsKey($entry.FullName)) { $replacementHashes[$entry.FullName] } else { Get-ZipEntryHash $entry }
+        $originalHash = Get-ZipEntryHash $entry
+        $expected = if ($replacementHashes.ContainsKey($entry.FullName)) { $replacementHashes[$entry.FullName] } else { $originalHash }
         if ((Get-ZipEntryHash $other) -ne $expected) { throw "App-file preservation failed: $($entry.FullName)" }
-        if ($replacementHashes.ContainsKey($entry.FullName)) { $changed++ }
+        if ($replacementHashes.ContainsKey($entry.FullName)) { $replaced++ }
+        if ($expected -ne $originalHash) { $changed++ }
         if ($entry.FullName -match '^lib/[^/]+/[^/]+\.so$') { $native++ }
         if ($entry.FullName -match '^res/.*\.(png|webp|jpg)$') { $artwork++ }
         $checked++
       }
     } finally { $original.Dispose(); $final.Dispose() }
-    if ($changed -ne 10 -or $native -ne $sourceNativeCount) { throw 'Unexpected changed-file/native-library count.' }
+    if ($replaced -ne 10 -or $changed -notin @(2, 10) -or $native -ne $sourceNativeCount) { throw 'Unexpected changed-file/native-library count.' }
     $proofPath = [IO.Path]::ChangeExtension($pendingOutput, '.verification.json')
     @{sourceFilename=[IO.Path]::GetFileName($ApkPath);sourceSha256=$sourceHash;sourceVersionCode=$sourceVersion;outputFilename=[IO.Path]::GetFileName($pendingOutput);outputSha256=(Get-FileHash -LiteralPath $pendingOutput -Algorithm SHA256).Hash.ToLowerInvariant();versionCode=$patch.targetVersionCode;payloadFilesVerified=$checked;changedPayloads=$changed;nativeLibrariesPreserved=$native;artworkFilesPreserved=$artwork;logoutMethod=$patch.method.signature;deviceLogoutTest='Pending'} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $proofPath -Encoding UTF8
     $success = $true
     Write-Host "SUCCESS: $pendingOutput" -ForegroundColor Green
     Write-Host 'Log Out is on the Account screen (single-person icon on Home).'
-    Write-Host 'Saved users are kept. The previous signed-in task is cleared after logout.'
+    Write-Host 'Log Out signs you out, closes Kristal Streams and opens the Onn home screen.'
+    Write-Host 'Saved users are kept for your next sign-in.'
     Write-Host 'Install as an update. Keep the current app installed.'
     Start-Process explorer.exe -ArgumentList "/select,`"$pendingOutput`"" -ErrorAction SilentlyContinue
   } catch {

@@ -18,6 +18,18 @@ try {
   [byte[]]$changed = Update-LogoutDex $original
   if ((Get-BytesHash $changed) -ne $patch.patchedDexSha256) { throw 'PowerShell/Python DEX mismatch.' }
   [IO.File]::WriteAllBytes((Join-Path $OutputDirectory 'classes.dex'), $changed)
+  foreach ($variant in $patch.sourceDexVariants) {
+    [byte[]]$variantDex = $original.Clone()
+    [byte[]]$methodBytes = Convert-HexBytes $variant.methodHex
+    [Array]::Copy($methodBytes, 0, $variantDex, [int]$patch.method.offset, $methodBytes.Length)
+    $sha1 = [Security.Cryptography.SHA1]::Create()
+    try { [Array]::Copy($sha1.ComputeHash($variantDex, 32, $variantDex.Length - 32), 0, $variantDex, 12, 20) }
+    finally { $sha1.Dispose() }
+    [Array]::Copy([BitConverter]::GetBytes([KsLogoutChecksum]::Adler32($variantDex, 12)), 0, $variantDex, 8, 4)
+    if ((Get-BytesHash $variantDex) -ne $variant.sha256) { throw 'Previous-version fixture hash differs.' }
+    [byte[]]$migrated = Update-LogoutDex $variantDex
+    if ((Get-BytesHash $migrated) -ne $patch.patchedDexSha256) { throw 'Previous-version migration differs.' }
+  }
   $original[100] = $original[100] -bxor 1
   $rejected = $false
   try { $null = Update-LogoutDex $original } catch { $rejected = $true }

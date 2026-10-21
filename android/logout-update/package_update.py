@@ -26,16 +26,16 @@ def launcher_bytes():
                "$b=($t -split ':KS_LOGOUT_PAYLOAD\\r?\\n',2)[1];"
                '$s=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b.Trim()));'
                '& ([ScriptBlock]::Create($s))"')
-    text = '\r\n'.join(['@echo off', 'setlocal', 'title Kristal Streams - Log Out update',
+    text = '\r\n'.join(['@echo off', 'setlocal', 'title Kristal Streams - Log Out to Onn Home',
                          'set "KS_LOGOUT_BUNDLE=%~f0"', command, 'set "KS_RESULT=%ERRORLEVEL%"',
                          'echo.', 'pause', 'exit /b %KS_RESULT%', ':KS_LOGOUT_PAYLOAD', encoded, ''])
     return text.encode('ascii')
 
 
-README = """KRISTAL STREAMS - LOG OUT UPDATE
+README = """KRISTAL STREAMS - LOG OUT TO ONN HOME (2026102002)
 
 On the Windows computer that built your current app, open START.cmd.
-It finds the current WORKING-BASE or APPROVED-ARTWORK APK in Downloads.
+It finds your current LOGOUT, WORKING-BASE or APPROVED-ARTWORK APK in Downloads.
 If asked, select that current APK. The existing Android SDK and matching
 signing key are required. No new signing key is created.
 
@@ -45,8 +45,8 @@ Install that APK as an update on your Onn; keep the current app installed.
 On the app's Home screen, open the single-person Account icon.
 The Account screen now has a visible Log Out button.
 Cancel keeps you signed in. Confirming Log Out clears the active login,
-opens saved-user selection and clears the previous activity task.
-Saved users remain available to select and sign in again.
+opens the Onn home screen and finishes the Kristal Streams activity task.
+When you reopen Kristal Streams, your saved users remain available to sign in.
 
 This updater preserves artwork, saved users, native libraries and all
 other code outside the reviewed logout method. It checks every APK file
@@ -54,7 +54,7 @@ and the signing certificate before reporting SUCCESS.
 If it stops, send the displayed error. Do not substitute an older APK.
 
 This package was checked using binary and simulated logout tests.
-Actual logout, Back-button, restart and re-login testing on Onn is pending.
+Actual Home-screen, Back-button, restart and re-login testing on Onn is pending.
 """
 
 

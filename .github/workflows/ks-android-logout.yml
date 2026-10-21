@@ -32,4 +32,4 @@ jobs:
           -SourceApk public/downloads/KristalStreams.apk
           -OutputDirectory "$env:RUNNER_TEMP/ks-logout-verified"
       - name: Package the self-contained updater
-        run: python android/logout-update/package_update.py android/logout-update/dist/KristalStreams-Log-Out-Update.zip
+        run: python android/logout-update/package_update.py android/logout-update/dist/KristalStreams-Log-Out-Onn-Home-Update.zip

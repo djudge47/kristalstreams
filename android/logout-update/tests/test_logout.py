@@ -20,12 +20,14 @@ APK = ROOT.parents[1] / 'public/downloads/KristalStreams.apk'
 
 class DalvikBoundaryRunner:
     """Decode and execute actual patch words; unknown opcodes/calls fail closed."""
-    def __init__(self, dex, code, stores, fail=None, null=False):
+    def __init__(self, dex, code, stores, fail=None, null=False, activity=True):
         self.dex, self.words = dex, struct.unpack('<'+'H'*(len(code)//2), code)
         self.stores, self.fail = copy.deepcopy(stores), fail
         self.events, self.fields = [], {}
         self.reg = [None]*7
         self.reg[6] = None if null else 'context'
+        self.activity = activity
+        self.task = ['Dashboard', 'AccountInfo']
 
     def invoke(self, signature, args):
         name = signature.split('->')[1].split('(')[0]
@@ -48,12 +50,27 @@ class DalvikBoundaryRunner:
             if store == self.fail: return False
             self.stores[store] = copy.deepcopy(args[0]['values']); return True
         if name == '<init>':
-            assert args[1] == 'context'
-            args[0]['target'] = args[2]; return None
+            if args[0]['class'] == 'Ljava/lang/String;':
+                args[0]['text'] = ''.join(map(chr, args[1])); return None
+            assert args[0]['class'] == 'Landroid/content/Intent;'
+            assert args[1] == 'android.intent.action.MAIN'
+            args[0]['action'] = args[1]; return None
+        if name == 'getMethod':
+            assert args == ['Landroid/content/Intent;', 'addCategory', ['Ljava/lang/String;']]
+            return ('method', 'addCategory')
+        if name == 'invoke':
+            assert args[0] == ('method', 'addCategory')
+            assert args[2][0]['class'] == 'Ljava/lang/String;'
+            args[1]['categories'] = [args[2][0]['text']]
+            return args[1]
         if name == 'setFlags':
             args[0]['flags'] = args[1]; return args[0]
         if name == 'startActivity':
             self.events.append(('launch', copy.deepcopy(args[1]))); return None
+        if name == 'finishAffinity':
+            assert args == ['context'] and self.activity
+            self.task.clear()
+            self.events.append(('finish-task',)); return None
         if name == 'makeText':
             assert args == ['context', 'Error', 1]
             return 'error-toast'
@@ -80,6 +97,29 @@ class DalvikBoundaryRunner:
                 pc += 2
             elif opcode == 0x14:
                 self.reg[register] = self.words[pc+1] | self.words[pc+2] << 16; pc += 3
+            elif opcode == 0x13:
+                self.reg[register] = struct.unpack('<h', struct.pack('<H',self.words[pc+1]))[0]; pc += 2
+            elif opcode == 0x20:
+                assert self.dex.types[self.words[pc+1]] == 'Landroid/app/Activity;'
+                self.reg[register & 15] = bool(self.reg[register >> 4]) and self.activity; pc += 2
+            elif opcode == 0x1f:
+                assert self.dex.types[self.words[pc+1]] == 'Landroid/app/Activity;' and self.activity
+                pc += 2
+            elif opcode == 0x23:
+                assert self.dex.types[self.words[pc+1]] == '[C'
+                self.reg[register & 15] = [0]*self.reg[register >> 4]; pc += 2
+            elif opcode == 0x24:
+                assert word >> 12 == 1
+                assert self.dex.types[self.words[pc+1]] in ['[Ljava/lang/Class;', '[Ljava/lang/Object;']
+                result = [self.reg[self.words[pc+2] & 15]]; pc += 3
+            elif opcode == 0x26:
+                offset = self.words[pc+1] | self.words[pc+2] << 16
+                payload = pc+offset
+                assert payload % 2 == 0 and self.words[payload:payload+2] == (0x300,2)
+                count = self.words[payload+2] | self.words[payload+3] << 16
+                assert len(self.reg[register]) == count
+                self.reg[register][:] = self.words[payload+4:payload+4+count]
+                pc += 3
             elif opcode == 0x62:
                 assert self.dex.fields[self.words[pc+1]] == 'Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;'
                 self.reg[register] = False; pc += 2
@@ -128,14 +168,17 @@ class LogoutTests(unittest.TestCase):
                 for name in ['player','saved_users_database']: self.assertEqual(vm.stores[name],before[name])
                 self.assertEqual(vm.events[:3],[('commit',n) for n in ['loginPrefs','loginprefsmultiuser','sharedprefremberme']])
                 self.assertEqual(vm.events[3], ('launch', {'class':'Landroid/content/Intent;',
-                    'target':'Lcom/gearzoneiptv/gearzoneiptviptvbox/view/activity/MultiUserActivity;', 'flags':0x10008000}))
-                self.assertEqual(len(vm.events),4)
+                    'action':'android.intent.action.MAIN', 'categories':['android.intent.category.HOME'], 'flags':0x10000000}))
+                self.assertEqual(vm.events[4], ('finish-task',))
+                self.assertEqual(vm.task, [])
+                self.assertEqual(len(vm.events),5)
 
     def test_each_failed_commit_prevents_navigation(self):
         for index, store in enumerate(['loginPrefs','loginprefsmultiuser','sharedprefremberme']):
             vm = DalvikBoundaryRunner(self.dex,self.code,self.stores(),fail=store).run()
             self.assertEqual(vm.events[-1],('error',))
             self.assertFalse(any(event[0]=='launch' for event in vm.events))
+            self.assertEqual(vm.task,['Dashboard','AccountInfo'])
             self.assertEqual(len(vm.events),index+2)
             self.assertEqual(vm.stores['saved_users_database'],self.stores()['saved_users_database'])
 
@@ -143,6 +186,41 @@ class LogoutTests(unittest.TestCase):
         before = self.stores()
         vm = DalvikBoundaryRunner(self.dex,self.code,before,null=True).run()
         self.assertEqual(vm.events,[]); self.assertEqual(vm.stores,before)
+
+    def test_non_activity_context_keeps_login_and_reports_failure(self):
+        before = self.stores()
+        vm = DalvikBoundaryRunner(self.dex,self.code,before,activity=False).run()
+        self.assertEqual(vm.events,[('error',)])
+        self.assertEqual(vm.stores,before)
+        self.assertEqual(vm.task,['Dashboard','AccountInfo'])
+
+    def test_previous_update_migration_is_bounded(self):
+        previous=json.loads((ROOT/'previous_logout.json').read_text())
+        old=bytearray(self.original)
+        start,length=self.method['offset'],self.method['length']
+        old[start:start+length]=bytes.fromhex(previous['methodHex'])
+        old[12:32]=hashlib.sha1(old[32:]).digest()
+        struct.pack_into('<I',old,8,zlib.adler32(old[12:]))
+        self.assertEqual(patcher.sha(old),previous['sha256'])
+        self.assertIn(previous['versionCode'],self.config['sourceVersions'])
+        self.assertIn(previous['sha256'],[v['sha256'] for v in self.config['sourceDexVariants']])
+
+    def test_independent_dex_decoder_and_real_account_context(self):
+        from androguard.core.dex import DEX
+        from loguru import logger
+        logger.remove()
+        decoded=DEX(self.changed)
+        utility=decoded.get_class('Lf/e/a/h/i/d;')
+        method=next(m for m in utility.get_methods() if m.get_name()=='P' and m.get_descriptor()=='(Landroid/content/Context;)V')
+        instructions=list(method.get_instructions())
+        calls=[i.get_output() for i in instructions if i.get_name().startswith('invoke-')]
+        self.assertTrue(any('finishAffinity' in c for c in calls))
+        self.assertTrue(any('Ljava/lang/reflect/Method;->invoke' in c for c in calls))
+        self.assertFalse(any('MultiUserActivity' in c for c in calls))
+        account=decoded.get_class('Lcom/gearzoneiptv/gearzoneiptviptvbox/view/activity/AccountInfoActivity;')
+        create=next(m for m in account.get_methods() if m.get_name()=='onCreate')
+        # The existing confirmation passes AccountInfoActivity.r, assigned to this.
+        self.assertTrue(any(i.get_name()=='iput-object' and i.get_output().startswith('v1, v1, ') and '->r Landroid/content/Context;' in i.get_output() for i in create.get_instructions()))
 
     def test_bounded_dex_change_and_headers(self):
         start, length = self.method['offset'], self.method['length']
