@@ -18,7 +18,9 @@ export async function runHttpSqlChecks({ admin, worker, check }) {
         assert.ok(['singleton','operation_id','id'].includes(field));
         assert.ok(columns.split(',').every(c => ['id','external_id','username','expiration_at','execution_enabled',
           'approval_id','operation_id','approver_id','customer_id','approval_hash','plan_fingerprint','state'].includes(c)));
-        const result = await json(worker, `(select to_jsonb(selected) from (select ${columns} from public.${table} where ${field}=${typeof value === 'boolean' ? value : literal(value)}) selected)`);
+        // psql prints SQL NULL as an empty field; return JSON null explicitly so
+        // a missing row matches Supabase maybeSingle in both database runners.
+        const result = await json(worker, `coalesce((select to_jsonb(selected) from (select ${columns} from public.${table} where ${field}=${typeof value === 'boolean' ? value : literal(value)}) selected),'null'::jsonb)`);
         return { data: result, error: null };
       },
       async persist(a) {
