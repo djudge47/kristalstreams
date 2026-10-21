@@ -1,5 +1,7 @@
 import { createRoombaPreviewHandler } from './ks-roomba-preview.js';
 import { createFixieDispatcher } from './ks-fixie-proxy.js';
+import { buildRenewalReview } from './ks-roomba-renewal-review.js';
+import { buildPackageSummary } from '../_shared/ks-roomba-package-summary.js';
 
 const options = { auth: { persistSession: false, autoRefreshToken: false } };
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -8,7 +10,7 @@ const lineId = value => ['string', 'number'].includes(typeof value) && /^[1-9]\d
 // Only the CRM UUID crosses the browser boundary. The server selects the line
 // reference, verifies the current reseller, and never persists provider data.
 export function createCustomerStatusHandler({ createClient, env = process.env, now = Date.now,
-  readFactory, dispatcherFactory = createFixieDispatcher } = {}) {
+  readFactory, dispatcherFactory = createFixieDispatcher, reviewRenewal = false } = {}) {
   let dispatcher;
   let proxySetting;
   const sharedDispatcher = setting => {
@@ -37,6 +39,10 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
     ...entry, access: Date.parse(entry.expiresAt) <= now() ? 'expired'
       : !entry.enabled || !entry.adminEnabled ? 'disabled' : 'within_service_period',
   });
+  const content = entry => {
+    const { renewalContext, ...line } = entry;
+    return { line: snapshot(line), ...(reviewRenewal ? { renewal: buildRenewalReview(renewalContext, now()) } : {}) };
+  };
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'private, no-store');
     const reply = (code, body) => res.status(code).json(body);
@@ -74,7 +80,7 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
     // Auth and current CRM identity are checked even for cached results.
     const key = JSON.stringify([customer.id, String(customer.external_id), customer.username]);
     const cached = cache.get(key);
-    if (cached && now() - Date.parse(cached.checkedAt) < 60000) return reply(200, { mode: 'read-only', databaseWrites: false, cached: true, line: snapshot(cached) });
+    if (cached && now() - Date.parse(cached.checkedAt) < 60000) return reply(200, { mode: 'read-only', databaseWrites: false, cached: true, ...content(cached) });
     if (pending?.key !== key && (pending || now() < retryAt)) {
       const seconds = Math.max(1, Math.ceil((retryAt - now()) / 1000));
       res.setHeader('Retry-After', String(seconds));
@@ -84,6 +90,7 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
       if (!pending) {
         retryAt = now() + 30000;
         const promise = (async () => {
+          const startedAt = new Date(now()).toISOString();
           const account = await read(accountHandler);
           if (account.status !== 'connected' || !lineId(account.account?.id)) throw new Error('reseller_unverified');
           const result = await read(factory({ readAction: 'get_line', lineId: String(customer.external_id) }));
@@ -92,10 +99,24 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
             || line.username !== customer.username || line.resellerId !== String(account.account.id)) throw new Error('identity_conflict');
           if (!Number.isFinite(Date.parse(line.expiresAt)) || !Number.isInteger(line.connections) || line.connections < 1 || line.connections > 32
             || ![line.trial, line.enabled, line.adminEnabled].every(value => typeof value === 'boolean')) throw new Error('invalid_line');
+          let renewalContext;
+          if (reviewRenewal) {
+            const catalog = await read(factory({ readAction: 'packages' }));
+            if (catalog.status !== 'packages_ready' || !Array.isArray(catalog.packages)) throw new Error('packages_unverified');
+            const packages = buildPackageSummary(catalog.packages, startedAt).packages;
+            const { packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds } = line;
+            renewalContext = { line: { packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds },
+              account: { credits: account.account.credits }, packages, checkedAt: startedAt };
+            buildRenewalReview(renewalContext, now());
+            // Keep one validated package per cached customer, not an entire
+            // catalog or any unrelated provider line fields.
+            renewalContext.packages = [packages.find(pkg => pkg.id === packageId) || packages[0]];
+          }
           const safe = {
             customerId, lineId: line.id, username: line.username, expiresAt: new Date(line.expiresAt).toISOString(),
             connectionsAllowed: line.connections, trial: line.trial, enabled: line.enabled, adminEnabled: line.adminEnabled,
             checkedAt: new Date(now()).toISOString(),
+            ...(reviewRenewal ? { renewalContext } : {}),
           };
           if (cache.size >= 100) cache.delete(cache.keys().next().value);
           cache.set(key, safe);
@@ -104,9 +125,11 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
         pending = { key, promise };
         void promise.finally(() => { pending = null; }).catch(() => {});
       }
-      return reply(200, { mode: 'read-only', databaseWrites: false, cached: false, line: snapshot(await pending.promise) });
+      return reply(200, { mode: 'read-only', databaseWrites: false, cached: false, ...content(await pending.promise) });
     } catch {
-      return reply(502, { error: 'The matching XUI line could not be verified. Saved CRM records have not changed.', retryAfterSeconds: 30 });
+      return reply(502, { error: reviewRenewal
+        ? 'The renewal review could not be verified. Saved CRM records have not changed.'
+        : 'The matching XUI line could not be verified. Saved CRM records have not changed.', retryAfterSeconds: 30 });
     }
   };
 }
