@@ -7,11 +7,14 @@ on:
       - '.github/workflows/ks-customer-status.yml'
       - 'api/ks-roomba-crm.js'
       - '_server/ks-roomba-*.js'
+      - '_server/ks-crm-renewal-*.js'
       - '_server/ks-fixie-proxy.js'
       - 'src/pages/admin/RoombaCustomerStatus.tsx'
       - 'src/pages/admin/CRMOperationsCenter.tsx'
       - 'scripts/test-ks-roomba-customer-status.mjs'
       - 'scripts/test-ks-roomba-renewal-review.mjs'
+      - 'scripts/test-ks-crm-renewal-simulation.mjs'
+      - 'scripts/ks-crm-renewal-simulation-readme.md'
       - 'package*.json'
 
 permissions:
@@ -34,6 +37,7 @@ jobs:
         run: |
           node scripts/test-ks-roomba-customer-status.mjs
           node scripts/test-ks-roomba-renewal-review.mjs
+          node scripts/test-ks-crm-renewal-simulation.mjs
           node scripts/test-ks-roomba-admin.mjs
           node scripts/test-ks-roomba-preview.mjs
           node scripts/test-ks-roomba-line.mjs
