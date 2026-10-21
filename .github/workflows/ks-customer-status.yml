@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - '.github/workflows/ks-customer-status.yml'
-      - 'api/ks-roomba-customer-status.js'
+      - 'api/ks-roomba-crm.js'
       - '_server/ks-roomba-*.js'
       - '_server/ks-fixie-proxy.js'
       - 'src/pages/admin/RoombaCustomerStatus.tsx'

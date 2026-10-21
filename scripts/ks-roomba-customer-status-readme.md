@@ -4,7 +4,7 @@ Each customer card in `/admin/crm` has **Check XUI status**. This manually reads
 the current provider line; it does not replace the saved CRM badges or billing
 dates. The saved trial receipt link remains unchanged.
 
-`GET /api/ks-roomba-customer-status?customerId=<CRM UUID>`:
+`GET /api/ks-roomba-crm?view=customer-status&customerId=<CRM UUID>`:
 
 - Verifies a confirmed, non-anonymous administrator with Supabase `getUser` on
   every request. Only the active Kristal Stream project is accepted.
@@ -51,7 +51,9 @@ throws while loading that rule with its current default configuration.
 
 Read-only connected database validation found 19 CRM customers with saved line
 references. This confirms the schema/data shape only, not provider ownership.
-Live Preview verification is pending: the Vercel connector currently rejects
-access to the Kristal Streams team (403, missing team grant). Do not describe
-the new button as live-verified until that access and a signed-in admin check
-have succeeded.
+Vercel access works with the explicit project ID and its existing connection;
+the earlier team-scoped 403 did not require reconnecting. The first Preview
+failed because a thirteenth API file exceeded the Hobby function limit. The
+status check now shares the existing CRM API file under `view=customer-status`,
+keeping twelve functions. The default saved-receipt GET and POST remain routed
+to their original handler. Live signed-in admin verification is still pending.

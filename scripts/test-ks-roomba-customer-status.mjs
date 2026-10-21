@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { createCustomerStatusHandler } from '../_server/ks-roomba-customer-status.js';
 import { createRoombaPreviewHandler } from '../_server/ks-roomba-preview.js';
+import { createRoombaCrmRoute } from '../_server/ks-roomba-crm-route.js';
+import { readdir, readFile } from 'node:fs/promises';
 
 const customerId = '11111111-1111-4111-8111-111111111111';
 const otherId = '22222222-2222-4222-8222-222222222222';
@@ -134,5 +136,24 @@ await test('real transport parser strips provider password and uses only documen
   await handler({ method: 'GET', query: { customerId }, headers: { authorization: 'Bearer fictional-token' } },
     { setHeader() {}, status(value) { code = value; return this; }, json(value) { output = value; } });
   assert.equal(code, 200); assert.deepEqual(calls, ['user_info', 'get_line']); assert.ok(!JSON.stringify(output).includes('sensitive-'));
+});
+await test('shared CRM function keeps default receipt routes and isolates the new read-only view', async () => {
+  const route = createRoombaCrmRoute({ env: { VERCEL_ENV: 'preview' } });
+  const request = async (query, method = 'GET') => {
+    const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
+    await route({ method, query, headers: {} }, res); return res;
+  };
+  assert.equal((await request({})).code, 401);
+  assert.equal((await request({}, 'POST')).code, 401);
+  assert.equal((await request({ view: 'customer-status', customerId })).code, 401);
+  assert.equal((await request({ view: 'customer-status', customerId }, 'POST')).code, 405);
+  assert.equal((await request({ view: ['customer-status'] })).code, 400);
+  assert.equal((await request({ view: 'unknown' })).code, 400);
+});
+await test('deployment stays within twelve functions and client uses the shared endpoint', async () => {
+  const entries = await readdir(new URL('../api/', import.meta.url));
+  assert.equal(entries.filter(name => /\.(js|ts)$/.test(name)).length, 12);
+  const client = await readFile(new URL('../src/pages/admin/RoombaCustomerStatus.tsx', import.meta.url), 'utf8');
+  assert.ok(client.includes('/api/ks-roomba-crm?view=customer-status&customerId='));
 });
 console.log(`${count} customer status checks passed. No live provider requests or database writes.`);

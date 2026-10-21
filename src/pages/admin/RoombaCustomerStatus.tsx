@@ -27,7 +27,7 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
     try {
       const { data, error: authError } = await supabase.auth.getSession();
       if (authError || !data.session?.access_token) throw new Error('Please sign in again to your admin account.');
-      const response = await fetch(`/api/ks-roomba-customer-status?customerId=${encodeURIComponent(customerId)}`, {
+      const response = await fetch(`/api/ks-roomba-crm?view=customer-status&customerId=${encodeURIComponent(customerId)}`, {
         method: 'GET', cache: 'no-store', signal: request.signal,
         headers: { Authorization: `Bearer ${data.session.access_token}`, Accept: 'application/json' },
       });
