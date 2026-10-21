@@ -10,7 +10,7 @@ await check('owned response becomes bounded whitelisted support context without 
  assert.deepEqual(orders,[{...order,recordedAt:'2026-10-17T12:00:00.000Z'}]);assert.equal(checkedAt,'2026-10-17T13:00:00.000Z');
  const output=JSON.stringify(orders);for(const value of['SECRET_PASSWORD','SECRET_KEY','PRIVATE_EMAIL',other,'create_line'])assert.ok(!output.includes(value));
 });
-await check('another displayed account, live responses and unconfirmed modes cannot supply context',()=>{
+await check('another displayed account and mismatched response modes cannot supply context',()=>{
  for(const change of[{accountId:other},{mode:'write'},{testMode:false},{checkedAt:'bad'},{orders:null}])assert.throws(()=>readSetupHelpOrders({...payload,...change},owner));
  for(const accountId of[other,'invalid',null])assert.throws(()=>readSetupHelpOrders(payload,accountId));
 });
@@ -25,7 +25,15 @@ await check('forged status, malformed identifiers and bad plan or financial fiel
 });
 await check('ticket context preserves original reference, plan, allowance and timestamps with an explicit test label',()=>{
  const safe=readSetupHelpOrders(payload,owner);const text=setupHelpDetails(safe.orders[0],safe.checkedAt);
- for(const expected of['Order reference: cs_test_setupHelp1','Plan: Bronze / monthly','Connections ordered: 1','Test amount: 20.00 USD','Payment recorded: 2026-10-17T12:00:00.000Z','Details checked: 2026-10-17T13:00:00.000Z','Saved setup status: awaiting activation','No real charge or streaming activation was made.'])assert.ok(text.includes(expected));
+ for(const expected of['Order reference: cs_test_setupHelp1','Plan: Bronze / monthly','Connections ordered: 1','Test amount: 20.00 USD','Payment recorded: 2026-10-17T12:00:00.000Z','Details checked: 2026-10-17T13:00:00.000Z','Saved setup status: awaiting activation','No real card charge was made.'])assert.ok(text.includes(expected));
  assert.ok(!text.includes('password'));assert.ok(!text.includes('new expiry'));assert.throws(()=>setupHelpDetails({...order,status:'active'},safe.checkedAt));assert.throws(()=>setupHelpDetails(order,'bad'));
+});
+await check('completed and expired support snapshots retain verified expiry without false pending or ready claims',()=>{
+ const complete={...order,status:'setup_complete',providerActivated:true,expiresAt:'2026-11-01T00:00:00Z'};
+ const ready=readSetupHelpOrders({...payload,orders:[complete]},owner);
+ assert.match(setupHelpDetails(ready.orders[0],ready.checkedAt),/setup confirmed/);
+ const expired={...complete,status:'setup_expired',providerActivated:false,expiresAt:'2026-10-17T12:30:00Z'};
+ assert.match(setupHelpDetails(readSetupHelpOrders({...payload,orders:[expired]},owner).orders[0],payload.checkedAt),/service period ended/);
+ for(const invalid of [{...complete,expiresAt:undefined},{...complete,testMode:false},{...complete,providerActivated:false},{...expired,expiresAt:complete.expiresAt}])assert.throws(()=>readSetupHelpOrders({...payload,orders:[invalid]},owner));
 });
 console.log(`${checks} setup-help context checks passed. No requests, ticket inserts, emails, payments or provider operations.`);

@@ -1,3 +1,5 @@
+Current follow-up: the disabled draft integration is described in [ks-live-receipt-rollout-readme.md](ks-live-receipt-rollout-readme.md). It imports this recorder behind a new-order live flag; no running route or production setting has been switched. The preparation history below predates that integration.
+
 # Receipt and durable setup queue preparation
 
 This change prepares payment recording and an atomic durable setup queue without granting streaming or website entitlement. It is deliberately **not imported by any running route**. Its private SQL foundation was installed empty on October 18, 2026 as migration `20261018102053_add_private_receipt_setup_queue`, followed by the review-claim/completion support migrations documented in `ks-reviewed-preview-completion-readme.md`. The current checkout, webhook, confirmation, notification, existing trial and completed paid test retain their behavior. There is no new API entrypoint, package dependency, environment setting, provider request or credit authorization.

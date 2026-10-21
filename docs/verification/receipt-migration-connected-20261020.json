@@ -1,0 +1,429 @@
+{
+  "kind": "read-only-connected-receipt-migration-compatibility",
+  "projectRef": "wftfxerblhlsxiijtfbo",
+  "tables": [
+    {
+      "rls": true,
+      "table_name": "ks_order_email_state",
+      "columns_match": true,
+      "browser_denied": true,
+      "service_permissions_match": true
+    },
+    {
+      "rls": true,
+      "table_name": "ks_payment_receipts",
+      "columns_match": true,
+      "browser_denied": true,
+      "service_permissions_match": true
+    },
+    {
+      "rls": true,
+      "table_name": "ks_setup_order_queue",
+      "columns_match": true,
+      "browser_denied": true,
+      "service_permissions_match": true
+    }
+  ],
+  "functions": [
+    {
+      "signature": "public.ks_apply_paid_checkout(text,text,uuid,boolean,text,integer,integer,integer,text)",
+      "body_matches": true,
+      "permissions_match": true,
+      "invoker_empty_path": true
+    },
+    {
+      "signature": "public.ks_record_paid_checkout(text,text,uuid,boolean,text,integer,integer,integer,text)",
+      "body_matches": true,
+      "permissions_match": true,
+      "invoker_empty_path": true
+    },
+    {
+      "signature": "public.ks_guard_setup_order_queue()",
+      "body_matches": true,
+      "permissions_match": true,
+      "invoker_empty_path": true
+    },
+    {
+      "signature": "public.ks_prepare_order_email(text,text)",
+      "body_matches": true,
+      "permissions_match": true,
+      "invoker_empty_path": true
+    }
+  ],
+  "checked_at": "2026-10-20T04:43:37.037393+00:00",
+  "server_version": "17.6",
+  "new_objects_absent": true,
+  "queue_guard_matches": true,
+  "scope": "Three receipt/queue/legacy-alert tables, four reviewed functions, queue trigger, new object absence. Catalog reads only; not a connected migration execution or complete live lifecycle verification.",
+  "schemaSnapshot": {
+    "columns": [
+      {
+        "type": "text",
+        "table": "ks_order_email_state",
+        "column": "checkout_session_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "timestamptz",
+        "table": "ks_order_email_state",
+        "column": "first_attempt_at",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "type": "jsonb",
+        "table": "ks_order_email_state",
+        "column": "send_payload",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "timestamptz",
+        "table": "ks_order_email_state",
+        "column": "sent_at",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "table": "ks_order_email_state",
+        "column": "resend_email_id",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "table": "ks_payment_receipts",
+        "column": "checkout_session_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "table": "ks_payment_receipts",
+        "column": "payment_intent_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "uuid",
+        "table": "ks_payment_receipts",
+        "column": "user_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "bool",
+        "table": "ks_payment_receipts",
+        "column": "livemode",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "table": "ks_payment_receipts",
+        "column": "tier",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "int4",
+        "table": "ks_payment_receipts",
+        "column": "connections",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "int4",
+        "table": "ks_payment_receipts",
+        "column": "duration_days",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "int4",
+        "table": "ks_payment_receipts",
+        "column": "amount_cents",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "table": "ks_payment_receipts",
+        "column": "currency",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "bool",
+        "table": "ks_payment_receipts",
+        "column": "activated",
+        "default": "false",
+        "nullable": "NO"
+      },
+      {
+        "type": "timestamptz",
+        "table": "ks_payment_receipts",
+        "column": "expires_at",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "timestamptz",
+        "table": "ks_payment_receipts",
+        "column": "recorded_at",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "table": "ks_setup_order_queue",
+        "column": "checkout_session_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "table": "ks_setup_order_queue",
+        "column": "payment_intent_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "uuid",
+        "table": "ks_setup_order_queue",
+        "column": "user_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "bool",
+        "table": "ks_setup_order_queue",
+        "column": "livemode",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "table": "ks_setup_order_queue",
+        "column": "tier",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "int4",
+        "table": "ks_setup_order_queue",
+        "column": "connections",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "int4",
+        "table": "ks_setup_order_queue",
+        "column": "duration_days",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "int4",
+        "table": "ks_setup_order_queue",
+        "column": "amount_cents",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "table": "ks_setup_order_queue",
+        "column": "currency",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "table": "ks_setup_order_queue",
+        "column": "fulfillment_status",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "timestamptz",
+        "table": "ks_setup_order_queue",
+        "column": "queued_at",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "permissions": [
+      {
+        "rls": true,
+        "anon": false,
+        "table": "ks_order_email_state",
+        "browser": false,
+        "service": true
+      },
+      {
+        "rls": true,
+        "anon": false,
+        "table": "ks_payment_receipts",
+        "browser": false,
+        "service": true
+      },
+      {
+        "rls": true,
+        "anon": false,
+        "table": "ks_setup_order_queue",
+        "browser": false,
+        "service": true
+      }
+    ],
+    "constraints": [
+      {
+        "name": "ks_payment_receipts_amount_cents_check",
+        "table": "ks_payment_receipts",
+        "validated": true,
+        "definition": "CHECK ((amount_cents > 0))"
+      },
+      {
+        "name": "ks_payment_receipts_connections_check",
+        "table": "ks_payment_receipts",
+        "validated": true,
+        "definition": "CHECK (((connections >= 1) AND (connections <= 5)))"
+      },
+      {
+        "name": "ks_payment_receipts_currency_check",
+        "table": "ks_payment_receipts",
+        "validated": true,
+        "definition": "CHECK ((currency = 'usd'::text))"
+      },
+      {
+        "name": "ks_payment_receipts_duration_days_check",
+        "table": "ks_payment_receipts",
+        "validated": true,
+        "definition": "CHECK ((duration_days = ANY (ARRAY[30, 90, 180, 365])))"
+      },
+      {
+        "name": "ks_payment_receipts_payment_intent_id_key",
+        "table": "ks_payment_receipts",
+        "validated": true,
+        "definition": "UNIQUE (payment_intent_id)"
+      },
+      {
+        "name": "ks_payment_receipts_pkey",
+        "table": "ks_payment_receipts",
+        "validated": true,
+        "definition": "PRIMARY KEY (checkout_session_id)"
+      },
+      {
+        "name": "ks_payment_receipts_tier_check",
+        "table": "ks_payment_receipts",
+        "validated": true,
+        "definition": "CHECK ((tier = ANY (ARRAY['bronze'::text, 'silver'::text, 'gold'::text, 'platinum'::text])))"
+      },
+      {
+        "name": "ks_payment_receipts_user_id_fkey",
+        "table": "ks_payment_receipts",
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id)"
+      },
+      {
+        "name": "ks_order_email_state_checkout_session_id_fkey",
+        "table": "ks_order_email_state",
+        "validated": true,
+        "definition": "FOREIGN KEY (checkout_session_id) REFERENCES ks_payment_receipts(checkout_session_id)"
+      },
+      {
+        "name": "ks_order_email_state_pkey",
+        "table": "ks_order_email_state",
+        "validated": true,
+        "definition": "PRIMARY KEY (checkout_session_id)"
+      },
+      {
+        "name": "ks_setup_order_queue_amount_cents_check",
+        "table": "ks_setup_order_queue",
+        "validated": true,
+        "definition": "CHECK ((amount_cents > 0))"
+      },
+      {
+        "name": "ks_setup_order_queue_checkout_session_id_fkey",
+        "table": "ks_setup_order_queue",
+        "validated": true,
+        "definition": "FOREIGN KEY (checkout_session_id) REFERENCES ks_payment_receipts(checkout_session_id) ON DELETE RESTRICT"
+      },
+      {
+        "name": "ks_setup_order_queue_connections_check",
+        "table": "ks_setup_order_queue",
+        "validated": true,
+        "definition": "CHECK (((connections >= 1) AND (connections <= 5)))"
+      },
+      {
+        "name": "ks_setup_order_queue_currency_check",
+        "table": "ks_setup_order_queue",
+        "validated": true,
+        "definition": "CHECK ((currency = 'usd'::text))"
+      },
+      {
+        "name": "ks_setup_order_queue_duration_days_check",
+        "table": "ks_setup_order_queue",
+        "validated": true,
+        "definition": "CHECK ((duration_days = ANY (ARRAY[30, 90, 180, 365])))"
+      },
+      {
+        "name": "ks_setup_order_queue_fulfillment_status_check",
+        "table": "ks_setup_order_queue",
+        "validated": true,
+        "definition": "CHECK ((fulfillment_status = ANY (ARRAY['awaiting_activation'::text, 'requires_review'::text, 'setup_complete'::text])))"
+      },
+      {
+        "name": "ks_setup_order_queue_payment_intent_id_key",
+        "table": "ks_setup_order_queue",
+        "validated": true,
+        "definition": "UNIQUE (payment_intent_id)"
+      },
+      {
+        "name": "ks_setup_order_queue_pkey",
+        "table": "ks_setup_order_queue",
+        "validated": true,
+        "definition": "PRIMARY KEY (checkout_session_id)"
+      },
+      {
+        "name": "ks_setup_order_queue_tier_check",
+        "table": "ks_setup_order_queue",
+        "validated": true,
+        "definition": "CHECK ((tier = ANY (ARRAY['bronze'::text, 'silver'::text, 'gold'::text, 'platinum'::text])))"
+      },
+      {
+        "name": "ks_setup_order_queue_user_id_fkey",
+        "table": "ks_setup_order_queue",
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id)"
+      }
+    ],
+    "triggers": [
+      {
+        "table": "ks_setup_order_queue",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ks_setup_order_queue_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ks_setup_order_queue FOR EACH ROW EXECUTE FUNCTION ks_guard_setup_order_queue()"
+      }
+    ]
+  },
+  "lineEndingNote": "The installed historical ks_apply_paid_checkout body uses CRLF. Its body matches reviewed source after CRLF-to-LF normalization; the other three raw body hashes match.",
+  "advisors": {
+    "checked": "security",
+    "existingInformationCount": 19,
+    "existingWarningCount": 1,
+    "notes": [
+      {
+        "name": "rls_enabled_no_policy",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+        "disposition": "Private service-only tables retain RLS and no browser policy; no widening performed."
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection",
+        "disposition": "Existing authentication warning; no Auth settings changed."
+      }
+    ]
+  },
+  "migrationApplied": false
+}

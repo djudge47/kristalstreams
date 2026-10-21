@@ -1,0 +1,75 @@
+name: Native receipt-only database checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/ks-live-receipt-native.yml'
+      - 'scripts/**/*.sql'
+      - 'scripts/test-ks-live-receipt-native.mjs'
+      - 'scripts/fixtures/ks-reviewed-handoff/**'
+      - 'supabase/migrations/**'
+      - '_server/ks-payments.js'
+      - '_server/ks-receipt-only.js'
+      - 'supabase/functions/ks-order-notification/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: receipt-native-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  receipt-contention:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        # 17.6 matches the read-only connected catalog; 17.11 covers the
+        # current patched PostgreSQL release used by the previous fixture run.
+        postgres: ['17.6', '17.11']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}-bookworm
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fictional-native-fixture
+          POSTGRES_DB: ks_receipt_native_test
+        ports:
+          - '127.0.0.1:5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ks_receipt_native_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Ensure PostgreSQL client is available
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends postgresql-client
+          fi
+      - name: Run independent-session tests against the disposable service
+        env:
+          KS_NATIVE_PG_URL: postgresql://postgres:fictional-native-fixture@127.0.0.1:5432/ks_receipt_native_test
+          KS_NATIVE_DISPOSABLE_ACK: receipt-only-fixtures
+          KS_NATIVE_REPORT: ks-native-receipt-report.json
+        run: node scripts/test-ks-live-receipt-native.mjs
+      - name: Retain the bounded test result
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: native-receipt-result-${{ matrix.postgres }}
+          path: ks-native-receipt-report.json
+          retention-days: 14
+          if-no-files-found: warn

@@ -4,6 +4,7 @@ import {queuePreviewPaidOrder} from '../_server/ks-preview-paid-orders.js';
 import {customerSetupSnapshot} from '../_server/ks-customer-setup.js';
 import {simulationSession,simulationOwner} from '../_server/ks-new-paid-simulation.js';
 const reference='cs_test_SimulatedNewCustomer';
+const expiry={setup_expires_at:'2030-02-01T00:00:00Z',setup_checked_at:'2030-01-01T00:00:00Z'};
 const pending={ok:true,test_mode:true,activated:false,provider_activated:false,order_status:'awaiting_activation'};
 let checks=0;
 async function check(label,fn){await fn();checks++;console.log(`PASS: ${label}`);}
@@ -12,12 +13,12 @@ await check('a saved test payment presents pending confirmation without claiming
   assert.doesNotMatch(view.message,/no.*activation|did not.*activate/);
 });
 await check('the separately verified completed test setup no longer displays no-activation copy',()=>{
-  const view=paymentConfirmationView({...pending,order_status:'setup_complete',provider_activated:true},reference);
+  const view=paymentConfirmationView({...pending,...expiry,order_status:'setup_complete',provider_activated:true},reference);
   assert.equal(view.kind,'ready');assert.equal(view.title,'Streaming setup confirmed');assert.match(view.message,/did not charge your card/);
   assert.doesNotMatch(view.message,/no.*activation|did not.*activate|ready to watch/i);
 });
 await check('replayed completion presents the same verified setup state without suggesting another purchase',()=>{
-  const complete={...pending,order_status:'setup_complete',provider_activated:true};
+  const complete={...pending,...expiry,order_status:'setup_complete',provider_activated:true};
   assert.deepEqual(paymentConfirmationView({...complete,replayed:true,queue_replayed:true},reference),paymentConfirmationView(complete,reference));
 });
 await check('test payment alone and older receipt-only responses never imply completed streaming setup',()=>{
@@ -66,7 +67,8 @@ await check('the existing owner-bound server queue result drives both pending an
       assert.equal(name,'ks_queue_preview_paid_order');assert.equal(args.p_user_id,simulationOwner);assert.equal(args.p_session_id,session.id);
       return {data:{ok:true,test_mode:true,order_status:complete?'setup_complete':'awaiting_activation',provider_activated:complete},error:null};
     }}},simulationOwner);
-    assert.equal(paymentConfirmationView({...pending,...queued},session.id).kind,complete?'ready':'test');
+    if(complete)assert.throws(()=>paymentConfirmationView({...pending,...queued},session.id));
+    assert.equal(paymentConfirmationView({...pending,...queued,...(complete?expiry:{})},session.id).kind,complete?'ready':'test');
   }
 });
 await check('a foreign purchaser and inconsistent server queue cannot reach a ready payment screen',async()=>{
@@ -82,5 +84,10 @@ await check('dashboard pending rows and payment pending copy agree; completed ro
   assert.equal(customerSetupSnapshot([row],simulationOwner)[0].providerActivated,false);
   assert.equal(paymentConfirmationView(pending,reference).kind,'test');
   assert.throws(()=>customerSetupSnapshot([{...row,fulfillment_status:'setup_complete'}],simulationOwner));
+});
+await check('expired completion needs dated proof and never produces a ready screen',()=>{
+  const expired={...pending,...expiry,order_status:'setup_expired',setup_checked_at:'2030-03-01T00:00:00Z'};
+  assert.equal(paymentConfirmationView(expired,reference).kind,'expired');
+  for(const patch of [{setup_checked_at:undefined},{setup_expires_at:'bad'},{provider_activated:true},{setup_checked_at:'2030-01-01T00:00:00Z'}])assert.throws(()=>paymentConfirmationView({...expired,...patch},reference));
 });
 console.log(`${checks} payment/dashboard presentation checks passed. All payments, queue responses and identities were fictional; no real charge, email, credit or account change occurred.`);

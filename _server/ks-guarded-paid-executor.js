@@ -37,7 +37,12 @@ export function createGuardedPaidExecutor({ store, provider, payments, env = pro
       const login = openStreamingLogin(attempt.login_envelope, { environment: 'preview', ownerId, sessionId: attempt.checkout_session_id, attemptId }, env);
       const line = verifyLine(await provider.line(attempt.provider_line_id, login.password), { resellerId: attempt.reseller_id,
         selected: { id: attempt.package_id, duration: { count: attempt.package_months, unit: 'months' }, maxConnections: attempt.connections, bouquetIds: attempt.bouquet_ids } }, login, now());
-      if (line.id !== attempt.provider_line_id || line.expiresAt !== attempt.provider_expires_at) throw new Error('saved_provider_result_changed');
+      // PostgreSQL may serialize the saved instant with +00:00 while the
+      // provider normalizer uses Z. Compare instants, preserving the exact
+      // line binding and rejecting a missing or genuinely changed expiry.
+      const savedExpiry = Date.parse(attempt.provider_expires_at);
+      if (line.id !== attempt.provider_line_id || !Number.isFinite(savedExpiry)
+        || Date.parse(line.expiresAt) !== savedExpiry) throw new Error('saved_provider_result_changed');
       await store.complete(attempt, login.username); return { state: 'credentials_ready', replayed: true };
     }
     const snapshot = await provider.snapshot();

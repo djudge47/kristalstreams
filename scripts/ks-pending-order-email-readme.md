@@ -1,3 +1,5 @@
+Current follow-up: the draft index now imports a protocol router for [the disabled live rollout](ks-live-receipt-rollout-readme.md). The pending SQL remains uninstalled and no Edge Function was deployed. The preparation history below describes the preceding unrouted proposal.
+
 # Pending setup support alert preparation
 
 This staged handler and SQL prepare support alerts for **payment received, streaming setup pending**. The existing deployed Edge Function index, legacy handler, webhook, confirmation and receipt recorder are unchanged. Nothing in this update sends an email, applies a project migration, spends credit, creates service, or enables an automatic worker. This is a support notification; it is not a customer login/ready email.

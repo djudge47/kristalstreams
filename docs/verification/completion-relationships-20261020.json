@@ -1,0 +1,81 @@
+{
+  "kind": "read-only-completion-relationship-check",
+  "date": "2026-10-20",
+  "projectRef": "wftfxerblhlsxiijtfbo",
+  "relationships": [
+    {
+      "table_name": "ks_preview_streaming_logins",
+      "conname": "ks_preview_login_fulfillment_fk",
+      "definition": "FOREIGN KEY (attempt_id) REFERENCES ks_preview_paid_fulfillments(attempt_id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "ks_preview_streaming_logins",
+      "conname": "ks_preview_streaming_logins_attempt_id_fkey",
+      "definition": "FOREIGN KEY (attempt_id) REFERENCES ks_preview_provisioning_attempts(attempt_id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "ks_preview_streaming_logins",
+      "conname": "ks_preview_streaming_logins_checkout_session_id_fkey",
+      "definition": "FOREIGN KEY (checkout_session_id) REFERENCES ks_payment_receipts(checkout_session_id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "ks_preview_streaming_logins",
+      "conname": "ks_preview_streaming_logins_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "ks_preview_paid_fulfillments",
+      "conname": "ks_preview_paid_fulfillments_approver_id_fkey",
+      "definition": "FOREIGN KEY (approver_id) REFERENCES auth.users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "ks_preview_paid_fulfillments",
+      "conname": "ks_preview_paid_fulfillments_attempt_id_fkey",
+      "definition": "FOREIGN KEY (attempt_id) REFERENCES ks_preview_provisioning_attempts(attempt_id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "ks_preview_paid_fulfillments",
+      "conname": "ks_preview_paid_fulfillments_checkout_session_id_fkey",
+      "definition": "FOREIGN KEY (checkout_session_id) REFERENCES ks_payment_receipts(checkout_session_id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "ks_preview_paid_fulfillments",
+      "conname": "ks_preview_paid_fulfillments_crm_customer_id_fkey",
+      "definition": "FOREIGN KEY (crm_customer_id) REFERENCES iptv_customers(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "ks_preview_paid_fulfillments",
+      "conname": "ks_preview_paid_fulfillments_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE RESTRICT"
+    }
+  ],
+  "scope": "Foreign-key catalog read only. Confirms explicit PostgREST relationship hints; does not verify deployed endpoint behavior or grant new access.",
+  "databaseChanged": false,
+  "selectPermissions": [
+    {
+      "table_name": "iptv_customers",
+      "rls": true,
+      "service_select": true
+    },
+    {
+      "table_name": "ks_payment_receipts",
+      "rls": true,
+      "service_select": true
+    },
+    {
+      "table_name": "ks_preview_paid_fulfillments",
+      "rls": true,
+      "service_select": true
+    },
+    {
+      "table_name": "ks_preview_provisioning_attempts",
+      "rls": true,
+      "service_select": true
+    },
+    {
+      "table_name": "ks_preview_streaming_logins",
+      "rls": true,
+      "service_select": true
+    }
+  ]
+}

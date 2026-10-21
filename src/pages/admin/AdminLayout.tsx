@@ -80,7 +80,7 @@ const AdminLayout: React.FC = () => {
   if (!authorized) return null;
 
   return (
-    <div className="min-h-screen bg-gray-900 lg:flex">
+    <div className="flex h-screen overflow-hidden bg-gray-900 supports-[height:100dvh]:h-dvh">
       {sidebarOpen && (
         <button
           type="button"
@@ -91,15 +91,22 @@ const AdminLayout: React.FC = () => {
       )}
 
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'translate-x-0 lg:w-64' : '-translate-x-full lg:w-16 lg:translate-x-0'} fixed inset-y-0 left-0 z-40 flex w-72 max-w-[86vw] flex-col border-r border-gray-800 bg-gray-950 shadow-2xl shadow-black/40 transition-[transform,width] duration-300 lg:static lg:max-w-none lg:shadow-none`}>
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+      <aside className={`${sidebarOpen ? 'translate-x-0 lg:w-64' : '-translate-x-full lg:w-16 lg:translate-x-0'} fixed inset-y-0 left-0 z-40 flex h-full w-72 max-w-[86vw] shrink-0 flex-col border-r border-gray-800 bg-gray-950 shadow-2xl shadow-black/40 transition-[transform,width] duration-300 lg:static lg:max-w-none lg:shadow-none`}>
+        <div className="shrink-0 p-4 border-b border-gray-800 flex items-center justify-between">
           {sidebarOpen && <h1 className="text-lg font-bold text-red-500">KS Admin</h1>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-400 hover:text-white">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(open => !open)}
+            aria-label={sidebarOpen ? 'Collapse admin navigation' : 'Expand admin navigation'}
+            aria-expanded={sidebarOpen}
+            aria-controls="admin-navigation"
+            className="inline-flex min-h-11 min-w-6 items-center justify-center text-gray-400 hover:text-white"
+          >
             {sidebarOpen ? <ChevronLeft size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
-        <nav className="flex-1 py-4 overflow-y-auto">
+        <nav id="admin-navigation" aria-label="Admin pages" className="min-h-0 flex-1 overflow-y-auto py-4">
           {navItems.map((item, i) => {
             if ('divider' in item && item.divider) {
               return sidebarOpen ? (
@@ -120,6 +127,8 @@ const AdminLayout: React.FC = () => {
                 key={item.path}
                 to={item.path!}
                 onClick={closeSidebarOnMobile}
+                aria-label={item.label}
+                title={sidebarOpen ? undefined : item.label}
                 className={`flex items-center px-4 py-2.5 mx-2 rounded-lg transition-colors ${
                   isActive
                     ? 'bg-red-600/20 text-red-500'
@@ -133,18 +142,23 @@ const AdminLayout: React.FC = () => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-800">
+        <div className="shrink-0 p-4 border-t border-gray-800">
           <button
+            type="button"
             onClick={handleLogout}
-            className="flex items-center text-gray-400 hover:text-white w-full px-2 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            aria-label="Sign Out"
+            title="Sign Out"
+            className="flex min-h-11 w-full items-center rounded-lg px-2 py-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white lg:hidden"
           >
-            <LogOut size={20} />
-            {sidebarOpen && <span className="ml-3 text-sm">Sign Out</span>}
+            <LogOut size={20} aria-hidden="true" />
+            <span className="ml-3 text-sm">Sign Out</span>
           </button>
           <Link
             to="/"
+            aria-label="Back to Site"
+            title="Back to Site"
             onClick={closeSidebarOnMobile}
-            className="flex items-center text-gray-400 hover:text-white w-full px-2 py-2 rounded-lg hover:bg-gray-800 transition-colors mt-1"
+            className="flex items-center text-gray-400 hover:text-white w-full px-2 py-2 rounded-lg hover:bg-gray-800 transition-colors"
           >
             <ChevronLeft size={20} />
             {sidebarOpen && <span className="ml-3 text-sm">Back to Site</span>}
@@ -153,20 +167,32 @@ const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-800/90 bg-gray-900/95 px-3 py-3 backdrop-blur lg:hidden">
+      <main className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+        <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-gray-800/90 bg-gray-900/95 px-3 py-3 backdrop-blur sm:px-5 lg:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-700 bg-gray-800 text-gray-200 shadow-sm lg:hidden"
+              aria-label="Open admin navigation"
+              aria-expanded={sidebarOpen}
+              aria-controls="admin-navigation"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">KS Admin</p>
+              <p className="hidden text-xs text-gray-400 sm:block">Admin Operations</p>
+            </div>
+          </div>
           <button
             type="button"
-            onClick={() => setSidebarOpen(true)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-700 bg-gray-800 text-gray-200 shadow-sm"
-            aria-label="Open admin navigation"
+            onClick={handleLogout}
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-gray-700 bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-200 transition-colors hover:bg-gray-700 hover:text-white"
           >
-            <Menu size={20} />
+            <LogOut size={18} aria-hidden="true" />
+            <span>Sign Out</span>
           </button>
-          <div className="text-right">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-400">Kristal Streams</p>
-            <p className="text-sm font-semibold text-white">Admin Operations</p>
-          </div>
         </div>
         <div className="min-w-0 px-3 py-4 sm:p-5 lg:p-6">
           <Outlet />

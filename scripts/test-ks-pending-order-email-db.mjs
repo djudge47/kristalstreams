@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { handlePendingOrderNotification } from '../supabase/functions/ks-order-notification/pending-handler.js';
+import { routeOrderNotification } from '../supabase/functions/ks-order-notification/router.js';
+import { fulfill } from '../_server/ks-payments.js';
+import { customerSetupSnapshot } from '../_server/ks-customer-setup.js';
 // Same temporary @electric-sql/pglite@0.5.10 used by receipt/queue tests. No
 // connection string, Supabase credentials, SMTP or email-provider access.
 const { PGlite } = await import(process.env.KS_PGLITE_MODULE || '@electric-sql/pglite');
@@ -28,14 +31,24 @@ try {
     create role anon; create role authenticated; create role service_role bypassrls;
     create schema auth; create table auth.users(id uuid primary key);
     insert into auth.users values ('${owner}');
-    create table public.profiles(id uuid primary key references auth.users(id),email text);
-    insert into public.profiles values ('${owner}','fictional@example.invalid');
+    create table public.profiles(id uuid primary key references auth.users(id),email text,
+      subscription_status text not null default 'inactive',subscription_tier text not null default 'bronze',
+      connections_allowed integer not null default 1,active_connections integer not null default 0,
+      subscription_expires_at timestamptz,stripe_checkout_session_id text,stripe_payment_intent_id text,
+      updated_at timestamptz not null default now());
+    insert into public.profiles(id,email) values ('${owner}','fictional@example.invalid');
     grant usage on schema public to service_role,anon,authenticated;
     grant select,update on public.profiles to service_role;
     ${original.slice(original.indexOf('create table'),original.indexOf('CREATE OR REPLACE FUNCTION'))}
     ${legacy.slice(legacy.indexOf('create table'),legacy.indexOf('create function'))}
   `);
-  await db.exec(queue); await db.exec(pending); await db.exec('set role service_role');
+  await db.exec(queue); await db.exec(pending);
+  // The archived editor export omits the closing statement delimiter. Add
+  // that delimiter only; the legacy function body and grants stay identical.
+  await db.exec(original.slice(original.indexOf('CREATE OR REPLACE FUNCTION'))
+    .replace('$function$\n\nrevoke', '$function$;\n\nrevoke'));
+  await db.exec(await readFile(new URL('./ks-live-receipt-rollback-guard.sql',import.meta.url),'utf8'));
+  await db.exec('set role service_role');
   await check('live pending receipt prepares a support alert without activating any service', async () => {
     const id = await record('LivePendingAlert', true); const alert = await prepare(id);
     assert.equal(alert.status, 'prepared'); assert.equal(alert.test_mode, false);
@@ -130,6 +143,40 @@ try {
     assert.equal((await handlePendingOrderNotification(request(), options)).status, 200);
     assert.equal(deliveries.size, 1); assert.equal(requests, 2);
     assert.equal((await prepare(id)).status, 'already_sent');
+  });
+  await check('opt-in fulfillment, actual receipt SQL and routed pending alert recover one payment and delivery', async () => {
+    const id='cs_live_FullPipeline',deliveries=new Map();let requests=0,loseAcknowledgement=true;
+    const profileBefore=(await db.query('select to_jsonb(p) as p from public.profiles p where id=$1',[owner])).rows[0].p;
+    const session={id,livemode:true,mode:'payment',status:'complete',payment_status:'paid',currency:'usd',amount_total:2000,amount_subtotal:2000,payment_intent:'pi_FullPipeline',metadata:{user_id:owner,plan:'bronze',connections:'1',interval:'monthly',price:'20',duration_days:'30'}};
+    const admin={
+      from(table){assert.equal(table,'ks_payment_receipts');return{select(){return this;},eq(column,value){assert.equal(column,'checkout_session_id');this.id=value;return this;},async maybeSingle(){return{data:(await db.query('select user_id,livemode from public.ks_payment_receipts where checkout_session_id=$1',[this.id])).rows[0]||null,error:null};}};},
+      auth:{admin:{getUserById:async user=>({data:{user:{id:user,email:'fictional@example.invalid'}},error:null})}},
+      async rpc(name,args){
+        if(name==='ks_record_paid_checkout')return{data:(await db.query('select public.ks_record_paid_checkout($1,$2,$3,$4,$5,$6,$7,$8,$9) as receipt',[args.p_session_id,args.p_payment_intent_id,args.p_user_id,args.p_livemode,args.p_tier,args.p_connections,args.p_duration_days,args.p_amount_cents,args.p_currency])).rows[0].receipt,error:null};
+        if(name==='ks_prepare_pending_order_alert')return{data:await prepare(args.p_session_id,args.p_customer_email,args.p_user_id),error:null};
+        assert.equal(name,'ks_complete_pending_order_alert');
+        if(loseAcknowledgement){loseAcknowledgement=false;return{data:null,error:{code:'fictional_acknowledgement_loss'}};}
+        return{data:await complete(args.p_session_id,args.p_email_id),error:null};
+      },
+    };
+    const options={admin,serviceKey:'fictional-server',resendKey:'fictional-provider',fetchImpl:async(url,config)=>{
+      assert.equal(url,'https://api.resend.com/emails');requests++;const key=config.headers['Idempotency-Key'];
+      if(deliveries.has(key))assert.equal(deliveries.get(key),config.body);else deliveries.set(key,config.body);
+      return Response.json({id:'mail-full-pipeline'});
+    }};
+    admin.functions={invoke:async(name,{body})=>{assert.equal(name,'ks-order-notification');const response=await routeOrderNotification(new Request('https://example.invalid',{method:'POST',headers:{Authorization:'Bearer fictional-server'},body:JSON.stringify(body)}),options);return{data:await response.json(),error:response.ok?null:{code:'notification_needs_retry'}};}};
+    const context={environment:'production',live:true,receiptOnlyLive:true,admin,stripe:{checkout:{sessions:{retrieve:async sessionId=>{assert.equal(sessionId,id);return session;}}}}};
+    await assert.rejects(()=>fulfill(id,context,owner),/payment is recorded.*do not pay again/);
+    const replay=await fulfill(id,context,owner);assert.equal(replay.replayed,true);assert.equal(replay.queue_replayed,true);assert.equal(replay.activated,false);assert.equal(replay.provider_activated,false);
+    await fulfill(id,context,owner);assert.equal(deliveries.size,1);assert.equal(requests,2);
+    for(const table of['ks_payment_receipts','ks_setup_order_queue','ks_pending_order_alerts'])assert.equal((await db.query(`select count(*)::int as n from public.${table} where checkout_session_id=$1`,[id])).rows[0].n,1);
+    assert.deepEqual((await db.query('select to_jsonb(p) as p from public.profiles p where id=$1',[owner])).rows[0].p,profileBefore);
+    const row=(await db.query('select q.checkout_session_id,q.fulfillment_status,q.queued_at,to_jsonb(r) as receipt from public.ks_setup_order_queue q join public.ks_payment_receipts r using(checkout_session_id) where q.checkout_session_id=$1',[id])).rows[0];
+    row.queued_at=new Date(row.queued_at).toISOString();row.receipt.recorded_at=new Date(row.receipt.recorded_at).toISOString();
+    assert.equal(customerSetupSnapshot([row],owner,true)[0].providerActivated,false);
+    await assert.rejects(()=>db.query("select public.ks_apply_paid_checkout($1,$2,$3,true,'bronze',1,30,2000,'usd')",[id,'pi_FullPipeline',owner]),/receipt_only_order_cannot_use_legacy_activation/);
+    assert.deepEqual((await db.query('select to_jsonb(p) as p from public.profiles p where id=$1',[owner])).rows[0].p,profileBefore);
+    assert.equal((await db.query('select activated from public.ks_payment_receipts where checkout_session_id=$1',[id])).rows[0].activated,false);
   });
   await db.exec('reset role');
   await check('database guards reject frozen-body changes, delivery resets and deletion', async () => {

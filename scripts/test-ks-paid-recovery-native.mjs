@@ -1,0 +1,303 @@
+import assert from 'node:assert/strict';
+import { spawn, spawnSync } from 'node:child_process';
+import { readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
+import { bootstrap, fixture, prepareAttempt, reserveAttempt, reserveReview, begin, complete, summary, json, literal, adminId } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
+import { buildPaidPlanMapping } from '../_server/ks-roomba-plan-mapping.js';
+import { createGuardedPaidExecutor } from '../_server/ks-guarded-paid-executor.js';
+import { createPaidExecutionStore } from '../_server/ks-paid-execution-store.js';
+import { issuePaidApproval } from '../_server/ks-paid-approval.js';
+import { sealStreamingLogin } from '../_server/ks-login-envelope.js';
+import { loadPreviewCompletions } from '../_server/ks-preview-completion-status.js';
+import { customerSetupSnapshot } from '../_server/ks-customer-setup.js';
+import { readSetupHelpOrders, setupHelpDetails } from '../_shared/ks-setup-help.js';
+import { paymentConfirmationView } from '../_shared/ks-payment-confirmation-view.js';
+
+// This harness cannot target Supabase or construct a real provider adapter.
+assert.equal(process.env.KS_NATIVE_DISPOSABLE_ACK,'paid-recovery-fixtures');
+const target=process.env.KS_NATIVE_PG_URL,address=new URL(target);
+assert.ok(['postgres:','postgresql:'].includes(address.protocol));
+assert.ok(['127.0.0.1','localhost','[::1]'].includes(address.hostname));
+assert.equal(address.pathname,'/ks_paid_recovery_native_test');
+assert.equal(address.search,'');assert.equal(address.hash,'');
+const psql=process.env.KS_NATIVE_PSQL||'psql',clients=[];
+let serial=0;
+globalThis.fetch=()=>{throw new Error('External transport is forbidden in native recovery fixtures');};
+const report={kind:'native-paid-worker-recovery',sourceCommit:spawnSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).stdout.trim(),startedAt:new Date().toISOString(),tests:[],sourceHashes:{}};
+
+class Session{
+  constructor(name){
+    this.pending=null;this.buffer='';
+    // A single ordered pipe keeps a rejected statement's ERROR text before
+    // its SQLSTATE marker. Arguments are passed separately, never interpolated.
+    this.child=spawn('bash',['-c','exec "$@" 2>&1','ks-native-psql',psql,'--no-psqlrc','--quiet','--no-align','--tuples-only','--set=ON_ERROR_STOP=off','--dbname',target],{env:{...process.env,PGAPPNAME:`ks-paid-recovery-native-${name}`},stdio:['pipe','pipe','pipe']});
+    this.child.on('error',error=>this.fail(error));
+    this.child.on('exit',code=>this.fail(new Error(`Disposable psql session exited (${code})`)));
+    this.child.stdout.on('data',chunk=>{
+      this.buffer+=chunk.toString();let index;
+      while((index=this.buffer.indexOf('\n'))>=0){const line=this.buffer.slice(0,index).replace(/\r$/,'');this.buffer=this.buffer.slice(index+1);const pending=this.pending;
+        if(!pending)continue;
+        if(line.startsWith(`${pending.marker} `)){
+          clearTimeout(pending.timer);this.pending=null;const code=line.slice(pending.marker.length+1).trim();
+          if(code==='00000')pending.resolve(pending.output.join('\n').trim());
+          else{const error=new Error(pending.error.trim()||`SQL rejected (${code})`);error.code=code;pending.reject(error);}
+        }else if(/^(ERROR|FATAL):/.test(line))pending.error+=line+'\n';
+        else pending.output.push(line);
+      }
+    });
+    this.child.stderr.on('data',chunk=>{if(this.pending)this.pending.error+=chunk.toString();});
+    clients.push(this);
+  }
+  fail(error){if(this.pending){clearTimeout(this.pending.timer);this.pending.reject(error);this.pending=null;}}
+  query(sql){
+    assert.equal(this.pending,null,'one request at a time per independent psql connection');
+    return new Promise((resolve,reject)=>{
+      const marker=`KS_NATIVE_DONE_${++serial}`;
+      const timer=setTimeout(()=>{this.fail(new Error('Disposable database request timed out'));this.child.kill('SIGTERM');},12000);
+      this.pending={resolve,reject,marker,timer,output:[],error:''};
+      this.child.stdin.write(`${sql.trim().replace(/;$/,'')};\n\\echo ${marker} :SQLSTATE\n`);
+    });
+  }
+  async json(sql){const value=await this.query(sql);return value?JSON.parse(value):null;}
+  stop(){this.child.kill('SIGTERM');}
+}
+
+
+let admin,a,b;
+async function check(name,fn){await fn();report.tests.push({name,passed:true});console.log(`PASS: ${name}`);}
+async function blocked(pid,state){
+  const deadline=Date.now()+4000;
+  while(Date.now()<deadline){
+    if(state.done)throw state.error||new Error('Expected competing statement to wait on a native lock');
+    const value=await admin.json(`select coalesce((select jsonb_build_object('wait',wait_event_type,'state',state) from pg_stat_activity where pid=${pid}),'{}'::jsonb)`);
+    if(value.wait==='Lock'&&value.state==='active')return;
+    await delay(20);
+  }
+  throw new Error('Native lock wait was not observed');
+}
+function competing(sql){
+  const state={done:false};
+  state.result=b.query(sql).then(value=>{state.done=true;return{value};},error=>{state.done=true;state.error=error;return{error};});
+  return state;
+}
+async function race(first,second,release='commit'){
+  await a.query('begin');const winner=await a.query(first),state=competing(second);
+  await blocked(b.pid,state);await a.query(release);const loser=await state.result;
+  if(loser.error)throw loser.error;
+  return [winner,loser.value];
+}
+const valueSql=value=>value===null?'null':Array.isArray(value)?`array[${value.map(Number).join(',')}]::integer[]`:typeof value==='object'?`${literal(JSON.stringify(value))}::jsonb`:literal(value);
+
+// Auth and provider transport are fictional; the actual execution-store methods
+// send their scoped reads and named RPC arguments to native PostgreSQL sessions.
+function databaseClient(connection,f,fault='',calls={}){
+  let failed=false;
+  return {
+    auth:{admin:{getUserById:async id=>({data:{user:{id,email:`fixture-${f.owner}@example.invalid`,email_confirmed_at:'2026-01-01',is_anonymous:false}},error:null})}},
+    from(table){
+      assert.ok(['profiles','ks_preview_provisioning_attempts'].includes(table));
+      let columns,filters=[];
+      return {select(selection){assert.match(selection,/^[a-z_,]+$/);columns=selection;return this;},eq(key,value){assert.match(key,/^[a-z_]+$/);filters.push(`${key}=${literal(value)}`);return this;},async maybeSingle(){
+        try {return {data:await connection.json(`select to_jsonb(t) from (select ${columns} from public.${table} where ${filters.join(' and ')} limit 1)t`),error:null};}
+        catch {return {data:null,error:{message:'fictional_native_read_failure'}};}
+      }};
+    },
+    async rpc(name,args){
+      assert.match(name,/^ks_[a-z_]+$/);assert.ok(Object.keys(args).every(key=>/^p_[a-z_]+$/.test(key)));
+      calls[name]=(calls[name]||0)+1;
+      try {
+        const data=await connection.json(`select to_jsonb(public.${name}(${Object.entries(args).map(([key,value])=>`${key}=>${valueSql(value)}`).join(',')}))`);
+        const lose=(fault==='lost_begin'&&name==='ks_begin_approved_preview_provisioning')
+          ||(fault==='lost_verified'&&name==='ks_record_preview_provider_result')
+          ||(fault==='lost_complete'&&name==='ks_commit_preview_paid_setup');
+        if(lose&&!failed){failed=true;return {data:null,error:{message:'fictional_reply_lost_after_commit'}};}
+        return {data,error:null};
+      }catch{return {data:null,error:{message:'fictional_native_rpc_failure'}};}
+    },
+  };
+}
+async function workerFixture(fault=''){
+  const env={VERCEL_ENV:'preview',ROOMBA_PREVIEW_SECRET:'fictional_native_approval_secret_0123456789',KS_LOGIN_ENCRYPTION_KEY:Buffer.alloc(32,7).toString('base64')};
+  const password='fictional_native_password_0123456789';
+  const packages=[1,3,6,12].flatMap((months,i)=>Array.from({length:5},(_,j)=>({id:String(1000+i*5+j),name:`${months} Months + ${j+1} Connections`,maxConnections:j+1,
+    paid:{count:months,unit:'months',credits:(i+1)*(j+1)+0.5},trial:null,bouquets:[13,14],issues:[]})));
+  const entry=buildPaidPlanMapping({schemaVersion:1,readOnly:true,checkedAt:new Date().toISOString(),packages}).entries[0];
+  const f=await fixture(admin,{fingerprint:entry.provider.fingerprint,envelopeFactory:value=>sealStreamingLogin({username:value.username,password},
+    {environment:'preview',ownerId:value.owner,sessionId:value.session,attemptId:value.attempt},env)});
+  f.bindingHash=createHash('sha256').update(JSON.stringify({sessionId:f.session,ownerId:f.owner,intentId:f.payment,tier:'bronze',connections:1,amountCents:2000,resellerId:f.reseller,packageFingerprint:f.fingerprint})).digest('hex');
+  if(fault==='review')await json(a,reserveReview(f));
+  await prepareAttempt(admin,f);
+  const now=Date.now(),session={id:f.session,livemode:false,mode:'payment',status:'complete',payment_status:'paid',currency:'usd',amount_total:2000,amount_subtotal:2000,
+    payment_intent:{id:f.payment,status:'succeeded',livemode:false,currency:'usd',amount:2000,amount_received:2000,
+      latest_charge:{id:'ch_FictionalNative',payment_intent:f.payment,livemode:false,currency:'usd',amount:2000,paid:true,captured:true,disputed:false,refunded:false,amount_refunded:0}},
+    metadata:{user_id:f.owner,plan:'bronze',connections:'1',interval:'monthly',price:'20',duration_days:'30'}};
+  const account={id:f.reseller,username:'fictional_native_reseller',credits:'100.5'},line={id:f.line,username:f.username,resellerId:f.reseller,packageId:'1000',connections:1,trial:false,enabled:true,adminEnabled:true,bouquetIds:[13,14],expiresAt:new Date(now+31*86400000).toISOString()};
+  const approval=issuePaidApproval({session,ownerId:f.owner,approverId:adminId,entry,currentPackage:packages[0],account,checkedAt:now},env,now);
+  const calls={creates:0,lineReads:0,paymentReads:0,rpcs:{}};
+  let arrivals=0,release;
+  const bothLoaded=new Promise(resolve=>{release=resolve;});
+  const provider={snapshot:async()=>({account,packages,checkedAt:now}),create:async()=>{calls.creates++;if(fault==='provider_timeout')throw new Error('fictional_provider_reply_uncertain');return structuredClone(line);},line:async()=>{calls.lineReads++;return structuredClone(line);},account:async()=>({...account,credits:'99'})};
+  const payments={retrieve:async()=>{calls.paymentReads++;return structuredClone(session);}};
+  const input={attemptId:f.attempt,ownerId:f.owner,approverId:adminId,approvalToken:approval.token,confirmed:true};
+  const make=connection=>{
+    const store=createPaidExecutionStore(databaseClient(connection,f,fault,calls.rpcs),env);
+    if(fault==='concurrent'){
+      const load=store.load.bind(store);
+      store.load=async(...args)=>{
+        const row=await load(...args);
+        if(arrivals<2){
+          assert.equal(row?.state,'reserved');if(++arrivals===2)release();
+          await bothLoaded;
+        }
+        return row;
+      };
+    }
+    return createGuardedPaidExecutor({store,provider,payments,env,now:()=>now});
+  };
+  return {f,input,calls,run:make(a),other:make(b)};
+}
+const profileSnapshot=()=>admin.json('select jsonb_agg(to_jsonb(p) order by id) from public.profiles p');
+async function completed(t){
+  const s=await summary(admin,t.f);
+  assert.equal(s.attemptState,'credentials_ready');assert.equal(s.crm,1);assert.equal(s.logins,1);assert.equal(s.fulfillments,1);assert.equal(s.dispatchSlots,0);assert.equal(s.receiptActivated,false);assert.equal(s.previewQueue,'setup_complete');
+  assert.equal(t.calls.creates,1);
+  assert.deepEqual(await admin.json(`select to_jsonb(login_envelope) from public.ks_preview_provisioning_attempts where attempt_id=${literal(t.f.attempt)}`),t.f.envelope);
+}
+
+function nativeCompletionClient(){
+  return {from(table){
+    assert.equal(table,'ks_preview_paid_fulfillments');const filters=new Map();let refs;
+    return {select(columns){assert.ok(!columns.includes('login_envelope'));return this;},eq(key,value){filters.set(key,value);return this;},in(key,values){assert.equal(key,'checkout_session_id');refs=values;return this;},async limit(limit){
+      const owner=filters.get('user_id');
+      for(const key of ['attempt.user_id','login.user_id','receipt.user_id'])assert.equal(filters.get(key),owner);
+      assert.equal(filters.get('receipt.livemode'),false);assert.equal(limit,refs.length+1);
+      const data=await admin.json(`select coalesce(jsonb_agg(to_jsonb(proof)),'[]'::jsonb) from (
+        select f.attempt_id,f.checkout_session_id,f.user_id,f.crm_customer_id,f.completed_at,
+          to_jsonb(a) as attempt,to_jsonb(l) as login,to_jsonb(r) as receipt,to_jsonb(c) as customer
+        from public.ks_preview_paid_fulfillments f join public.ks_preview_provisioning_attempts a using(attempt_id)
+        join public.ks_preview_streaming_logins l using(attempt_id) join public.ks_payment_receipts r on r.checkout_session_id=f.checkout_session_id
+        join public.iptv_customers c on c.id=f.crm_customer_id
+        where f.user_id=${literal(owner)} and a.user_id=${literal(owner)} and l.user_id=${literal(owner)} and r.user_id=${literal(owner)} and r.livemode=false
+          and f.checkout_session_id in (${refs.map(literal).join(',')}) limit ${limit}) proof`);
+      return {data,error:null};
+    }};
+  }};
+}
+
+async function completedOwnerView(t,now=Date.now()){
+  const row=await admin.json(`select jsonb_build_object('checkout_session_id',q.checkout_session_id,'fulfillment_status',q.fulfillment_status,'queued_at',q.queued_at,'receipt',to_jsonb(r))
+    from public.ks_preview_paid_orders q join public.ks_payment_receipts r using(checkout_session_id) where q.checkout_session_id=${literal(t.f.session)}`);
+  const proofs=await loadPreviewCompletions(nativeCompletionClient(),t.f.owner,[row.receipt],now);
+  const orders=customerSetupSnapshot([row],t.f.owner,false,proofs);
+  const parsed=readSetupHelpOrders({accountId:t.f.owner,mode:'read-only',testMode:true,orders,checkedAt:new Date(now).toISOString()},t.f.owner);
+  return {order:parsed.orders[0],help:setupHelpDetails(parsed.orders[0],parsed.checkedAt),view:paymentConfirmationView({ok:true,test_mode:true,activated:false,
+    order_status:parsed.orders[0].status,provider_activated:parsed.orders[0].providerActivated,setup_expires_at:parsed.orders[0].expiresAt,setup_checked_at:parsed.checkedAt},t.f.session)};
+}
+
+try{
+  admin=new Session('admin');a=new Session('a');b=new Session('b');
+  for(const client of [admin,a,b]){client.request=client.query.bind(client);client.pid=Number(await client.query('select pg_backend_pid()'));await client.query("set statement_timeout='8s'");await client.query("set lock_timeout='6s'");}
+  report.server=await admin.json("select jsonb_build_object('database',current_database(),'version',current_setting('server_version_num'),'isolation',current_setting('transaction_isolation'))");
+  assert.ok(['170006','170011'].includes(report.server.version));
+  report.foundationManifest=await bootstrap(admin);
+  const bindingName='supabase/migrations/20261020003225_add_private_checkout_intent_binding.sql';
+  const binding=await readFile(new URL('../'+bindingName,import.meta.url),'utf8');
+  report.sourceHashes[bindingName]=createHash('sha256').update(binding).digest('hex');
+  await admin.request(binding);
+  const sources=['_server/ks-guarded-paid-executor.js','_server/ks-paid-execution-store.js','_server/ks-paid-approval.js','_server/ks-login-envelope.js','_server/ks-roomba-plan-mapping.js','_server/ks-paid-settlement.js','_server/ks-payment-validation.js','_server/ks-preview-completion-status.js','_server/ks-customer-setup.js','_shared/ks-setup-help.js','_shared/ks-payment-confirmation-view.js','scripts/fixtures/ks-reviewed-handoff/fixtures.mjs'];
+  for(const name of sources)report.sourceHashes[name]=createHash('sha256').update(await readFile(new URL('../'+name,import.meta.url))).digest('hex');
+  await a.query('set role service_role');await b.query('set role service_role');
+  await check('three native backends use the current guarded foundation without installing the handoff prototype',async()=>{
+    assert.equal(new Set([admin.pid,a.pid,b.pid]).size,3);assert.equal(report.server.isolation,'read committed');
+    assert.equal(await admin.query("select to_regclass('public.ks_proto_reservation_handoffs') is null"),'t');
+  });
+  for(const fault of ['', 'lost_begin','provider_timeout','lost_verified','lost_complete']){
+    await check(`${fault||'ordinary'} worker recovery preserves one native attempt and no duplicate fictional create`,async()=>{
+      const t=await workerFixture(fault),before=await profileSnapshot();
+      if(fault==='lost_begin')await assert.rejects(()=>t.run(t.input));else{
+        const first=await t.run(t.input);
+        assert.equal(first.state,fault==='provider_timeout'||fault==='lost_verified'?'reconciliation_required':fault==='lost_complete'?'completion_pending':'credentials_ready');
+      }
+      const result=await t.other(t.input),s=await summary(admin,t.f);
+      if(fault==='lost_begin'||fault==='provider_timeout'){
+        assert.equal(result.state,'reconciliation_required');assert.equal(s.dispatchSlots,1);assert.equal(s.crm,0);assert.equal(s.logins,0);assert.equal(s.fulfillments,0);assert.equal(t.calls.creates,fault==='lost_begin'?0:1);
+        assert.equal(s.attemptState,fault==='lost_begin'?'dispatching':'reconciliation_required');
+      }else{assert.equal(result.state,'credentials_ready');await completed(t);}
+      assert.deepEqual(await profileSnapshot(),before);
+    });
+  }
+  await check('a native completion failure after CRM writes rolls back and retries without a second create',async()=>{
+    const t=await workerFixture(),before=await profileSnapshot();
+    await admin.query("create function public.ks_native_completion_fault() returns trigger language plpgsql as $$begin raise exception 'fictional_completion_failure';end;$$; create trigger ks_native_completion_fault after insert on public.iptv_customer_activity for each row execute function public.ks_native_completion_fault()");
+    assert.equal((await t.run(t.input)).state,'completion_pending');
+    const stopped=await summary(admin,t.f);assert.equal(stopped.attemptState,'provider_verified');assert.equal(stopped.crm,0);assert.equal(stopped.logins,0);assert.equal(stopped.fulfillments,0);assert.equal(stopped.dispatchSlots,1);
+    await admin.query('drop trigger ks_native_completion_fault on public.iptv_customer_activity;drop function public.ks_native_completion_fault()');
+    assert.equal((await t.other(t.input)).state,'credentials_ready');await completed(t);assert.deepEqual(await profileSnapshot(),before);
+  });
+  await check('two real executor callers sharing native SQL create and complete at most once',async()=>{
+    const t=await workerFixture('concurrent'),before=await profileSnapshot();
+    const results=await Promise.race([Promise.allSettled([t.run(t.input),t.other(t.input)]),delay(6000).then(()=>{throw new Error('Concurrent executor fixture timed out');})]);
+    assert.ok(results.some(result=>result.status==='fulfilled'&&result.value.state==='credentials_ready'));
+    assert.equal((await t.run(t.input)).state,'credentials_ready');await completed(t);assert.deepEqual(await profileSnapshot(),before);
+  });
+  await check('same-attempt approved begin waits on a native row lock and grants one dispatch decision',async()=>{
+    const f=await prepareAttempt(admin,await fixture(admin));const values=await race(`select ${begin(f)}`,`select ${begin(f)}`);
+    assert.deepEqual(values,['t','f']);assert.equal((await summary(admin,f)).dispatchSlots,1);
+  });
+  await check('rolled-back approved begin allows the waiting caller one fresh dispatch decision',async()=>{
+    const f=await prepareAttempt(admin,await fixture(admin));const values=await race(`select ${begin(f)}`,`select ${begin(f)}`,'rollback');
+    assert.deepEqual(values,['t','t']);assert.equal((await summary(admin,f)).dispatchSlots,1);
+  });
+  await check('native simultaneous local completions commit one CRM, fulfillment and encrypted owner binding',async()=>{
+    const f=await prepareAttempt(admin,await fixture(admin),'provider_verified'),before=await profileSnapshot();
+    const values=await race(`select ${complete(f)}`,`select ${complete(f)}`);assert.equal(JSON.parse(values[0]).replayed,false);assert.equal(JSON.parse(values[1]).replayed,true);
+    const s=await summary(admin,f);assert.equal(s.crm,1);assert.equal(s.logins,1);assert.equal(s.fulfillments,1);assert.equal(s.dispatchSlots,0);assert.equal(s.receiptActivated,false);assert.deepEqual(await profileSnapshot(),before);
+  });
+  await check('review reservation blocks the actual signed executor before any fictional provider creation',async()=>{
+    const t=await workerFixture('review');const before=await summary(admin,t.f);
+    await assert.rejects(()=>t.run(t.input));assert.equal(t.calls.creates,0);assert.deepEqual(await summary(admin,t.f),before);
+  });
+  await check('uncommitted review ownership rejects approved begin immediately, then remains exclusive after commit',async()=>{
+    const work=await fixture(admin),review=await fixture(admin,{reseller:work.reseller});
+    // The worker reservation is initially invisible to the other transaction.
+    // Each order has its own owner/profile/receipt, but the physical reseller
+    // key remains shared. The existing guard is neither replaced nor bypassed.
+    await b.query('begin');work.token=(await json(b,reserveAttempt(work))).claimToken;
+    await a.query('begin');await json(a,reserveReview(review));await b.query('commit');
+    await assert.rejects(()=>b.query(`select ${begin(work)}`),error=>error.code==='P0001'&&/reseller_reservation_busy/.test(error.message));
+    await a.query('commit');await assert.rejects(()=>b.query(`select ${begin(work)}`),error=>error.code==='P0001'&&/reseller_reserved_for_setup_review/.test(error.message));
+    const s=await summary(admin,work);assert.equal(s.attemptState,'reserved');assert.equal(s.reviewSlots,1);assert.equal(s.dispatchSlots,0);
+  });
+  await check('uncommitted dispatch ownership rejects review reservation and rollback restores eligibility',async()=>{
+    const work=await fixture(admin),review=await fixture(admin,{reseller:work.reseller});
+    // SQL-only race: no provider adapter runs inside this uncommitted test
+    // transaction. A rollback removes both its attempt and dispatch claim.
+    await a.query('begin');work.token=(await json(a,reserveAttempt(work))).claimToken;
+    assert.equal(await json(a,begin(work)),true);
+    await assert.rejects(()=>b.query(`select ${reserveReview(review)}`),error=>error.code==='P0001'&&/reseller_reservation_busy/.test(error.message));
+    await a.query('rollback');await json(b,reserveReview(review));const s=await summary(admin,work);
+    assert.equal(s.attemptState,null);assert.equal(s.reviewSlots,1);assert.equal(s.dispatchSlots,0);
+  });
+  await check('browser roles cannot read owner envelopes or execute dispatch/completion RPCs',async()=>{
+    const f=await fixture(admin);await b.query('reset role');await b.query('set role authenticated');
+    for(const sql of ['select * from public.ks_preview_streaming_logins','select * from public.ks_preview_provisioning_attempts',`select ${begin({...f,token:adminId})}`,`select ${complete({...f,token:adminId})}`])await assert.rejects(()=>b.query(sql),error=>error.code==='42501');
+    await b.query('reset role');await b.query('set role service_role');
+  });
+  let completedStatusFixture;
+  await check('native completed setup survives a lost reply and reaches verified owner/payment/support status once',async()=>{
+    const t=completedStatusFixture=await workerFixture('lost_complete'),before=await profileSnapshot();
+    assert.equal((await t.run(t.input)).state,'completion_pending');assert.equal((await t.other(t.input)).state,'credentials_ready');
+    const result=await completedOwnerView(t);assert.equal(result.order.status,'setup_complete');assert.equal(result.order.providerActivated,true);assert.equal(result.view.kind,'ready');assert.match(result.help,/setup confirmed/);
+    assert.ok(!JSON.stringify(result).includes(t.f.envelope.ciphertext));await completed(t);assert.deepEqual(await profileSnapshot(),before);
+  });
+  await check('native completion becomes expired at its saved boundary without another setup or billing claim',async()=>{
+    const t=completedStatusFixture;const before=await summary(admin,t.f);
+    const expiry=await admin.query(`select extract(epoch from provider_expires_at)*1000 from public.ks_preview_provisioning_attempts where attempt_id=${literal(t.f.attempt)}`);
+    const result=await completedOwnerView(t,Number(expiry));assert.equal(result.order.status,'setup_expired');assert.equal(result.order.providerActivated,false);assert.equal(result.view.kind,'expired');assert.match(result.help,/service period ended/);
+    assert.deepEqual(await summary(admin,t.f),before);assert.equal(t.calls.creates,1);
+  });
+  report.passed=true;
+  console.log(`${report.tests.length} native worker recovery checks passed. Provider/Auth/Stripe are fictional; only the named loopback database was used.`);
+}catch(error){report.passed=false;report.failure={message:error.message,code:error.code||null};console.error('Native paid recovery checks failed:',report.failure);process.exitCode=1;}
+finally{for(const client of clients)client.stop();report.finishedAt=new Date().toISOString();if(process.env.KS_NATIVE_REPORT)await writeFile(process.env.KS_NATIVE_REPORT,JSON.stringify(report,null,2)+'\n');}

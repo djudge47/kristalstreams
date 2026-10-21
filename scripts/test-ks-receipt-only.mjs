@@ -78,4 +78,8 @@ await check('database failure or an incomplete reply cannot return false success
   await assert.rejects(() => recordPaymentReceipt(session, false, owner, backend(null, { message: 'offline' })), /do not pay again/);
   await assert.rejects(() => recordPaymentReceipt(session, false, owner, backend({ ok: true })), /do not pay again/);
 });
+await check('an existing completed queue preserves recorded money but requires separate completion review',async()=>{
+ const recorded=await recordPaymentReceipt(session,false,owner,backend({...result,order_status:'setup_complete',replayed:true,queue_replayed:true}));
+ assert.equal(recorded.order_status,'requires_review');assert.equal(recorded.payment_recorded,true);assert.equal(recorded.provider_activated,false);
+});
 console.log(`${count} receipt-only checks passed. No provider, Stripe, email or database call was made.`);

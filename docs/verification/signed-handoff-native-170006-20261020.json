@@ -1,0 +1,242 @@
+{
+  "kind": "native-signed-reviewed-handoff",
+  "sourceCommit": "d9cd67baaffa4aff06eced08e7d18d141972be46",
+  "startedAt": "2026-10-20T05:55:24.723Z",
+  "tests": [
+    {
+      "name": "unmodified native prototype refuses the wrong database before any schema creation",
+      "passed": true
+    },
+    {
+      "name": "three independent native backends install the unchanged guarded disposable prototype",
+      "passed": true
+    },
+    {
+      "name": "prototype transfers once and retains the exact reserved budget",
+      "passed": true
+    },
+    {
+      "name": "a second captured approval for the same claim cannot create a second transfer decision",
+      "passed": true
+    },
+    {
+      "name": "prototype completion settles once using fresh balance and preserves original review evidence",
+      "passed": true
+    },
+    {
+      "name": "later standalone completion cannot commit without transferred review settlement",
+      "passed": true
+    },
+    {
+      "name": "journal-only and source-deletion-only transactions cannot commit",
+      "passed": true
+    },
+    {
+      "name": "faults at journal, source delete, destination insert, state update and deferred commit restore ownership",
+      "passed": true
+    },
+    {
+      "name": "wrong attempt token cannot consume approval or move the reservation",
+      "passed": true
+    },
+    {
+      "name": "approval cannot bind a different customer or unrelated attempt",
+      "passed": true
+    },
+    {
+      "name": "revoking the review policy stops an unused handoff approval",
+      "passed": true
+    },
+    {
+      "name": "expired, stale and future approval evidence cannot be recorded",
+      "passed": true
+    },
+    {
+      "name": "trial upgrade cannot enter the new-line prototype operation",
+      "passed": true
+    },
+    {
+      "name": "insufficient fresh reserve fails without double-counting or moving budget",
+      "passed": true
+    },
+    {
+      "name": "immutable evidence and the extra row-lock grant cannot permit slot edits",
+      "passed": true
+    },
+    {
+      "name": "uncertain provider outcome holds reservation and denies every further simulated send",
+      "passed": true
+    },
+    {
+      "name": "prototype tables and functions remain private invoker objects with no Auth read grant",
+      "passed": true
+    },
+    {
+      "name": "changed handoff cost cannot manufacture transfer evidence",
+      "passed": true
+    },
+    {
+      "name": "raw reserve adjustment after transfer cannot commit inconsistent budget state",
+      "passed": true
+    },
+    {
+      "name": "settlement succeeds after policy revocation without authorizing another send",
+      "passed": true
+    },
+    {
+      "name": "completed history does not block later different-customer work on the same reseller",
+      "passed": true
+    },
+    {
+      "name": "real signed review and AES envelope bind the committed SQL handoff; a changed historical balance is retained",
+      "passed": true
+    },
+    {
+      "name": "captured approval reply loss can be read safely and never transfers on the failing call",
+      "passed": true
+    },
+    {
+      "name": "lost committed handoff reply never grants a second decision or releases the credit reservation",
+      "passed": true
+    },
+    {
+      "name": "a deferred SQL failure cannot escape as a successful handoff decision",
+      "passed": true
+    },
+    {
+      "name": "policy revocation after signed capture rolls transfer back with the review reservation intact",
+      "passed": true
+    },
+    {
+      "name": "wrong_owner stops before approval capture and preserves the saved reservation",
+      "passed": true
+    },
+    {
+      "name": "wrong_intent stops before approval capture and preserves the saved reservation",
+      "passed": true
+    },
+    {
+      "name": "changed_cost stops before approval capture and preserves the saved reservation",
+      "passed": true
+    },
+    {
+      "name": "corrupt_envelope stops before approval capture and preserves the saved reservation",
+      "passed": true
+    },
+    {
+      "name": "old_day stops before approval capture and preserves the saved reservation",
+      "passed": true
+    },
+    {
+      "name": "refunded stops before approval capture and preserves the saved reservation",
+      "passed": true
+    },
+    {
+      "name": "existing_customer stops before approval capture and preserves the saved reservation",
+      "passed": true
+    },
+    {
+      "name": "changed_balance stops before approval capture and preserves the saved reservation",
+      "passed": true
+    },
+    {
+      "name": "wrong attempt token is rejected by SQL before transfer",
+      "passed": true
+    },
+    {
+      "name": "stale_after_commit denies the provisional decision after commit and preserves one stopped handoff",
+      "passed": true
+    },
+    {
+      "name": "day_after_commit denies the provisional decision after commit and preserves one stopped handoff",
+      "passed": true
+    },
+    {
+      "name": "malformed_reply denies the provisional decision after commit and preserves one stopped handoff",
+      "passed": true
+    },
+    {
+      "name": "verified transferred completion settles once and the rehearsal never supplies a second decision",
+      "passed": true
+    },
+    {
+      "name": "explicit approval, bound approver, and the simulation-only construction boundary are mandatory",
+      "passed": true
+    },
+    {
+      "name": "committed transfer holds the native row lock until commit and its competitor receives replay only",
+      "passed": true
+    },
+    {
+      "name": "rolled back transfer restores the source reservation before a waiting caller can win",
+      "passed": true
+    },
+    {
+      "name": "native deferred expiry rejects commit and restores the complete review reservation",
+      "passed": true
+    },
+    {
+      "name": "signed callers on independent SQL connections receive at most one committed fictional decision",
+      "passed": true
+    },
+    {
+      "name": "shared reseller advisory lock remains held while native transfer is uncommitted",
+      "passed": true
+    },
+    {
+      "name": "browser roles cannot capture approvals or transfer ownership through the prototype",
+      "passed": true
+    },
+    {
+      "name": "the native prototype rejects repeatable-read transfer before ownership or budget changes",
+      "passed": true
+    },
+    {
+      "name": "all fictional customer profiles retain their original website entitlement fields",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "scripts/fixtures/ks-reviewed-handoff/prototype.sql": "edf3bdfe11d5c6ef4439f00d19ef5aaba930835c03cdc80007afe20b1d56aa97",
+    "scripts/test-ks-reviewed-handoff-native.mjs": "ef99689f8e5afec86ae1cccfdde0f865eb5139764d161b23dd8b0aac406a08a0",
+    "scripts/fixtures/ks-reviewed-handoff/fixtures.mjs": "27361480f9a0f603b534db81a960d829aa726c9c74376121b808dba29ae7b73b",
+    "scripts/fixtures/ks-reviewed-handoff/handoff-fixtures.mjs": "bc09a971a13af774b99f359aa4e53d4883faeca2fccac4bd7cdfcea0fc55d497",
+    "scripts/fixtures/ks-reviewed-handoff/handoff-scenarios.mjs": "770fafa70b7ee69e736a218a783bd893a5d28e5841e71ec46292c58d88145ccd",
+    "scripts/fixtures/ks-reviewed-handoff/signed-fixtures.mjs": "d6b39b56d5b93ccb986f395c355132ce856dc7b16023f3376bfb4552c83a6edb",
+    "scripts/fixtures/ks-reviewed-handoff/signed-scenarios.mjs": "f83dbbc3c2c70bc22bb08a582b834a68d844d959ebb78b65412046b132bfbd21",
+    "_server/ks-reviewed-handoff-rehearsal.js": "dc9e4bc927ceb01b8c4f8fb51cab85662a5d1bd00838d8c8380398c3c8452e9f",
+    "_server/ks-paid-approval.js": "cf3c0f9625c9099c404e67af158d555e705707e83b7d5e1bdf68b7242176a0c1",
+    "_server/ks-login-envelope.js": "4af38a8b26a7a8fc73e2a9579db3bb51e77891bfe0d9afc39c39808ce5262ffd",
+    "_server/ks-roomba-plan-mapping.js": "97c54b4ef2858b49e09e00126dcf4b7180c5e541d2e6bc45694b42ccdc578348",
+    "_server/ks-paid-settlement.js": "f7a78c804f17db21efc4529616de7b6a5669defcc07579d764341b02de11bbda",
+    "_server/ks-payment-validation.js": "e950320e25a5aa97fb18205a37919863906980703edea0e04e908157798e602e"
+  },
+  "server": {
+    "version": "170006",
+    "database": "ks_disposable_handoff_test",
+    "isolation": "read committed"
+  },
+  "foundationManifest": {
+    "sourceCommit": "f434a3a2220a0ac09dd83aa367dfb9b78aaaebe3",
+    "files": {
+      "ks-payment-schema.sql": "35d2b7bab8d3eb89b89510a60bf61da482dd2d2f977ce3d8dd78cc54eeb4c688",
+      "ks-preview-paid-orders-schema.sql": "6bc446f85f4412434904354d4755d525be5563c3b456059bedf55d6c5b0803ff",
+      "ks-paid-foundation-schema.sql": "053d89eae0994f66c325d61a4e43e2192bd68eb112fdba37f2d2bcd60bb545fa",
+      "ks-guarded-paid-execution-schema.sql": "8f86670fdaaaf55934166db4c965a6dbbc6b31d4c035c77c6fc4eb7d8cb871b6",
+      "ks-receipt-only-schema.sql": "c1447e27fdaf0fd51bd4a9383934abd2d8179ebf84684619bb1a48ea71e196f5",
+      "ks-setup-review-claim-schema.sql": "9eb115e33f4517b98b86a4bba4bda9d3dedcfaf35897c33a6c5456392db27c2a",
+      "ks-reviewed-preview-completion-schema.sql": "84150882e7e5a33eed48a9c4537031fa68af53d9d6dbf844d30ceaa0296a423e",
+      "ks-reseller-reservation-exclusion-schema.sql": "d6151a938e007c572ea98ce7c6de512558c411664675420c5f053a4d413966f9"
+    }
+  },
+  "passed": true,
+  "finishedAt": "2026-10-20T05:55:27.098Z",
+  "artifactVerification": {
+    "runId": 39377445650,
+    "artifactId": 12243313833,
+    "zipSha256": "6e6854c68ec9d63fdeabef29f2d37ca52ba73d9091f6ccf980852caed13e7ab6",
+    "verifiedAt": "2026-10-20T05:56:15.540507+00:00",
+    "sourceTree": "fa0e1b7033aea385d29babefd20341aa1513cb76",
+    "checks": "ZIP digest, named member, source commit/tree, server version, all 48 results, 13 integration source hashes and 8 foundation hashes verified."
+  }
+}

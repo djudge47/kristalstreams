@@ -59,7 +59,7 @@ const PaymentSuccess: React.FC = () => {
       <div className="mx-auto max-w-xl rounded-3xl border border-white/10 bg-dark-100 p-8 text-center shadow-2xl shadow-black/40" role="status" aria-live="polite">
         {status === 'checking' ? <Loader className="mx-auto mb-6 h-14 w-14 animate-spin text-primary" /> :
           status === 'error' ? <AlertCircle className="mx-auto mb-6 h-14 w-14 text-red-500" /> :
-          status === 'review' ? <AlertCircle className="mx-auto mb-6 h-14 w-14 text-amber-400" /> :
+          status === 'review' || status === 'expired' ? <AlertCircle className="mx-auto mb-6 h-14 w-14 text-amber-400" /> :
           <CheckCircle className="mx-auto mb-6 h-14 w-14 text-green-500" />}
         <h1 className="mb-4 text-3xl font-bold">
           {title}
@@ -71,7 +71,7 @@ const PaymentSuccess: React.FC = () => {
         </div>}
         {status !== 'checking' && status !== 'error' && <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button onClick={() => navigate('/dashboard')} className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:bg-red-700">Go to Dashboard</button>
-          {status === 'review' && <button onClick={() => navigate('/support')} className="rounded-lg bg-white/10 px-6 py-3 font-medium text-white hover:bg-white/15">Contact Support</button>}
+          {(status === 'review' || status === 'expired') && <button onClick={() => navigate('/support')} className="rounded-lg bg-white/10 px-6 py-3 font-medium text-white hover:bg-white/15">Contact Support</button>}
         </div>}
       </div>
     </div>

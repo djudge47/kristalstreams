@@ -39,6 +39,23 @@ await check('wrong owner and ciphertext cannot begin dispatch; lost result ackno
   const tamper = createGuardedWorkerFixture(); tamper.row.login_envelope.tag = Buffer.alloc(16).toString('base64'); await assert.rejects(() => tamper.execute(tamper.input)); assert.equal(tamper.calls.begins, 0);
   const lost = createGuardedWorkerFixture('lost_verified_reply'); await lost.execute(lost.input); assert.equal((await lost.execute(lost.input)).state, 'credentials_ready'); assert.equal(lost.calls.creates, 1);
 });
+await check('verified recovery accepts PostgreSQL timestamp formatting for the same saved expiry', async () => {
+  const f = createGuardedWorkerFixture('completion_failure');
+  assert.equal((await f.execute(f.input)).state, 'completion_pending');
+  f.row.provider_expires_at = f.row.provider_expires_at.replace('Z', '+00:00');
+  assert.equal((await f.execute(f.input)).state, 'credentials_ready');
+  assert.equal(f.calls.creates, 1); assert.equal(f.calls.completed, 1);
+});
+await check('verified recovery rejects changed or invalid saved expiry without another creation', async () => {
+  for (const altered of ['changed', 'invalid']) {
+    const f = createGuardedWorkerFixture('completion_failure');
+    assert.equal((await f.execute(f.input)).state, 'completion_pending');
+    f.row.provider_expires_at = altered === 'changed'
+      ? new Date(Date.parse(f.row.provider_expires_at) + 1000).toISOString() : 'invalid';
+    await assert.rejects(() => f.execute(f.input), /saved_provider_result_changed/);
+    assert.equal(f.calls.creates, 1); assert.equal(f.calls.completed, 0);
+  }
+});
 const fixtureEnv = { VERCEL_ENV: 'preview', ROOMBA_API_URL: 'https://cdn.rooomba.tv/WDXTMHmN/', ROOMBA_API_KEY: 'synthetic_key_not_real',
   ROOMBA_PREVIEW_SECRET: 'synthetic_secret_not_real_0123456789', FIXIE_URL: 'http://synthetic:synthetic-password@synthetic.usefixie.com:80' };
 const rawLine = { id: '9999901', member_id: '99999', package_id: '1000', username: 'ks_fixture_paid_customer', password: 'synthetic_password_only_0123456789',

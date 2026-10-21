@@ -1,5 +1,5 @@
-// Staged only: the deployed index does not import this handler. It sends a
-// support alert about a saved pending order, never a streaming-ready message.
+// The receipt-only protocol sends a support alert about a saved pending order,
+// never a streaming-ready message. It requires the separately reviewed SQL.
 const reply = (status, body) => Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
 const email = value => typeof value === 'string' && value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 function safePayload(payload, testMode) {
