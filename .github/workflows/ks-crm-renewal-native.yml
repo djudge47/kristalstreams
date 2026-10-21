@@ -10,6 +10,7 @@ on:
       - 'scripts/fixtures/ks-crm-renewal/**'
       - 'scripts/fixtures/ks-reviewed-handoff/**'
       - 'scripts/*-schema.sql'
+      - 'scripts/ks-crm-renewal-installation-verify.sql'
 
 permissions:
   contents: read
@@ -26,6 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         postgres: ['17.6', '17.11']
+        schema: ['prototype', 'installation']
     services:
       postgres:
         image: postgres:${{ matrix.postgres }}-bookworm
@@ -60,13 +62,14 @@ jobs:
         env:
           KS_NATIVE_PG_URL: postgresql://postgres:fictional-native-fixture@127.0.0.1:5432/ks_disposable_crm_renewal_test
           KS_NATIVE_DISPOSABLE_ACK: crm-renewal-fixtures
+          KS_RENEWAL_SCHEMA: ${{ matrix.schema }}
           KS_NATIVE_REPORT: ks-native-renewal-report.json
         run: node scripts/test-ks-crm-renewal-native.mjs
       - name: Retain bounded verification report
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: native-renewal-result-${{ matrix.postgres }}
+          name: native-renewal-result-${{ matrix.postgres }}-${{ matrix.schema }}
           path: ks-native-renewal-report.json
           retention-days: 14
           if-no-files-found: warn

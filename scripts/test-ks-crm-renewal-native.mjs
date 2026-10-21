@@ -6,6 +6,11 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { bootstrap, json, literal, fixture as setupFixture, prepareAttempt, begin as setupBegin } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
 import { runSequential, renewalFixture, reserve, begin, verify, complete, summary } from './fixtures/ks-crm-renewal/scenarios.mjs';
 import { runWorkflowChecks } from './fixtures/ks-crm-renewal/workflow.mjs';
+import { installationSql, installationPreflight, installationDisabledChecks, installationStopCheck } from './fixtures/ks-crm-renewal/installation.mjs';
+
+const schema=process.env.KS_RENEWAL_SCHEMA||'prototype';
+assert.ok(['prototype','installation'].includes(schema));
+const installing=schema==='installation';
 
 assert.equal(process.env.KS_NATIVE_DISPOSABLE_ACK,'crm-renewal-fixtures');
 const target=process.env.KS_NATIVE_PG_URL,address=new URL(target);
@@ -15,7 +20,7 @@ assert.equal(address.pathname,'/ks_disposable_crm_renewal_test');
 assert.equal(address.search,'');assert.equal(address.hash,'');
 const psql=process.env.KS_NATIVE_PSQL||'psql',clients=[];
 globalThis.fetch=()=>{throw Error('External transport forbidden in disposable renewal checks');};
-const report={kind:'native-crm-renewal-rehearsal',sourceCommit:spawnSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).stdout.trim(),tests:[],sourceHashes:{}};
+const report={kind:installing?'native-crm-renewal-installation':'native-crm-renewal-rehearsal',sourceCommit:spawnSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).stdout.trim(),tests:[],sourceHashes:{}};
 let serial=0;
 class Session {
   constructor(name){
@@ -39,6 +44,7 @@ class Session {
   }
   fail(error){if(this.pending){clearTimeout(this.pending.timer);this.pending.reject(error);this.pending=null;}}
   request(sql){
+    if(installing)sql=installationSql(sql);
     assert.equal(this.pending,null,'one request per independent connection');
     return new Promise((resolve,reject)=>{
       const marker=`KS_RENEWAL_DONE_${++serial}`;
@@ -74,20 +80,24 @@ try{
   for(const client of [admin,a,b]){client.pid=Number(await client.request('select pg_backend_pid()'));await client.request("set statement_timeout='8s';set lock_timeout='6s'");}
   report.server=await json(admin,"jsonb_build_object('database',current_database(),'version',current_setting('server_version_num'))");
   assert.ok(['170006','170011'].includes(report.server.version));assert.equal(new Set([admin.pid,a.pid,b.pid]).size,3);
-  const source=await readFile(new URL('./fixtures/ks-crm-renewal/prototype.sql',import.meta.url),'utf8');
+  const source=await readFile(new URL(installing?'./ks-crm-renewal-installation-schema.sql':'./fixtures/ks-crm-renewal/prototype.sql',import.meta.url),'utf8');
   await check('unaltered installation SQL refuses the wrong database before creating objects',async()=>{
     const wrong=new URL(target);wrong.pathname='/postgres';
     const output=spawnSync(psql,['--no-psqlrc','--quiet','--set=ON_ERROR_STOP=on','--dbname',wrong.href],{input:source,encoding:'utf8',timeout:10000});
-    assert.equal(output.status,3);assert.match(output.stderr,/disposable_crm_renewal_database_required/);
-    const inspect=spawnSync(psql,['--no-psqlrc','--quiet','--no-align','--tuples-only','--set=ON_ERROR_STOP=on','--dbname',wrong.href,'--command',"select to_regclass('public.ks_proto_renewal_approvals') is null"],{encoding:'utf8',timeout:10000});
+    assert.equal(output.status,3);assert.match(output.stderr,installing?/renewal_foundation_prerequisites_required/:/disposable_crm_renewal_database_required/);
+    const inspect=spawnSync(psql,['--no-psqlrc','--quiet','--no-align','--tuples-only','--set=ON_ERROR_STOP=on','--dbname',wrong.href,'--command',`select to_regclass('public.${installing?'ks_crm_':'ks_proto_'}renewal_approvals') is null`],{encoding:'utf8',timeout:10000});
     assert.equal(inspect.status,0);assert.equal(inspect.stdout.trim(),'t');
   });
-  report.foundationManifest=await bootstrap(admin);await admin.request(source);
+  report.foundationManifest=await bootstrap(admin);
+  if(installing)await installationPreflight({admin,source,check});
+  await admin.request(source);
   for(const name of ['scripts/fixtures/ks-crm-renewal/prototype.sql','scripts/fixtures/ks-crm-renewal/scenarios.mjs',
+    'scripts/ks-crm-renewal-installation-schema.sql','scripts/fixtures/ks-crm-renewal/installation.mjs',
     'scripts/test-ks-crm-renewal-native.mjs','_server/ks-crm-renewal-approval.js','_server/ks-crm-renewal-plan.js'])
     report.sourceHashes[name]=createHash('sha256').update(await readFile(new URL('../'+name,import.meta.url))).digest('hex');
   await a.request('set role service_role');await b.request('set role service_role');
-  await runSequential({admin,worker:a,check});
+  if(installing)await installationDisabledChecks({admin,worker:a,check});
+  await runSequential({admin,worker:a,check,expectedTables:installing?6:5});
   await runWorkflowChecks({admin,worker:a,check});
   await check('native same-operation concurrent begin yields exactly one committed fictional decision',async()=>{
     const f=await renewalFixture(admin,a);assert.deepEqual(await race(begin(f),begin(f)),[true,false]);
@@ -108,7 +118,7 @@ try{
     }finally{await a.request('rollback');}
     // Same-table contention is enforced by the durable primary key; the shared
     // trigger gives a separate fixed error for conflicts with other protocols.
-    await assert.rejects(()=>json(b,begin(g)),/ks_proto_renewal_reseller_slots_pkey/);
+    await assert.rejects(()=>json(b,begin(g)),installing?/ks_crm_renewal_reseller_slots_pkey/:/ks_proto_renewal_reseller_slots_pkey/);
     assert.equal((await summary(admin,g)).versions,0);
   });
   for(const renewalFirst of [true,false])await check(`renewal and existing paid setup share the native lock (${renewalFirst?'renewal':'setup'} first)`,async()=>{
@@ -142,6 +152,7 @@ try{
         await assert.rejects(()=>b.request(sql),/permission denied/);
     }await b.request('reset role;set role service_role');
   });
+  if(installing)await installationStopCheck({admin,worker:a,check});
   report.result='passed';console.log(`${report.tests.length} native PostgreSQL renewal checks passed. Disposable fixtures only; no provider transport or connected database.`);
 }catch(error){report.result='failed';report.error={message:error.message,code:error.code};console.error('Native renewal checks failed',report.error);process.exitCode=1;}
 finally{
