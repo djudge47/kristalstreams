@@ -11,6 +11,7 @@ on:
       - 'src/pages/admin/RoombaCustomerStatus.tsx'
       - 'src/pages/admin/CRMOperationsCenter.tsx'
       - 'scripts/test-ks-roomba-customer-status.mjs'
+      - 'scripts/test-ks-roomba-renewal-review.mjs'
       - 'package*.json'
 
 permissions:
@@ -32,6 +33,7 @@ jobs:
       - name: Synthetic provider and CRM checks (no connected credentials)
         run: |
           node scripts/test-ks-roomba-customer-status.mjs
+          node scripts/test-ks-roomba-renewal-review.mjs
           node scripts/test-ks-roomba-admin.mjs
           node scripts/test-ks-roomba-preview.mjs
           node scripts/test-ks-roomba-line.mjs
