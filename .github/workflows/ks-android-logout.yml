@@ -1,0 +1,35 @@
+name: Android logout updater checks
+
+on:
+  push:
+    branches: ['codex/android-visible-logout-20261020']
+    paths: ['android/logout-update/**', '.github/workflows/ks-android-logout.yml']
+  pull_request:
+    paths: ['android/logout-update/**', '.github/workflows/ks-android-logout.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  windows-builder:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install independent binary XML parser
+        run: python -m pip install androguard==4.1.3
+      - name: Execute emitted logout code and inspect real layouts
+        run: python -m unittest discover -s android/logout-update/tests -v
+      - name: Verify updater with Windows PowerShell 5
+        shell: powershell
+        run: >-
+          & ./android/logout-update/tests/verify-builder.ps1
+          -SourceApk public/downloads/KristalStreams.apk
+          -OutputDirectory "$env:RUNNER_TEMP/ks-logout-verified"
+      - name: Package the self-contained updater
+        run: python android/logout-update/package_update.py android/logout-update/dist/KristalStreams-Log-Out-Update.zip
