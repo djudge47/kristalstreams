@@ -41,14 +41,14 @@ export const summary=(admin,f)=>json(admin,`jsonb_build_object(
   'completions',(select count(*) from public.ks_proto_renewal_completions where operation_id=${literal(f.operation)}),
   'expiry',(select expiration_at from public.iptv_customers where id=${literal(f.customer)}))`);
 
-export async function runSequential({admin,worker,check}) {
+export async function runSequential({admin,worker,check,expectedTables=5}) {
   await check('private invoker-only ledger seeds no work and exposes no table or function to browser roles',async()=>{
     assert.equal(await json(admin,'(select count(*) from public.ks_proto_renewal_operations)'),0);
     for(const role of ['anon','authenticated']) {
       const rows=await json(admin,`(select jsonb_agg(jsonb_build_object('table',c.relname,'rls',c.relrowsecurity,
         'read',has_table_privilege(${literal(role)},c.oid,'select'),'write',has_table_privilege(${literal(role)},c.oid,'insert')))
         from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname like 'ks_proto_renewal_%' and c.relkind='r')`);
-      assert.equal(rows.length,5);for(const row of rows){assert.equal(row.rls,true);assert.equal(row.read,false);assert.equal(row.write,false);}
+      assert.equal(rows.length,expectedTables);for(const row of rows){assert.equal(row.rls,true);assert.equal(row.read,false);assert.equal(row.write,false);}
       const functions=await json(admin,`(select jsonb_agg(jsonb_build_object('definer',prosecdef,'config',proconfig,
         'execute',has_function_privilege(${literal(role)},p.oid,'execute'))) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
         where n.nspname='public' and p.proname like 'ks_proto_%renewal%')`);
