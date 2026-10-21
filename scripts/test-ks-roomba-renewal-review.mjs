@@ -324,7 +324,7 @@ try {
   });
   await test('actual stale save click cannot submit an expired review or reuse its checkbox', async () => {
     const f = savingFixture(); connect(f); await click(); findCheckbox(render()).props.onChange({ target: { checked: true } });
-    const stale = findButton(render(), 'Save test approval'); f.state.now += 30001;
+    const stale = findButton(render(), 'Save test approval'); f.state.now += 300001;
     stale.props.onClick(); await new Promise(resolve => setImmediate(resolve)); assert.equal(f.calls.rpc.length, 0);
     assert.equal(findButton(render(), 'Save test approval').props.disabled, true);
   });
@@ -334,9 +334,19 @@ try {
     globalThis.fetch = async (...args) => { const response = await fetch(...args); if (!lost && args[1].method === 'POST') { lost = true; throw new TypeError('fictional network loss'); } return response; };
     await pressSave('Save test approval'); assert.ok(findButton(render(), 'Check saved test approval'));
     assert.equal(findButton(render(), 'Review renewal').props.disabled, true); assert.equal(f.calls.rpc.length, 1);
-    f.state.now += 60000; await pressSave('Check saved test approval');
+    f.state.now += 360000; await pressSave('Check saved test approval');
     assert.ok(renderToStaticMarkup(render()).includes('Test approval saved')); assert.equal(f.calls.rpc.length, 1);
     assert.equal(findButton(render(), 'Review renewal').props.disabled, false);
+  });
+  await test('actual test review remains confirmable after the displayed snapshot expires and saves only newly checked evidence', async () => {
+    const f = savingFixture({ readDelay: 4000 }); connect(f); await click();
+    f.state.now += 60000;
+    const markup = renderToStaticMarkup(render()); assert.ok(markup.includes('five minutes'));
+    assert.ok(!markup.includes('This review has expired')); assert.ok(findCheckbox(render()));
+    findCheckbox(render()).props.onChange({ target: { checked: true } });
+    await pressSave('Save test approval'); assert.ok(renderToStaticMarkup(render()).includes('Test approval saved'));
+    assert.equal(f.calls.rpc.length, 1); assert.equal(f.state.now - Date.parse(f.calls.rpc[0].p_plan.checkedAt), 12000);
+    assert.equal(findButton(render(), 'Approve renewal').props.disabled, true);
   });
   await test('a mismatched saved response never becomes a success banner', async () => {
     const f = savingFixture(); connect(f); await click(); findCheckbox(render()).props.onChange({ target: { checked: true } });

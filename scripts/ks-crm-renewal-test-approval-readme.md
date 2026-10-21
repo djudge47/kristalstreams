@@ -10,7 +10,8 @@ disabled. No additional Vercel function or schema migration is required.
 
 Open a saved CRM customer and select Review renewal. Check the current customer,
 term, cost, allowance and exact channel groups, then tick the review checkbox and
-select Save test approval within the 30-second window. The confirmation appears
+select Save test approval within five minutes. Saving checks XUI again and requires
+the exact displayed plan to match. The confirmation appears
 only after the server has read back the saved immutable binding and reserved
 operation. It includes the operation reference and says that no renewal was sent
 and no credits were spent.
@@ -30,9 +31,11 @@ cannot enable the execution control.
   comes from that verified identity, never browser input or user metadata.
 - POST requires same-origin HTTPS JSON and only `reviewToken` plus an explicit
   `preserveCurrentSelectionConfirmed: true`, within the existing 1 KB body limit.
-- The GET review performs no database write. It issues signed test evidence
+- The GET review performs no database write. It issues a signed v2 test intent
   binding the actor, customer, operation/approval UUIDs, complete plan fingerprint
-  and original 30-second evidence window. Cached reads never extend that window.
+  and a five-minute confirmation window starting when the review is issued. The
+  displayed snapshot retains its original 30-second freshness window. It cannot
+  be substituted for the new provider evidence required by the save handler.
 - The HMAC uses a domain-separated key derived from the existing server-only
   Preview secret, which must be at least 32 bytes. Its purpose is distinct from
   offline rehearsal and any live renewal. The signed payload contains no provider
@@ -44,9 +47,16 @@ cannot enable the execution control.
   `user_info`, the CRM-selected `get_line`, and `packages`. It rebuilds the
   simulation-only plan and compares its complete fingerprint, including current
   balance, package catalog, term, credit cost, identity and exact selected groups.
-  It rechecks expiry after those reads. Additional package groups are never added.
+  It rechecks intent expiry after those reads. The new provider evidence must still
+  pass the unchanged 30-second planner/database checks. The saved approval expires
+  at the earlier of fresh-evidence time plus 30 seconds or intent expiry. Additional
+  package groups are never added. Original v1 tokens are rejected by the v2 route;
+  they must be handled on their original deployment when investigating an old save.
 - The existing reserve RPC independently checks current CRM identity/expiry,
   plan kind, freshness, immutable operation binding and approval audit identity.
+
+See `scripts/ks-crm-renewal-test-timing-readme.md` for the connected timing failure
+and regression coverage. No SQL migration or execution gate change is needed.
 
 The route checks that execution is disabled before processing a save or replay.
 If it is enabled, missing or unreadable, this test endpoint refuses the request.
