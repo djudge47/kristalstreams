@@ -1,8 +1,14 @@
-# Disabled CRM renewal foundation: installation review
+# Disabled CRM renewal foundation: installed
 
 Target: **Kristal Stream**, Supabase project **wftfxerblhlsxiijtfbo** only.
-The SQL draft is `scripts/ks-crm-renewal-installation-schema.sql`. It has not been
-applied to the connected database and is not an instruction to run it now.
+Installed after Donald’s explicit approval on October 21, 2026 at 18:14 EDT,
+with execution disabled, through Supabase migration
+`20261021221434_ks_crm_renewal_disabled_foundation`. The exact applied SQL is
+recorded in `supabase/migrations/20261021221434_ks_crm_renewal_disabled_foundation.sql`.
+It is byte-identical to the reviewed source
+`scripts/ks-crm-renewal-installation-schema.sql` (including its historical draft
+header); do not run either copy again. This file records the server-assigned
+migration version; it does not invent a new migration timestamp.
 
 ## Exact database change
 
@@ -51,13 +57,11 @@ rechecks prerequisites inside the installation transaction. SQL prerequisite
 checks do not identify a Supabase project by themselves; the installer must use
 the exact project ID above and must never select another project.
 
-After explicit approval, create/record a migration through the Supabase tooling,
-apply it to that project only, then verify table/function privileges, disabled
-control, zero new work/reservations/completions and the shared trigger definition.
-Use the SELECT-only `scripts/ks-crm-renewal-installation-verify.sql`; every returned
-check must be true before treating installation as complete.
-Do not enable execution as part of that installation. Run the project's advisors
-and distinguish unrelated pre-existing findings from this migration's findings.
+Connected installation and all six SELECT-only post-install checks succeeded.
+See `scripts/ks-crm-renewal-connected-verification.md` for the recorded migration,
+privileges, disabled state, zero new work and advisor comparison. Execution was
+not enabled. Keep the verifier for future read-only checks; installation is not
+a reset or repeatable action.
 
 No automatic rollback/delete script is provided: dropping a ledger after it has
 work could remove recovery evidence. If installation fails, use its transaction
