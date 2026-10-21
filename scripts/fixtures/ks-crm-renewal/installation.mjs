@@ -21,7 +21,7 @@ export async function installationPreflight({admin,source,check}) {
   ])await check(`installation rejects ${label} before creating objects`,async()=>{
     await admin.request(alter);
     try{await assert.rejects(()=>admin.request(source),reason);await admin.request('rollback');
-      assert.equal(await json(admin,"to_regclass('public.ks_crm_renewal_control')"),null);
+      assert.equal(await json(admin,"to_regclass('public.ks_crm_renewal_control') is null"),true);
     }finally{await admin.request('rollback');await admin.request(restore);}
   });
 }
