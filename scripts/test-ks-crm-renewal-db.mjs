@@ -6,6 +6,7 @@ import { bootstrap } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
 import { runSequential } from './fixtures/ks-crm-renewal/scenarios.mjs';
 import { runWorkflowChecks } from './fixtures/ks-crm-renewal/workflow.mjs';
 import { installationSql, installationPreflight, installationDisabledChecks, installationStopCheck } from './fixtures/ks-crm-renewal/installation.mjs';
+import { runHttpSqlChecks } from './fixtures/ks-crm-renewal/http-sql.mjs';
 
 const schema=process.env.KS_RENEWAL_SCHEMA||'prototype';
 assert.ok(['prototype','installation'].includes(schema));
@@ -40,7 +41,7 @@ try{
   if(installing)await installationDisabledChecks({admin,worker,check});
   await runSequential({admin,worker,check,expectedTables:installing?6:5});
   await runWorkflowChecks({admin,worker,check});
-  if(installing)await installationStopCheck({admin,worker,check});
+  if(installing){await installationStopCheck({admin,worker,check});await runHttpSqlChecks({admin,worker,check});}
   console.log(`${checks} isolated SQL renewal checks passed. PGlite is single-session preflight, not native contention evidence. No connected database or provider was used.`);
 }catch(error){console.error('Renewal SQL preflight failed',{message:error.message,code:error.code,where:error.where});process.exitCode=1;}
 finally{await db.close();await rm(dataDir,{recursive:true,force:true});}

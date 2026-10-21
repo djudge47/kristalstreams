@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { buildRenewalReview, compareChannelGroups } from '../_server/ks-roomba-renewal-review.js';
 import { buildPreservationReview } from '../_server/ks-crm-renewal-preservation-review.js';
 import { createRoombaCrmRoute } from '../_server/ks-roomba-crm-route.js';
+import { httpFixture } from './fixtures/ks-crm-renewal/http.mjs';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
@@ -117,7 +118,7 @@ function fixture(settings = {}) {
     VITE_SUPABASE_ANON_KEY: 'fictional-anon', SUPABASE_SERVICE_ROLE_KEY: 'fictional-service', ROOMBA_PREVIEW_SECRET: 'fictional-preview', ...settings.env };
   const createClient = (_url, key) => key === 'fictional-anon' ? { auth: { async getUser() { calls.auth++; return { data: { user: state.user } }; } } }
     : { from(table) { assert.equal(table, 'iptv_customers'); return {
-      select(columns) { assert.equal(columns, 'id,external_id,username'); calls.crm++; return this; },
+      select(columns) { assert.equal(columns, 'id,external_id,username,expiration_at'); calls.crm++; return this; },
       eq(field, id) { assert.equal(field, 'id'); assert.equal(id, customerId); return this; },
       async maybeSingle() { return { data: { id: customerId, external_id: 123, username: line.username } }; },
     }; } };
@@ -219,10 +220,17 @@ try {
     globalThis.__ksRenewalHooks = { cursor: 0, values: [] };
     globalThis.fetch = async (url, options) => {
       const parsed = new URL(url, 'https://fictional.example.invalid');
-      assert.equal(parsed.pathname, '/api/ks-roomba-crm'); assert.equal(parsed.searchParams.get('view'), 'customer-renewal');
-      assert.equal(parsed.searchParams.get('customerId'), customerId); assert.equal([...parsed.searchParams.keys()].length, 2);
-      assert.equal(options.method, 'GET'); assert.equal(options.headers.Authorization, 'Bearer fictional-token');
-      const r = await f.request({ method: options.method, query: Object.fromEntries(parsed.searchParams) });
+      assert.equal(parsed.pathname, '/api/ks-roomba-crm');
+      if (options.method === 'GET') {
+        assert.equal(parsed.searchParams.get('view'), 'customer-renewal');
+        assert.equal(parsed.searchParams.get('customerId'), customerId); assert.equal([...parsed.searchParams.keys()].length, 2);
+      } else {
+        assert.equal(options.method, 'POST'); assert.equal(parsed.searchParams.get('view'), 'renewal-test-approval');
+        assert.equal(options.headers['Content-Type'], 'application/json'); assert.equal([...parsed.searchParams.keys()].length, 1);
+      }
+      assert.equal(options.headers.Authorization, 'Bearer fictional-token');
+      const r = await f.request({ method: options.method, view: parsed.searchParams.get('view'),
+        query: Object.fromEntries(parsed.searchParams), body: options.body ? JSON.parse(options.body) : undefined });
       return new Response(JSON.stringify(r.body), { status: r.code, headers: { 'content-type': 'application/json' } });
     };
   };
@@ -277,6 +285,53 @@ try {
     const f = fixture(); connect(f); await click(); assert.ok(renderToStaticMarkup(render()).includes('Current package reviewed'));
     f.state.now += 61000; f.state.packageFails = true; await click(); const markup = renderToStaticMarkup(render());
     assert.ok(markup.includes('role="alert"')); assert.ok(markup.includes('could not be verified')); assert.ok(!markup.includes('Current package reviewed'));
+  });
+  const savingFixture = settings => httpFixture({ now, customer: { id: customerId, external_id: 123,
+    username: line.username, expiration_at: '2026-11-20T16:30:00.000Z' }, ...settings });
+  const pressSave = async label => { const button = findButton(render(), label); assert.ok(button); button.props.onClick(); await new Promise(resolve => setImmediate(resolve)); };
+  await test('actual checkbox and save button cross the real authenticated route and preserve four groups in the saved test', async () => {
+    const f = savingFixture(); connect(f); await click();
+    assert.equal(findButton(render(), 'Save test approval').props.disabled, true);
+    findCheckbox(render()).props.onChange({ target: { checked: true } });
+    assert.equal(findButton(render(), 'Save test approval').props.disabled, false);
+    await pressSave('Save test approval');
+    const markup = renderToStaticMarkup(render()); assert.ok(markup.includes('Test approval saved'));
+    assert.ok(markup.includes('No renewal was sent to XUI')); assert.ok(markup.includes('Live renewal remains off'));
+    assert.equal(f.calls.rpc.length, 1); assert.deepEqual(f.calls.rpc[0].p_plan.bouquetIds, [2,13,18,40]);
+    assert.equal(findButton(render(), 'Approve renewal').props.disabled, true); assert.equal(f.state.account.credits, 100);
+    assert.ok(!findButton(render(), 'Save test approval')); assert.ok(!markup.includes('No renewal approval has been saved or submitted'));
+  });
+  await test('actual stale save click cannot submit an expired review or reuse its checkbox', async () => {
+    const f = savingFixture(); connect(f); await click(); findCheckbox(render()).props.onChange({ target: { checked: true } });
+    const stale = findButton(render(), 'Save test approval'); f.state.now += 30001;
+    stale.props.onClick(); await new Promise(resolve => setImmediate(resolve)); assert.equal(f.calls.rpc.length, 0);
+    assert.equal(findButton(render(), 'Save test approval').props.disabled, true);
+  });
+  await test('lost browser response blocks a new review and checks the same saved attempt after expiry without another reserve', async () => {
+    const f = savingFixture(); connect(f); await click(); findCheckbox(render()).props.onChange({ target: { checked: true } });
+    const fetch = globalThis.fetch; let lost = false;
+    globalThis.fetch = async (...args) => { const response = await fetch(...args); if (!lost && args[1].method === 'POST') { lost = true; throw new TypeError('fictional network loss'); } return response; };
+    await pressSave('Save test approval'); assert.ok(findButton(render(), 'Check saved test approval'));
+    assert.equal(findButton(render(), 'Review renewal').props.disabled, true); assert.equal(f.calls.rpc.length, 1);
+    f.state.now += 60000; await pressSave('Check saved test approval');
+    assert.ok(renderToStaticMarkup(render()).includes('Test approval saved')); assert.equal(f.calls.rpc.length, 1);
+    assert.equal(findButton(render(), 'Review renewal').props.disabled, false);
+  });
+  await test('a mismatched saved response never becomes a success banner', async () => {
+    const f = savingFixture(); connect(f); await click(); findCheckbox(render()).props.onChange({ target: { checked: true } });
+    const fetch = globalThis.fetch;
+    globalThis.fetch = async (...args) => { const response = await fetch(...args); if (args[1].method !== 'POST') return response;
+      const body = await response.json(); body.operationId = '00000000-0000-4000-8000-000000000099'; return new Response(JSON.stringify(body), { status: 200 }); };
+    await pressSave('Save test approval'); assert.ok(!renderToStaticMarkup(render()).includes('Test approval saved'));
+    assert.ok(findButton(render(), 'Check saved test approval')); assert.equal(f.calls.rpc.length, 1);
+  });
+  await test('double save clicks while pending share one attempt and cannot create two approvals', async () => {
+    let release; const wait = new Promise(resolve => { release = resolve; });
+    const f = savingFixture({ rpcWait: wait }); connect(f); await click(); findCheckbox(render()).props.onChange({ target: { checked: true } });
+    const button = findButton(render(), 'Save test approval'); button.props.onClick(); button.props.onClick();
+    await new Promise(resolve => setImmediate(resolve)); assert.equal(f.calls.rpc.length, 1); assert.equal(f.state.approvals.size, 0);
+    release(); await new Promise(resolve => setImmediate(resolve)); assert.ok(renderToStaticMarkup(render()).includes('Test approval saved'));
+    assert.equal(f.state.approvals.size, 1);
   });
 } finally {
   globalThis.fetch = originalFetch;

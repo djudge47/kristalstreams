@@ -3,6 +3,7 @@ import { createFixieDispatcher } from './ks-fixie-proxy.js';
 import { buildRenewalReview } from './ks-roomba-renewal-review.js';
 import { buildPackageSummary } from '../_shared/ks-roomba-package-summary.js';
 import { buildPreservationReview } from './ks-crm-renewal-preservation-review.js';
+import { issueRenewalTestReview } from './ks-crm-renewal-test-review.js';
 
 const options = { auth: { persistSession: false, autoRefreshToken: false } };
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -40,11 +41,12 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
     ...entry, access: Date.parse(entry.expiresAt) <= now() ? 'expired'
       : !entry.enabled || !entry.adminEnabled ? 'disabled' : 'within_service_period',
   });
-  const content = (entry, customer) => {
+  const content = (entry, customer, actorId) => {
     const { renewalContext, ...line } = entry;
     return { line: snapshot(line), ...(reviewRenewal ? {
       renewal: buildRenewalReview(renewalContext, now()),
       preservation: buildPreservationReview(renewalContext, customer, now()),
+      testApproval: issueRenewalTestReview({ context: renewalContext, customer, actorId, secret: env.ROOMBA_PREVIEW_SECRET, now: now() }),
     } : {}) };
   };
   return async function handler(req, res) {
@@ -61,18 +63,19 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
       || !env.VITE_SUPABASE_ANON_KEY || !env.SUPABASE_SERVICE_ROLE_KEY || !env.ROOMBA_PREVIEW_SECRET) {
       return reply(503, { error: 'The Kristal Streams status connection is not configured.' });
     }
-    let customer;
+    let customer, actorId;
     try {
       const auth = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, options);
       const { data, error } = await auth.auth.getUser(token);
       const user = data?.user;
+      actorId = user?.id;
       if (error || !user?.id) return reply(401, { error: 'Please sign in again to your admin account.' });
       if (user.is_anonymous || !user.email_confirmed_at || user.email?.trim().toLowerCase() !== 'djudge47@gmail.com') {
         return reply(403, { error: 'Only the Kristal Streams administrator can check XUI status.' });
       }
       const admin = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, options);
       const { data: row, error: readError } = await admin.from('iptv_customers')
-        .select('id,external_id,username').eq('id', customerId).maybeSingle();
+        .select(reviewRenewal ? 'id,external_id,username,expiration_at' : 'id,external_id,username').eq('id', customerId).maybeSingle();
       if (readError) throw new Error('crm_unavailable');
       if (!row) return reply(404, { error: 'The CRM customer was not found.' });
       if (row.id !== customerId || !lineId(row.external_id) || typeof row.username !== 'string' || !/^[A-Za-z0-9_.-]{3,64}$/.test(row.username)) {
@@ -86,7 +89,7 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
     const cached = cache.get(key);
     if (cached && now() - Date.parse(cached.checkedAt) < 60000
       && (!reviewRenewal || now() - Date.parse(cached.renewalContext.checkedAt) < 30000)) {
-      return reply(200, { mode: 'read-only', databaseWrites: false, cached: true, ...content(cached, customer) });
+      return reply(200, { mode: 'read-only', databaseWrites: false, cached: true, ...content(cached, customer, actorId) });
     }
     if (pending?.key !== key && (pending || now() < retryAt)) {
       const seconds = Math.max(1, Math.ceil((retryAt - now()) / 1000));
@@ -132,7 +135,7 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
         pending = { key, promise };
         void promise.finally(() => { pending = null; }).catch(() => {});
       }
-      return reply(200, { mode: 'read-only', databaseWrites: false, cached: false, ...content(await pending.promise, customer) });
+      return reply(200, { mode: 'read-only', databaseWrites: false, cached: false, ...content(await pending.promise, customer, actorId) });
     } catch {
       return reply(502, { error: reviewRenewal
         ? 'The renewal review could not be verified. Saved CRM records have not changed.'

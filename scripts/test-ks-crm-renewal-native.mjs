@@ -7,6 +7,7 @@ import { bootstrap, json, literal, fixture as setupFixture, prepareAttempt, begi
 import { runSequential, renewalFixture, reserve, begin, verify, complete, summary } from './fixtures/ks-crm-renewal/scenarios.mjs';
 import { runWorkflowChecks } from './fixtures/ks-crm-renewal/workflow.mjs';
 import { installationSql, installationPreflight, installationDisabledChecks, installationStopCheck } from './fixtures/ks-crm-renewal/installation.mjs';
+import { runHttpSqlChecks } from './fixtures/ks-crm-renewal/http-sql.mjs';
 
 const schema=process.env.KS_RENEWAL_SCHEMA||'prototype';
 assert.ok(['prototype','installation'].includes(schema));
@@ -93,7 +94,9 @@ try{
   await admin.request(source);
   for(const name of ['scripts/fixtures/ks-crm-renewal/prototype.sql','scripts/fixtures/ks-crm-renewal/scenarios.mjs',
     'scripts/ks-crm-renewal-installation-schema.sql','scripts/fixtures/ks-crm-renewal/installation.mjs',
-    'scripts/test-ks-crm-renewal-native.mjs','_server/ks-crm-renewal-approval.js','_server/ks-crm-renewal-plan.js'])
+    'scripts/test-ks-crm-renewal-native.mjs','_server/ks-crm-renewal-approval.js','_server/ks-crm-renewal-plan.js',
+    '_server/ks-crm-renewal-test-approval.js','_server/ks-crm-renewal-test-review.js',
+    'scripts/fixtures/ks-crm-renewal/http.mjs','scripts/fixtures/ks-crm-renewal/http-sql.mjs'])
     report.sourceHashes[name]=createHash('sha256').update(await readFile(new URL('../'+name,import.meta.url))).digest('hex');
   await a.request('set role service_role');await b.request('set role service_role');
   if(installing)await installationDisabledChecks({admin,worker:a,check});
@@ -152,7 +155,7 @@ try{
         await assert.rejects(()=>b.request(sql),/permission denied/);
     }await b.request('reset role;set role service_role');
   });
-  if(installing)await installationStopCheck({admin,worker:a,check});
+  if(installing){await installationStopCheck({admin,worker:a,check});await runHttpSqlChecks({admin,worker:a,check});}
   report.result='passed';console.log(`${report.tests.length} native PostgreSQL renewal checks passed. Disposable fixtures only; no provider transport or connected database.`);
 }catch(error){report.result='failed';report.error={message:error.message,code:error.code};console.error('Native renewal checks failed',report.error);process.exitCode=1;}
 finally{
