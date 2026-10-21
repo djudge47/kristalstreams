@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import RoombaCrmLink from './RoombaCrmLink';
+import RoombaCustomerStatus from './RoombaCustomerStatus';
 import PreviewPaidOrders from './PreviewPaidOrders';
 import { displayedAccountStatus, isBillingExcluded, isPreviewPaidCustomer, isBillingOverdue, isDueWithin, isTrialCustomer, isUnpaidCustomer, trialBadge } from '../../../_shared/ks-crm-status.js';
 
@@ -460,7 +461,7 @@ const CRMOperationsCenter: React.FC = () => {
         </div>
       </header>
 
-      <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200" role="note">CRM records only: payment and date actions do not charge customers or renew Roomba service. Account and connection statuses reflect saved records.</p>
+      <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200" role="note">Payment and date actions update CRM records only. Account and connection badges reflect saved records. In Preview, use Check XUI status on a customer to read its current provider status.</p>
 
       <PreviewPaidOrders />
       <RoombaCrmLink onLinked={refresh} onShowCustomer={(username) => {
@@ -530,6 +531,7 @@ const CRMOperationsCenter: React.FC = () => {
                 <div className="border-t border-gray-800 px-4 py-3"><p className="text-xs text-gray-500">IPTV password</p><div className="mt-1 flex items-center gap-2"><code className="min-w-0 flex-1 truncate rounded-lg bg-gray-950 px-2.5 py-1.5 text-xs text-gray-300">{visiblePasswords[c.id] ? c.iptv_password || 'Not set' : '••••••••••'}</code><button onClick={() => setVisiblePasswords((v) => ({ ...v, [c.id]: !v[c.id] }))} className="rounded-lg p-2 text-gray-400">{visiblePasswords[c.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
                 {pendingIds.has(c.id) && <div className="border-t border-gray-800 bg-yellow-500/5 px-4 py-2 text-xs font-medium text-yellow-300"><Bell className="mr-1.5 inline h-3.5 w-3.5" />Renewal follow-up queued</div>}
                 <div className="grid grid-cols-2 gap-2 border-t border-gray-800 p-3 sm:grid-cols-3"><button disabled={isPreviewPaidCustomer(c)} onClick={() => openEdit(c)} className="inline-flex items-center justify-center rounded-lg bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-200"><Edit3 className="mr-1.5 h-3.5 w-3.5" />Edit</button><button disabled={isBillingExcluded(c) || busy === `pay-${c.id}`} onClick={() => void recordPayment(c)} className="inline-flex items-center justify-center rounded-lg bg-green-500/10 px-3 py-2 text-xs font-semibold text-green-300 disabled:opacity-50"><CreditCard className="mr-1.5 h-3.5 w-3.5" />Record Payment (CRM)</button><button disabled={isBillingExcluded(c)} title={isTrialCustomer(c) ? 'Trial expiration is recorded from Roomba.' : undefined} onClick={() => setExtendCustomer(c)} className="inline-flex items-center justify-center rounded-lg bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"><CalendarDays className="mr-1.5 h-3.5 w-3.5" />Update Dates (CRM)</button><button disabled={busy === `follow-${c.id}`} onClick={() => void queueFollowup(c)} className="inline-flex items-center justify-center rounded-lg bg-yellow-500/10 px-3 py-2 text-xs font-semibold text-yellow-300 disabled:opacity-50"><Bell className="mr-1.5 h-3.5 w-3.5" />Follow Up</button><button onClick={() => void openHistory(c)} className="inline-flex items-center justify-center rounded-lg bg-purple-500/10 px-3 py-2 text-xs font-semibold text-purple-300"><History className="mr-1.5 h-3.5 w-3.5" />History</button><button disabled={!c.xui_line_url} onClick={() => c.xui_line_url && window.open(c.xui_line_url, '_blank', 'noopener,noreferrer')} className="inline-flex items-center justify-center rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 disabled:opacity-40"><ExternalLink className="mr-1.5 h-3.5 w-3.5" />XUI</button></div>
+                <RoombaCustomerStatus customerId={c.id} panelId={c.external_id} username={c.username} />
               </article>
             ); })}
           </div>

@@ -1,0 +1,44 @@
+name: CRM XUI status checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/ks-customer-status.yml'
+      - 'api/ks-roomba-customer-status.js'
+      - '_server/ks-roomba-*.js'
+      - '_server/ks-fixie-proxy.js'
+      - 'src/pages/admin/RoombaCustomerStatus.tsx'
+      - 'src/pages/admin/CRMOperationsCenter.tsx'
+      - 'scripts/test-ks-roomba-customer-status.mjs'
+      - 'package*.json'
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-status:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Synthetic provider and CRM checks (no connected credentials)
+        run: |
+          node scripts/test-ks-roomba-customer-status.mjs
+          node scripts/test-ks-roomba-admin.mjs
+          node scripts/test-ks-roomba-preview.mjs
+          node scripts/test-ks-roomba-line.mjs
+          node scripts/test-ks-roomba-crm.mjs
+      - name: Check changed React components
+        run: >-
+          npx eslint src/pages/admin/RoombaCustomerStatus.tsx
+          src/pages/admin/CRMOperationsCenter.tsx
+          --rule '@typescript-eslint/no-unused-expressions: ["error", {"allowShortCircuit": false,"allowTernary": false,"allowTaggedTemplates": false}]'
+      - run: npm run build
