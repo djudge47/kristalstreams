@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildRenewalReview } from '../_server/ks-roomba-renewal-review.js';
+import { buildRenewalReview, compareChannelGroups } from '../_server/ks-roomba-renewal-review.js';
 import { createRoombaCrmRoute } from '../_server/ks-roomba-crm-route.js';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -46,6 +46,25 @@ await test('same-package group and allowance changes block readiness, while grou
     assert.equal(review({ line: { ...line, ...patch } }).status, 'manual_review');
   }
   assert.equal(review({ line: { ...line, bouquetIds: [11, 10] } }).status, 'review_ready');
+});
+await test('comparison identifies exact sorted differences without changing either selection', () => {
+  const actual = [30, 10, 20]; const expected = [40, 10, 50];
+  assert.deepEqual(compareChannelGroups(actual, expected), { status: 'different', lineCount: 3, packageCount: 3, lineOnly: [20, 30], packageOnly: [40, 50] });
+  assert.deepEqual(actual, [30, 10, 20]); assert.deepEqual(expected, [40, 10, 50]);
+  assert.deepEqual(compareChannelGroups([10, 20], [20, 10]), { status: 'match', lineCount: 2, packageCount: 2, lineOnly: [], packageOnly: [] });
+});
+await test('unverified or duplicate selections never appear as an empty successful match', () => {
+  for (const invalid of [null, [], ['10'], [0], [-1], [10, 10], [2147483648], ['sensitive-text']]) {
+    const result = compareChannelGroups(invalid, [10]); assert.equal(result.status, 'unverified'); assert.equal(result.lineCount, null);
+    assert.deepEqual(result.lineOnly, []); assert.deepEqual(result.packageOnly, []); assert.ok(!JSON.stringify(result).includes('sensitive-text'));
+  }
+});
+await test('comparison includes every differing group at the supported limit without truncation', () => {
+  const actual = Array.from({ length: 2000 }, (_, i) => i + 1);
+  const expected = Array.from({ length: 2000 }, (_, i) => i + 2001);
+  const r = compareChannelGroups(actual, expected); assert.equal(r.lineOnly.length, 2000); assert.equal(r.packageOnly.length, 2000);
+  assert.deepEqual(r.lineOnly, actual); assert.deepEqual(r.packageOnly, expected);
+  assert.equal(compareChannelGroups([...actual, 4001], expected).status, 'unverified');
 });
 await test('incomplete, alternative, inconsistent and trial packages cannot become ready', () => {
   for (const patch of [{ name: 'VIP package' }, { name: `${pkg.name} (Without Adults)` }, { issues: ['Incomplete'] },
@@ -187,11 +206,14 @@ try {
     const f = fixture(); connect(f); await click(); const markup = renderToStaticMarkup(render());
     assert.ok(markup.includes('Current package reviewed')); assert.ok(markup.includes('12 calendar months')); assert.ok(markup.includes('2.75 credits'));
     assert.ok(markup.includes('68 credits')); assert.ok(markup.includes('Submission is not enabled')); assert.ok(!markup.includes('sensitive-'));
+    assert.ok(markup.includes('The channel selections match.'));
     assert.deepEqual(f.calls.actions, ['user_info', 'get_line', 'packages']);
   });
   await test('actual component renders fixed manual-review reasons for changed groups', async () => {
     const f = fixture({ line: { bouquetIds: [10, 99] } }); connect(f); await click(); const markup = renderToStaticMarkup(render());
     assert.ok(markup.includes('Renewal needs manual review')); assert.ok(markup.includes('channel groups do not match')); assert.ok(!markup.includes('Current package reviewed'));
+    assert.ok(markup.includes('Channel group comparison')); assert.ok(markup.includes('View differing group IDs'));
+    assert.ok(markup.includes('<code class="break-all">99</code>')); assert.ok(markup.includes('<code class="break-all">11</code>'));
   });
   await test('failed refresh removes a previous ready review and shows an alert instead', async () => {
     const f = fixture(); connect(f); await click(); assert.ok(renderToStaticMarkup(render()).includes('Current package reviewed'));

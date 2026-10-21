@@ -12,6 +12,8 @@ interface RenewalReview {
   status: 'manual_review' | 'review_ready'; executionEnabled: false; sent: false; checkedAt: string;
   packageName: string | null; durationMonths: number | null; estimatedCredits: number | null;
   creditsAvailable: number | null; blockers: string[];
+  channelGroups: { status: 'match' | 'different' | 'unverified'; lineCount: number | null;
+    packageCount: number | null; lineOnly: number[]; packageOnly: number[] };
 }
 
 const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }) => {
@@ -50,11 +52,16 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
         || !['expired', 'disabled', 'within_service_period'].includes(result.access)) throw new Error('The matching XUI status could not be verified.');
       if (review) {
         const r = payload.renewal;
+        const g = r?.channelGroups;
         if (!r || !['manual_review', 'review_ready'].includes(r.status) || r.executionEnabled !== false || r.sent !== false
           || !Number.isFinite(Date.parse(r.checkedAt)) || (r.packageName !== null && typeof r.packageName !== 'string')
           || (r.durationMonths !== null && ![1, 3, 6, 12].includes(r.durationMonths))
           || ![r.estimatedCredits, r.creditsAvailable].every(value => value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0))
           || !Array.isArray(r.blockers) || r.blockers.length > 10 || !r.blockers.every((value: unknown) => typeof value === 'string' && value.length <= 200)
+          || !g || !['match', 'different', 'unverified'].includes(g.status)
+          || ![g.lineCount, g.packageCount].every(value => value === null || (Number.isInteger(value) && value >= 1 && value <= 2000))
+          || ![g.lineOnly, g.packageOnly].every(value => Array.isArray(value) && value.length <= 2000
+            && value.every(id => Number.isSafeInteger(id) && id > 0 && id <= 2147483647))
           || (r.status === 'review_ready' && (r.blockers.length !== 0 || !r.packageName || !r.durationMonths || !r.estimatedCredits || r.creditsAvailable === null))) {
           throw new Error('The renewal review could not be verified.');
         }
@@ -95,6 +102,20 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
         <div><dt className="inline text-gray-400">Reseller balance at check: </dt><dd className="inline">{renewal.creditsAvailable === null ? 'Unknown' : `${renewal.creditsAvailable} credits`}</dd></div>
       </dl>
       {renewal.blockers.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-4 text-amber-200">{renewal.blockers.map(reason => <li key={reason}>{reason}</li>)}</ul>}
+      <div className="mt-3 border-t border-amber-500/20 pt-2 text-gray-300">
+        <p className="font-semibold">Channel group comparison</p>
+        <p>Groups on this line: {renewal.channelGroups.lineCount ?? 'Unverified'} · Groups in current package: {renewal.channelGroups.packageCount ?? 'Unverified'}</p>
+        {renewal.channelGroups.status === 'different' ? <>
+          <p>Only on this line: {renewal.channelGroups.lineOnly.length} · Only in current package: {renewal.channelGroups.packageOnly.length}</p>
+          <details className="mt-2"><summary className="cursor-pointer text-amber-200">View differing group IDs</summary>
+            <div className="mt-2 max-h-48 space-y-2 overflow-y-auto rounded-lg bg-gray-950/50 p-2">
+              <p>Only on this line: <code className="break-all">{renewal.channelGroups.lineOnly.join(', ') || 'None'}</code></p>
+              <p>Only in current package: <code className="break-all">{renewal.channelGroups.packageOnly.join(', ') || 'None'}</code></p>
+              <p className="text-gray-400">These IDs identify provider channel groups. Their names and contents have not been verified.</p>
+            </div>
+          </details>
+        </> : <p>{renewal.channelGroups.status === 'match' ? 'The channel selections match.' : 'The channel selections could not be fully verified.'}</p>}
+      </div>
       <p className="mt-2 text-gray-400">Reviewed {new Date(renewal.checkedAt).toLocaleString()}. Same package only; a new expiration date must come from XUI after an approved renewal. Submission is not enabled, and this review spends no credits or charges the customer.</p>
     </section>}
     {error && <p role="alert" className="mt-3 text-xs leading-5 text-amber-200">{error}</p>}

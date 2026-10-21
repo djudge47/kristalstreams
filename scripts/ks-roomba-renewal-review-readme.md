@@ -32,6 +32,14 @@ approved future renewal. Provider calendar months are not converted into the
 website receipt's fixed day count. Credits are reseller costs; this review
 does not infer customer pricing, payment or an affordable future execution.
 
+The review includes a channel-group comparison: total groups on the line and
+in its current package, plus complete sorted IDs present only on either side.
+The UI shows counts and a collapsible list of the differing IDs. Names and
+contents are not guessed because no supported group-name lookup is documented.
+Invalid/missing/duplicate selections are marked unverified rather than an empty
+match. The supported 2,000 groups per side are compared without truncation.
+The mismatch blocker remains in place; these diagnostics authorize no edits.
+
 Reviews older than one minute lose readiness, including cache hits. Cache hits
 still recheck authentication and CRM identity, and line expiry is recalculated.
 The read-start timestamp is retained so slow catalog reads cannot make old
@@ -42,7 +50,7 @@ before another attempt. The current response supplies none of that authority.
 
 ## Verification
 
-`node scripts/test-ks-roomba-renewal-review.mjs` covers eighteen synthetic
+`node scripts/test-ks-roomba-renewal-review.mjs` covers twenty-one synthetic
 scenarios: readiness, package/identity/ownership matching, credit bounds,
 expiry and freshness boundaries, unsupported cases, safe output, method/auth
 gates, exact GET actions, failures and concurrency. Four cases execute and

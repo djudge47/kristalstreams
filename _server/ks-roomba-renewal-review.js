@@ -7,6 +7,19 @@ const groups = value => Array.isArray(value) && value.length > 0 && value.length
 const amount = value => ['string', 'number'].includes(typeof value) && /^\d+(?:\.\d+)?$/.test(String(value))
   && Number.isFinite(Number(value)) && Number(value) <= 1000000 ? Number(value) : null;
 
+export function compareChannelGroups(lineGroups, packageGroups) {
+  const actual = groups(lineGroups);
+  const expected = groups(packageGroups);
+  if (!actual || !expected) return { status: 'unverified', lineCount: actual?.length ?? null,
+    packageCount: expected?.length ?? null, lineOnly: [], packageOnly: [] };
+  const actualSet = new Set(actual);
+  const expectedSet = new Set(expected);
+  const lineOnly = actual.filter(id => !expectedSet.has(id));
+  const packageOnly = expected.filter(id => !actualSet.has(id));
+  return { status: lineOnly.length || packageOnly.length ? 'different' : 'match',
+    lineCount: actual.length, packageCount: expected.length, lineOnly, packageOnly };
+}
+
 // Review only: no form, dispatch token, provider mutation or database access.
 // Only same-package renewal of an active paid line is documented as verified.
 export function buildRenewalReview({ line, account, packages, checkedAt }, now = Date.now()) {
@@ -24,11 +37,9 @@ export function buildRenewalReview({ line, account, packages, checkedAt }, now =
     && [1, 3, 6, 12].includes(pkg.paid.count) && pkg.paid.count === Number(name[1])
     && pkg.maxConnections === Number(name[2]) && pkg.paid.credits > 0;
   if (!validPackage) blockers.push('The current line package needs review. No alternative package was selected.');
-  const actualGroups = groups(line.bouquetIds);
-  const packageGroups = groups(pkg?.bouquets);
-  if (!actualGroups || !packageGroups || JSON.stringify(actualGroups) !== JSON.stringify(packageGroups)) {
-    blockers.push('The line and package channel groups do not match.');
-  }
+  const channelGroups = compareChannelGroups(line.bouquetIds, pkg?.bouquets);
+  if (channelGroups.status === 'different') blockers.push('The line and package channel groups do not match.');
+  else if (channelGroups.status === 'unverified') blockers.push('The line or package channel groups could not be verified.');
   if (!pkg || line.connections !== pkg.maxConnections) blockers.push('The package connection allowance does not match the line.');
   const creditsAvailable = amount(account?.credits);
   const estimatedCredits = validPackage ? pkg.paid.credits : null;
@@ -38,6 +49,6 @@ export function buildRenewalReview({ line, account, packages, checkedAt }, now =
     status: blockers.length ? 'manual_review' : 'review_ready', executionEnabled: false, sent: false,
     checkedAt: new Date(checked).toISOString(),
     packageName: validPackage ? `${pkg.paid.count} month${pkg.paid.count === 1 ? '' : 's'} · ${pkg.maxConnections} connection${pkg.maxConnections === 1 ? '' : 's'}` : null,
-    durationMonths: validPackage ? pkg.paid.count : null, estimatedCredits, creditsAvailable, blockers,
+    durationMonths: validPackage ? pkg.paid.count : null, estimatedCredits, creditsAvailable, blockers, channelGroups,
   };
 }
