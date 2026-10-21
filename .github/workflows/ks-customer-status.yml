@@ -14,6 +14,7 @@ on:
       - 'scripts/test-ks-roomba-customer-status.mjs'
       - 'scripts/test-ks-roomba-renewal-review.mjs'
       - 'scripts/test-ks-crm-renewal-simulation.mjs'
+      - 'scripts/test-ks-crm-renewal-approval.mjs'
       - 'scripts/ks-crm-renewal-simulation-readme.md'
       - 'package*.json'
 
@@ -38,6 +39,7 @@ jobs:
           node scripts/test-ks-roomba-customer-status.mjs
           node scripts/test-ks-roomba-renewal-review.mjs
           node scripts/test-ks-crm-renewal-simulation.mjs
+          node scripts/test-ks-crm-renewal-approval.mjs
           node scripts/test-ks-roomba-admin.mjs
           node scripts/test-ks-roomba-preview.mjs
           node scripts/test-ks-roomba-line.mjs
