@@ -21,7 +21,7 @@ interface PreservationReview {
   preservesCurrentSelection: boolean; blockers: string[];
 }
 type TestReview = { available: false; reason: string } | {
-  available: true; token: string; operationId: string; approvalId: string; expiresAt: string;
+  available: true; token: string; operationId: string; approvalId: string; issuedAt: string; expiresAt: string;
 };
 type SavedTest = { operationId: string; approvalId: string };
 const uuid = (value: unknown): value is string => typeof value === 'string'
@@ -50,10 +50,13 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
   }, [customerId, panelId, username]);
   useEffect(() => {
     if (!preservation) return;
-    const timeout = window.setTimeout(() => { setReviewClock(Date.now()); setPreserveReviewed(false); },
+    const snapshotTimeout = window.setTimeout(() => setReviewClock(Date.now()),
       Math.max(0, Date.parse(preservation.validUntil) - Date.now()) + 20);
-    return () => window.clearTimeout(timeout);
-  }, [preservation]);
+    const confirmUntil = testReview?.available ? testReview.expiresAt : preservation.validUntil;
+    const timeout = window.setTimeout(() => { setReviewClock(Date.now()); setPreserveReviewed(false); },
+      Math.max(0, Date.parse(confirmUntil) - Date.now()) + 20);
+    return () => { window.clearTimeout(snapshotTimeout); window.clearTimeout(timeout); };
+  }, [preservation, testReview]);
 
   const check = async (review = false) => {
     if (controller.current || saveUnknown) return;
@@ -112,7 +115,9 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
         const t = payload.testApproval;
         if (t !== undefined && (!t || typeof t.available !== 'boolean'
           || (t.available && (typeof t.token !== 'string' || t.token.length > 950 || !uuid(t.operationId) || !uuid(t.approvalId)
-            || t.expiresAt !== p.validUntil || p.status !== 'review_ready'))
+            || !Number.isFinite(Date.parse(t.issuedAt)) || Date.parse(t.issuedAt) < Date.parse(p.checkedAt)
+            || Date.parse(t.issuedAt) - Date.parse(p.checkedAt) > 30000
+            || Date.parse(t.expiresAt) !== Date.parse(t.issuedAt) + 300000 || p.status !== 'review_ready'))
           || (!t.available && (typeof t.reason !== 'string' || t.reason.length > 200)))) {
           throw new Error('The test approval review could not be verified.');
         }
@@ -174,6 +179,10 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
   const reviewNow = Math.max(reviewClock, Date.now());
   const reviewFresh = preservation && Date.parse(preservation.checkedAt) <= reviewNow
     && Date.parse(preservation.validUntil) > reviewNow && line && Date.parse(line.expiresAt) > reviewNow;
+  const testReviewOpen = testReview?.available && Date.parse(testReview.issuedAt) <= reviewNow
+    && Date.parse(testReview.expiresAt) > reviewNow && line && Date.parse(line.expiresAt) > reviewNow;
+  const canConfirm = testReviewOpen || reviewFresh;
+  const confirmUntil = testReview?.available ? testReview.expiresAt : preservation?.validUntil;
   return <div className="border-t border-gray-800 px-4 py-3">
     <div className="flex flex-wrap gap-2"><button type="button" disabled={busy || saveUnknown} onClick={() => void check()}
       className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-cyan-500/30 px-3 py-2 text-xs font-semibold text-cyan-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 disabled:opacity-50">
@@ -210,16 +219,16 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
         </details>}
       </div>
       {preservation.blockers.length > 0 && <ul className="mt-3 list-disc space-y-1 pl-4 text-xs text-amber-200">{preservation.blockers.map(reason => <li key={reason}>{reason}</li>)}</ul>}
-      {!reviewFresh && <p role="status" className="mt-3 text-xs text-amber-200">This review has expired. Select Review renewal to load current details.</p>}
-      {preservation.status === 'review_ready' && reviewFresh && <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-gray-700 p-3 text-xs text-gray-200">
+      {!canConfirm && !savedTest && <p role="status" className="mt-3 text-xs text-amber-200">This review has expired. Select Review renewal to load current details.</p>}
+      {preservation.status === 'review_ready' && canConfirm && <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-gray-700 p-3 text-xs text-gray-200">
         <input type="checkbox" checked={preserveReviewed} disabled={busy || saveUnknown || savedTest !== null} className="mt-1 h-4 w-4 shrink-0 accent-cyan-400"
           onChange={event => setPreserveReviewed(event.target.checked && Date.now() >= Date.parse(preservation.checkedAt)
-            && Date.now() < Date.parse(preservation.validUntil) && Date.now() < Date.parse(line.expiresAt))} />
+            && Date.now() < Date.parse(confirmUntil || '') && Date.now() < Date.parse(line.expiresAt))} />
         <span>I have checked this customer, renewal length, credit cost and exact channel selection.</span>
       </label>}
-      {preserveReviewed && reviewFresh && !savedTest && <p role="status" className="mt-2 text-xs text-cyan-200">Review checked on this screen. No renewal approval has been saved or submitted.</p>}
+      {preserveReviewed && canConfirm && !savedTest && <p role="status" className="mt-2 text-xs text-cyan-200">Review checked on this screen. No renewal approval has been saved or submitted.</p>}
       {testReview?.available && !savedTest && <button type="button" onClick={() => void saveTest()}
-        disabled={busy || (!saveUnknown && (!preserveReviewed || !reviewFresh))}
+        disabled={busy || (!saveUnknown && (!preserveReviewed || !testReviewOpen))}
         className="mt-3 min-h-11 w-full rounded-lg border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-sm font-semibold text-cyan-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 disabled:opacity-50">
         {savingTest ? 'Checking test approval…' : saveUnknown ? 'Check saved test approval' : 'Save test approval'}
       </button>}
@@ -228,7 +237,9 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
       <p className="mt-2 text-xs text-gray-400">Save test approval records this review in the CRM only. It does not renew service, change channels or charge the customer.</p>
       <button type="button" disabled className="mt-3 min-h-11 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-400" aria-describedby={`renewal-unavailable-${customerId}`}>Approve renewal — unavailable</button>
       <p id={`renewal-unavailable-${customerId}`} className="mt-2 text-xs text-gray-400">Live renewal approval is not enabled in this preview. This preview spends no credits and does not charge the customer.</p>
-      <p className="mt-2 text-xs text-gray-500">Checked {new Date(preservation.checkedAt).toLocaleString()}. Selection review is valid for 30 seconds. XUI must supply the new expiration after a future approved renewal.</p>
+      <p className="mt-2 text-xs text-gray-500">Checked {new Date(preservation.checkedAt).toLocaleString()}. {testReview?.available
+        ? 'You have five minutes to confirm this test review. Saving checks XUI again; changed details require a new review.'
+        : 'Selection review is valid for 30 seconds.'} XUI must supply the new expiration after a future approved renewal.</p>
     </section>}
     {renewal && line && <details className="mt-3 text-xs text-gray-400"><summary className="cursor-pointer py-2">Package comparison details</summary><section className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-5" aria-label="Renewal review">
       <h3 className="font-semibold text-amber-200">{renewal.status === 'review_ready' ? 'Current package reviewed' : 'Renewal needs manual review'}</h3>

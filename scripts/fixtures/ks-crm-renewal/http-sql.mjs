@@ -25,15 +25,22 @@ export async function runHttpSqlChecks({ admin, worker, check }) {
       },
       async persist(a) {
         writes++;
+        assert.ok(Date.parse(a.p_plan.checkedAt) > Date.parse(review.issuedAt) + 30000);
+        assert.ok(Date.now() - Date.parse(a.p_plan.checkedAt) < 30000);
+        assert.equal(Date.parse(a.p_expires), Date.parse(a.p_plan.checkedAt) + 30000);
         const result = await json(worker, `public.ks_crm_reserve_renewal(${literal(a.p_operation)},${literal(a.p_approval)},
           ${literal(a.p_approver)},${literal(JSON.stringify(a.p_plan))}::jsonb,${literal(a.p_expires)}::timestamptz,${literal(a.p_approval_hash)})`);
         if (lostReply) throw Error('fictional lost SQL reply');
         return { data: result, error: null };
       },
     });
+    // Model a minute of operator review without a real sleep. Only the new
+    // save-time evidence uses current time when it reaches the real SQL guard.
+    fixture.state.now = Date.now() - 60000;
     const review = await fixture.review(); assert.equal(review.available, true);
+    fixture.state.now = Date.now();
     const first = await fixture.save(review); assert.equal(first.code, 200); assert.equal(first.body.replayed, lostReply);
-    fixture.state.now += 60000;
+    fixture.state.now += 360000;
     const second = await fixture.save(review); assert.equal(second.code, 200); assert.equal(second.body.replayed, true);
     assert.equal(first.body.operationId, second.body.operationId); assert.equal(writes, 1);
     const saved = await json(worker, `(select jsonb_build_object('groups',a.groups,'kind_state',o.state,'approver',a.approver_id,

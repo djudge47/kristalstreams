@@ -140,9 +140,12 @@ export function createRenewalTestApprovalHandler({ createClient, env = process.e
         return reply(409, { error: 'The reviewed details changed or expired. Load a new renewal review before saving.' });
       }
       attemptedSave = true;
+      // The operator's review intent and the new provider evidence have separate
+      // deadlines. Never reuse the displayed snapshot as fresh database evidence.
+      const approvalExpiresAt = new Date(Math.min(Date.parse(evidence.expiresAt), Date.parse(plan.checkedAt) + 30000)).toISOString();
       const saved = await admin.rpc('ks_crm_reserve_renewal', { p_operation: evidence.operationId,
         p_approval: evidence.approvalId, p_approver: actor.id, p_plan: plan,
-        p_expires: evidence.expiresAt, p_approval_hash: approvalHash });
+        p_expires: approvalExpiresAt, p_approval_hash: approvalHash });
       if (saved.error || saved.data?.state !== 'reserved' || saved.data.may_dispatch !== false
         || typeof saved.data.replayed !== 'boolean') throw Error('save_outcome_unverified');
       // Read back immutable binding and operation state. Never return the claim.

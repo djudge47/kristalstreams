@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 import { httpFixture } from './fixtures/ks-crm-renewal/http.mjs';
 import { verifyRenewalTestReview } from '../_server/ks-crm-renewal-test-review.js';
 
@@ -11,7 +12,9 @@ await test('real shared GET issues a short signed actor-bound review without wri
   assert.equal(f.calls.rpc.length, 0); assert.deepEqual(f.calls.reads, ['user_info','get_line','packages']);
   const p = verifyRenewalTestReview(review.token, { actorId: f.state.user.id, secret: f.env.ROOMBA_PREVIEW_SECRET, now: f.state.now });
   assert.equal(p.customerId, f.state.customer.id); assert.equal(p.operationId, review.operationId);
-  assert.equal(Date.parse(p.expiresAt), Date.parse(p.checkedAt) + 30000);
+  assert.equal(p.purpose, 'ks-crm-renewal-test-review/v2');
+  assert.equal(Date.parse(p.expiresAt), Date.parse(p.issuedAt) + 300000);
+  assert.ok(Date.parse(p.issuedAt) - Date.parse(p.checkedAt) <= 30000);
   assert.ok(Buffer.byteLength(JSON.stringify({ reviewToken: review.token, preserveCurrentSelectionConfirmed: true })) < 1024);
 });
 await test('explicit confirmed save refreshes evidence and calls only the reserve RPC with the exact four groups', async () => {
@@ -25,7 +28,7 @@ await test('explicit confirmed save refreshes evidence and calls only the reserv
   assert.equal(f.state.customer.expiration_at, f.state.line.expiresAt); assert.equal(f.state.account.credits, 100);
 });
 await test('duplicate and expired saved attempts return the same IDs without provider reads or another RPC', async () => {
-  const f = httpFixture(); const review = await f.review(); await f.save(review); f.state.now += 60000;
+  const f = httpFixture(); const review = await f.review(); await f.save(review); f.state.now += 360000;
   const before = f.calls.reads.length; const r = await f.save(review);
   assert.equal(r.code, 200); assert.equal(r.body.replayed, true); assert.equal(r.body.operationId, review.operationId);
   assert.equal(f.calls.reads.length, before); assert.equal(f.calls.rpc.length, 1);
@@ -61,15 +64,36 @@ await test('signature tampering, purpose separation, rotated secret and actor su
   const [encoded, signature] = review.token.split('.');
   const p = JSON.parse(Buffer.from(encoded, 'base64url').toString()); p.purpose = 'live-renewal';
   assert.equal((await f.save({ ...review, token: Buffer.from(JSON.stringify(p)).toString('base64url') + '.' + signature })).code, 409);
+  const legacy = { ...p, purpose: 'ks-crm-renewal-test-review/v1', expiresAt: new Date(Date.parse(p.checkedAt) + 30000).toISOString() };
+  delete legacy.issuedAt;
+  const legacyEncoded = Buffer.from(JSON.stringify(legacy)).toString('base64url');
+  const legacyKey = createHmac('sha256', f.env.ROOMBA_PREVIEW_SECRET).update('ks-crm-renewal-test-review-key/v1').digest();
+  const legacySignature = createHmac('sha256', legacyKey).update(`ks-crm-renewal-test-review/v1\0${legacyEncoded}`).digest('hex');
+  assert.equal((await f.save({ ...review, token: legacyEncoded + '.' + legacySignature })).code, 409);
   assert.throws(() => verifyRenewalTestReview(review.token, { actorId: f.state.user.id, secret: 'different-secret-at-least-thirty-two-bytes', now: f.state.now }));
   f.state.user = { ...f.state.user, id: '00000000-0000-4000-8000-000000000091' };
   assert.equal((await f.save(review)).code, 409); assert.equal(f.calls.rpc.length, 0);
 });
-await test('expired or slowly refreshed evidence never reaches reserve', async () => {
+await test('reviewing for a minute and rereading XUI cannot consume the fresh evidence window before saving', async () => {
+  const f = httpFixture({ readDelay: 4000 }); const review = await f.review();
+  const original = verifyRenewalTestReview(review.token, { actorId: f.state.user.id, secret: f.env.ROOMBA_PREVIEW_SECRET, now: f.state.now });
+  f.state.now += 60000;
+  const freshReadStarted = f.state.now; const r = await f.save(review);
+  assert.equal(r.code, 200); assert.equal(f.calls.rpc.length, 1);
+  const args = f.calls.rpc[0]; assert.equal(Date.parse(args.p_plan.checkedAt), freshReadStarted);
+  assert.ok(Date.parse(args.p_plan.checkedAt) > Date.parse(original.checkedAt) + 30000);
+  assert.equal(f.state.now - Date.parse(args.p_plan.checkedAt), 12000);
+  assert.equal(Date.parse(args.p_expires), freshReadStarted + 30000);
+  assert.ok(Date.parse(args.p_expires) < Date.parse(original.expiresAt));
+  assert.equal(args.p_plan.fingerprint, original.fingerprint);
+});
+await test('expired intent stops before new provider reads and slow new evidence still cannot reserve', async () => {
   for (const slow of [false,true]) {
-    const f = httpFixture(); const review = await f.review();
-    if (slow) f.state.readDelay = 11000; else f.state.now += 30000;
-    assert.equal((await f.save(review)).code, 409); assert.equal(f.calls.rpc.length, 0);
+    const f = httpFixture(); const review = await f.review(); const before = f.calls.reads.length;
+    if (slow) f.state.readDelay = 11000; else f.state.now += 300000;
+    const r = await f.save(review); assert.equal(r.code, 409); assert.equal(f.calls.rpc.length, 0);
+    if (slow) assert.deepEqual(r.body.diagnostic, { step: 'plan', reason: 'evidence_expired' });
+    else assert.equal(f.calls.reads.length, before);
   }
 });
 await test('each changed identity, selection, catalog, cost, balance, expiry or allowance blocks the reviewed plan', async () => {
