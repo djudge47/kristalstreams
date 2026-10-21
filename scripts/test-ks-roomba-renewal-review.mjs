@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildRenewalReview, compareChannelGroups } from '../_server/ks-roomba-renewal-review.js';
+import { buildPreservationReview } from '../_server/ks-crm-renewal-preservation-review.js';
 import { createRoombaCrmRoute } from '../_server/ks-roomba-crm-route.js';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -91,6 +92,23 @@ await test('review construction does not mutate inputs or make any network reque
   globalThis.fetch = () => { throw Error('Network forbidden'); };
   try { review(); assert.equal(JSON.stringify(base), before); } finally { globalThis.fetch = original; }
 });
+await test('preservation preview accepts a verified subset and exposes exact groups without an approval capability', () => {
+  const context = { ...base, account: { id: '12', credits: '68' }, packages: [{ ...pkg, bouquets: [10,11,12,13] }] };
+  const customer = { id: customerId, external_id: 123, username: line.username };
+  const r = buildPreservationReview(context, customer, now);
+  assert.equal(r.status,'review_ready');assert.deepEqual(r.currentGroupIds,[10,11]);assert.equal(r.packageGroupCount,4);
+  assert.equal(r.executionEnabled,false);assert.equal(r.sent,false);assert.equal(r.mode,'review-only');
+  assert.equal(Date.parse(r.validUntil),now+30000);
+  for(const field of ['fingerprint','approvalToken','form','resellerId','bouquetIds'])assert.ok(!Object.hasOwn(r,field));
+});
+await test('preservation preview rejects expired evidence, changed identities, out-of-package groups and unreadable cost', () => {
+  const context = { ...base, account: { id: '12', credits: '68' } }, customer = { id: customerId, external_id: 123, username: line.username };
+  for(const patch of [{checkedAt:new Date(now-30001).toISOString()},{line:{...line,bouquetIds:[99]}},
+    {line:{...line,username:'different'}},{account:{id:'12',credits:'not-a-number'}},
+    {packages:[{...pkg,paid:{...pkg.paid,credits:0.0000001}}]}]){
+    const r=buildPreservationReview({...context,...patch},customer,now);assert.equal(r.status,'manual_review');assert.equal(r.preservesCurrentSelection,false);assert.ok(r.blockers.length);
+  }
+});
 
 function fixture(settings = {}) {
   const state = { now, user: { id: customerId, email: 'djudge47@gmail.com', email_confirmed_at: checkedAt }, ...settings };
@@ -114,7 +132,7 @@ function fixture(settings = {}) {
     assert.equal(settings.readAction, 'packages');
     if (state.packageFails) throw Error('sensitive-provider-error');
     state.now += state.packageDelay || 0;
-    return res.status(200).json({ ...common, status: 'packages_ready', packages: [pkg] });
+    return res.status(200).json({ ...common, status: 'packages_ready', packages: state.packages || [pkg] });
   };
   const handler = createRoombaCrmRoute({ env, createClient, readFactory, now: () => state.now });
   return { state, calls, async request({ method = 'GET', query = {}, token = 'fictional-token' } = {}) {
@@ -143,10 +161,13 @@ await test('identity mismatch stops before reading packages; package failures do
   const failure = fixture({ packageFails: true }); const r = await failure.request(); assert.equal(r.code, 502); assert.equal(r.body.renewal, undefined);
   assert.equal((await failure.request()).code, 429);
 });
-await test('cache revalidates identity and auth and expires readiness as reads age', async () => {
+await test('cache revalidates identity and auth and reloads evidence after the preservation window', async () => {
   const f = fixture({ packageDelay: 45000 }); const first = await f.request(); assert.equal(first.body.renewal.status, 'review_ready');
-  f.state.now += 16000; const second = await f.request(); assert.equal(second.body.cached, true); assert.equal(second.body.renewal.status, 'manual_review');
-  assert.equal(f.calls.auth, 2); assert.equal(f.calls.crm, 2); assert.equal(f.calls.actions.length, 3);
+  assert.equal(first.body.preservation.status,'manual_review');
+  f.state.now += 16000; f.state.packageDelay=0;
+  const second = await f.request(); assert.equal(second.body.cached, false); assert.equal(second.body.preservation.status,'review_ready');
+  f.state.now += 1;assert.equal((await f.request()).body.cached,true);
+  assert.equal(f.calls.auth, 3); assert.equal(f.calls.crm, 3); assert.equal(f.calls.actions.length, 6);
   f.state.user = null; assert.equal((await f.request()).code, 401);
 });
 await test('simultaneous renewal reviews coalesce without creating execution capability', async () => {
@@ -162,6 +183,7 @@ const reactPath = require.resolve('react');
 const directory = await mkdtemp(join(process.cwd(), 'node_modules', '.ks-renewal-view-'));
 const originalFetch = globalThis.fetch;
 const originalWindow = globalThis.window;
+const originalDateNow = Date.now;
 try {
   const built = await build({ entryPoints: ['src/pages/admin/RoombaCustomerStatus.tsx'], bundle: true, write: false,
     platform: 'node', format: 'esm', jsx: 'automatic', external: ['react/jsx-runtime', 'react-dom', 'lucide-react'],
@@ -179,14 +201,21 @@ try {
   const path = join(directory, 'component.mjs'); await writeFile(path, built.outputFiles[0].text);
   const { default: Component } = await import(pathToFileURL(path).href);
   globalThis.window = { setTimeout, clearTimeout };
-  const render = () => { globalThis.__ksRenewalHooks.cursor = 0; return Component({ customerId, panelId: 123, username: line.username }); };
+  const render = (props = {}) => { globalThis.__ksRenewalHooks.cursor = 0; return Component({ customerId, panelId: 123, username: line.username, ...props }); };
   const findButton = (node, label) => {
     if (!node || typeof node !== 'object') return null;
     if (Array.isArray(node)) return node.map(child => findButton(child, label)).find(Boolean);
     if (node.type === 'button' && JSON.stringify(node.props.children).includes(label)) return node;
     return findButton(node.props?.children, label);
   };
+  const findCheckbox = node => {
+    if (!node || typeof node !== 'object') return null;
+    if (Array.isArray(node)) return node.map(findCheckbox).find(Boolean);
+    if (node.type === 'input' && node.props.type === 'checkbox') return node;
+    return findCheckbox(node.props?.children);
+  };
   const connect = f => {
+    Date.now = () => f.state.now;
     globalThis.__ksRenewalHooks = { cursor: 0, values: [] };
     globalThis.fetch = async (url, options) => {
       const parsed = new URL(url, 'https://fictional.example.invalid');
@@ -215,6 +244,35 @@ try {
     assert.ok(markup.includes('Channel group comparison')); assert.ok(markup.includes('View differing group IDs'));
     assert.ok(markup.includes('<code class="break-all">99</code>')); assert.ok(markup.includes('<code class="break-all">11</code>'));
   });
+  await test('actual screen preserves four selected groups from a 107-group package and never enables approval', async () => {
+    const selected=[10,11,12,13];
+    const f=fixture({line:{bouquetIds:selected},packages:[{...pkg,bouquets:Array.from({length:107},(_,i)=>i+1)}]});
+    connect(f);await click();let tree=render(),markup=renderToStaticMarkup(tree);
+    assert.ok(markup.includes('Renewal approval preview'));assert.ok(markup.includes('fictional-customer'));
+    assert.ok(markup.includes('4 current groups'));assert.ok(markup.includes('107 package groups'));
+    assert.ok(markup.includes('10, 11, 12, 13'));assert.equal(findButton(tree,'Approve renewal').props.disabled,true);
+    const checkbox=findCheckbox(tree);assert.ok(checkbox);checkbox.props.onChange({target:{checked:true}});
+    markup=renderToStaticMarkup(render());assert.ok(markup.includes('Review checked on this screen'));
+    assert.ok(markup.includes('No renewal approval has been saved or submitted'));assert.equal(f.calls.actions.length,3);
+  });
+  await test('expired reviews cannot retain checkbox confirmation or enable approval and refresh resets it',async()=>{
+    const f=fixture();connect(f);await click();findCheckbox(render()).props.onChange({target:{checked:true}});
+    assert.ok(renderToStaticMarkup(render()).includes('Review checked on this screen'));
+    const stale=findCheckbox(render());f.state.now+=30001;
+    assert.ok(!findCheckbox(render()));stale.props.onChange({target:{checked:true}});assert.ok(!renderToStaticMarkup(render()).includes('Review checked on this screen'));
+    await click();assert.equal(findCheckbox(render()).props.checked,false);assert.equal(findButton(render(),'Approve renewal').props.disabled,true);
+  });
+  await test('switching customer identity immediately hides old review details and confirmation',async()=>{
+    const f=fixture();connect(f);await click();findCheckbox(render()).props.onChange({target:{checked:true}});
+    const tree=render({customerId:'22222222-2222-4222-8222-222222222222',panelId:999,username:'another-customer'});
+    const markup=renderToStaticMarkup(tree);assert.ok(!markup.includes('Renewal approval preview'));assert.ok(!markup.includes('Review checked on this screen'));assert.ok(!markup.includes('fictional-customer'));
+  });
+  await test('a malformed preservation response clears the preview and shows a fixed validation error',async()=>{
+    const f=fixture();connect(f);const fetch=globalThis.fetch;
+    globalThis.fetch=async(...args)=>{const response=await fetch(...args),payload=await response.json();payload.preservation.currentGroupIds=[10,10];return new Response(JSON.stringify(payload),{status:200});};
+    await click();const markup=renderToStaticMarkup(render());assert.ok(markup.includes('could not be verified'));
+    assert.ok(!markup.includes('Renewal approval preview'));assert.ok(!findCheckbox(render()));
+  });
   await test('failed refresh removes a previous ready review and shows an alert instead', async () => {
     const f = fixture(); connect(f); await click(); assert.ok(renderToStaticMarkup(render()).includes('Current package reviewed'));
     f.state.now += 61000; f.state.packageFails = true; await click(); const markup = renderToStaticMarkup(render());
@@ -222,6 +280,7 @@ try {
   });
 } finally {
   globalThis.fetch = originalFetch;
+  Date.now = originalDateNow;
   if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow;
   delete globalThis.__ksRenewalHooks;
   await rm(directory, { recursive: true, force: true });

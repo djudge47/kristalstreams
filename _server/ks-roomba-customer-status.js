@@ -2,6 +2,7 @@ import { createRoombaPreviewHandler } from './ks-roomba-preview.js';
 import { createFixieDispatcher } from './ks-fixie-proxy.js';
 import { buildRenewalReview } from './ks-roomba-renewal-review.js';
 import { buildPackageSummary } from '../_shared/ks-roomba-package-summary.js';
+import { buildPreservationReview } from './ks-crm-renewal-preservation-review.js';
 
 const options = { auth: { persistSession: false, autoRefreshToken: false } };
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -39,9 +40,12 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
     ...entry, access: Date.parse(entry.expiresAt) <= now() ? 'expired'
       : !entry.enabled || !entry.adminEnabled ? 'disabled' : 'within_service_period',
   });
-  const content = entry => {
+  const content = (entry, customer) => {
     const { renewalContext, ...line } = entry;
-    return { line: snapshot(line), ...(reviewRenewal ? { renewal: buildRenewalReview(renewalContext, now()) } : {}) };
+    return { line: snapshot(line), ...(reviewRenewal ? {
+      renewal: buildRenewalReview(renewalContext, now()),
+      preservation: buildPreservationReview(renewalContext, customer, now()),
+    } : {}) };
   };
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'private, no-store');
@@ -80,7 +84,10 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
     // Auth and current CRM identity are checked even for cached results.
     const key = JSON.stringify([customer.id, String(customer.external_id), customer.username]);
     const cached = cache.get(key);
-    if (cached && now() - Date.parse(cached.checkedAt) < 60000) return reply(200, { mode: 'read-only', databaseWrites: false, cached: true, ...content(cached) });
+    if (cached && now() - Date.parse(cached.checkedAt) < 60000
+      && (!reviewRenewal || now() - Date.parse(cached.renewalContext.checkedAt) < 30000)) {
+      return reply(200, { mode: 'read-only', databaseWrites: false, cached: true, ...content(cached, customer) });
+    }
     if (pending?.key !== key && (pending || now() < retryAt)) {
       const seconds = Math.max(1, Math.ceil((retryAt - now()) / 1000));
       res.setHeader('Retry-After', String(seconds));
@@ -104,9 +111,9 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
             const catalog = await read(factory({ readAction: 'packages' }));
             if (catalog.status !== 'packages_ready' || !Array.isArray(catalog.packages)) throw new Error('packages_unverified');
             const packages = buildPackageSummary(catalog.packages, startedAt).packages;
-            const { packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds } = line;
-            renewalContext = { line: { packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds },
-              account: { credits: account.account.credits }, packages, checkedAt: startedAt };
+            const { id, username, resellerId, packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds } = line;
+            renewalContext = { line: { id, username, resellerId, packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds },
+              account: { id: String(account.account.id), credits: account.account.credits }, packages, checkedAt: startedAt };
             buildRenewalReview(renewalContext, now());
             // Keep one validated package per cached customer, not an entire
             // catalog or any unrelated provider line fields.
@@ -125,7 +132,7 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
         pending = { key, promise };
         void promise.finally(() => { pending = null; }).catch(() => {});
       }
-      return reply(200, { mode: 'read-only', databaseWrites: false, cached: false, ...content(await pending.promise) });
+      return reply(200, { mode: 'read-only', databaseWrites: false, cached: false, ...content(await pending.promise, customer) });
     } catch {
       return reply(502, { error: reviewRenewal
         ? 'The renewal review could not be verified. Saved CRM records have not changed.'

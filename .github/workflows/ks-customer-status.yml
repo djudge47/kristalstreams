@@ -16,6 +16,7 @@ on:
       - 'scripts/test-ks-crm-renewal-simulation.mjs'
       - 'scripts/test-ks-crm-renewal-approval.mjs'
       - 'scripts/ks-crm-renewal-simulation-readme.md'
+      - 'scripts/ks-crm-renewal-screen-readme.md'
       - 'package*.json'
 
 permissions:
