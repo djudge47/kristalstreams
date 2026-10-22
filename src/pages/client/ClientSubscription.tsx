@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Calendar, Clock, CreditCard, Monitor, Package, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { restoreSessionAfterStripe } from '../../lib/stripe';
+import CustomerCrmService from '../../components/CustomerCrmService';
 
 interface ProfileSubscription {
   id: string;
@@ -117,6 +118,7 @@ const ClientSubscription: React.FC = () => {
         <h1 className="text-3xl font-bold text-white">Subscription Details</h1>
       </div>
 
+      {subscription?.id && <CustomerCrmService key={subscription.id} accountId={subscription.id} />}
       {error ? (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-500">
           {error}
@@ -140,7 +142,7 @@ const ClientSubscription: React.FC = () => {
           <div className="bg-dark-100 rounded-xl p-8 border border-gray-800">
             <div className="flex items-center mb-6">
               <Package className="text-primary w-6 h-6 mr-3" />
-              <h2 className="text-xl font-semibold text-white">Current Plan</h2>
+              <h2 className="text-xl font-semibold text-white">Website Plan</h2>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
@@ -162,7 +164,7 @@ const ClientSubscription: React.FC = () => {
               <h2 className="text-xl font-semibold text-white">Connections</h2>
             </div>
             <div className="bg-dark-200 rounded-lg px-4 py-3 text-white">
-              {subscription.active_connections ?? 0} / {subscription.connections_allowed ?? 1} devices
+              {subscription.connections_allowed ?? 1} allowed by your website plan
             </div>
           </div>
 
@@ -229,9 +231,9 @@ const ClientSubscription: React.FC = () => {
       ) : (
         <div className="bg-dark-100 rounded-xl p-8 border border-gray-800 text-center">
           <AlertCircle className="w-12 h-12 text-primary mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-white mb-2">No Active Subscription</h2>
+          <h2 className="text-xl font-semibold text-white mb-2">No Active Website Plan</h2>
           <p className="text-gray-400 mb-6">
-            You do not have an active subscription or demo access yet. Choose a plan or start the 36-hour demo.
+            This section describes your website plan. Your linked streaming service and recorded payments appear separately above. If you already paid and your details are missing, contact support before paying again.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button

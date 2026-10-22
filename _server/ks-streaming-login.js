@@ -44,9 +44,10 @@ export function createStreamingLoginHandler({ createClient, env = process.env, r
   };
 }
 
-export function createCustomerSetupRouter({ statusHandler, availabilityHandler, revealHandler }) {
+export function createCustomerSetupRouter({ statusHandler, availabilityHandler, revealHandler, crmHandler }) {
   return (req, res) => {
     if (req.query?.view === undefined) return statusHandler(req, res);
+    if (req.query.view === 'crm-service' && crmHandler) return crmHandler(req, res);
     if (req.query.view === 'login-availability') return availabilityHandler(req, res);
     if (req.query.view === 'streaming-login') return revealHandler(req, res);
     res.setHeader('Cache-Control', 'private, no-store');

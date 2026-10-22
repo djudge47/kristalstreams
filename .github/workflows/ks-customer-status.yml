@@ -22,6 +22,17 @@ on:
       - '_shared/ks-crm-service-sync-client.*'
       - '_server/ks-crm-service-sync.js'
       - '_server/ks-crm-renewal-payment.js'
+      - '_server/ks-customer-crm.js'
+      - '_shared/ks-customer-crm.*'
+      - '_server/ks-streaming-login.js'
+      - 'api/ks-customer-setup.js'
+      - 'src/components/CustomerCrmService.tsx'
+      - 'src/pages/admin/CustomerPortalLink.tsx'
+      - 'src/pages/client/ClientSubscription.tsx'
+      - 'src/pages/Dashboard.tsx'
+      - 'scripts/test-ks-customer-crm*.mjs'
+      - 'scripts/ks-crm-customer-portal*'
+      - 'supabase/migrations/*_ks_crm_customer_portal.sql'
       - '_shared/ks-crm-renewal-payment.*'
       - '_shared/ks-crm-payment-summary.*'
       - 'scripts/test-ks-crm-payment-summary.mjs'
@@ -73,6 +84,10 @@ jobs:
           KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-crm-renewal-payments.mjs
           node scripts/test-ks-crm-renewal-payment-ui.mjs
           node scripts/test-ks-crm-payment-summary.mjs
+          KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-customer-crm.mjs
+          node scripts/test-ks-customer-crm-ui.mjs
+          node scripts/test-ks-customer-setup.mjs
+          node scripts/test-ks-customer-status-view.mjs
           KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-crm-legacy-payments.mjs
       - name: Synthetic provider and CRM checks (no connected credentials)
         run: |
@@ -100,6 +115,9 @@ jobs:
           src/pages/admin/CRMOperationsCenter.tsx
           src/pages/admin/RenewalPaymentForm.tsx
           src/pages/admin/PaidRenewalReview.tsx
+          src/pages/admin/CustomerPortalLink.tsx
+          src/components/CustomerCrmService.tsx
+          src/pages/client/ClientSubscription.tsx
           src/pages/admin/CRMPremiumOverview.tsx
           src/pages/admin/BulkXuiCheck.tsx
           src/pages/admin/BulkCrmServiceSync.tsx

@@ -73,7 +73,7 @@ try {
       b.onResolve({ filter: /^file:/ }, a => ({ path: a.path, external: true }));
       b.onResolve({ filter: /^react$/ }, () => ({ path: 'hooks', namespace: 'fixture' }));
       b.onResolve({ filter: /\/lib\/supabase$/ }, () => ({ path: 'auth', namespace: 'fixture' }));
-      b.onResolve({ filter: /^\.\/(RoombaCrmLink|RoombaCustomerStatus|BulkXuiCheck|BulkCrmServiceSync|PreviewPaidOrders|RenewalPaymentForm|PaidRenewalReview)$/ }, () => ({ path: 'child', namespace: 'fixture' }));
+      b.onResolve({ filter: /^\.\/(RoombaCrmLink|RoombaCustomerStatus|BulkXuiCheck|BulkCrmServiceSync|PreviewPaidOrders|RenewalPaymentForm|PaidRenewalReview|CustomerPortalLink)$/ }, () => ({ path: 'child', namespace: 'fixture' }));
       b.onLoad({ filter: /.*/, namespace: 'fixture' }, a => ({ loader: 'js', contents: a.path === 'hooks'
         ? `import React from ${JSON.stringify(reactPath)};export default React;export const useEffect=()=>{};export const useMemo=f=>f();export const useState=initial=>{const i=globalThis.__cardIndex++;return[i===0?globalThis.__cardCustomers:i===1?globalThis.__cardPayments:initial===true?false:initial,()=>{}];};`
         : a.path === 'auth' ? `export const supabase=new Proxy({}, {get(){throw Error('Connected reads and writes forbidden');}});` : 'export default ()=>null;' }));
