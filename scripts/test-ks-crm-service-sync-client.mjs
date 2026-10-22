@@ -61,19 +61,20 @@ await test('actual React checkbox and one apply click update all 100 in a single
     }}]});
     const path=join(dir,'view.mjs');await writeFile(path,built.outputFiles[0].text);const{default:View}=await import(pathToFileURL(path));
     globalThis.__syncHooks={values:[validateSyncBatch(complete),original.batchId,'idle','','',false,false,now],refs:[],cursor:0,refCursor:0};
-    let appliedRefresh=0,requests=0;const props={customerIds:original.items.map(i=>i.customerId),loading:false,onApplied:async()=>{appliedRefresh++;}};
+    let appliedRefresh=0,requests=0;const props={customerIds:original.items.map(i=>i.customerId),visibleCustomerIds:[id(1)],searchActive:true,loading:false,onApplied:async()=>{appliedRefresh++;}};
     const render=()=>{globalThis.__syncHooks.cursor=0;globalThis.__syncHooks.refCursor=0;return View(props);};
     const nodes=element=>!React.isValidElement(element)?[]:[element,...React.Children.toArray(element.props.children).flatMap(nodes)];
     const text=e=>typeof e==='string'||typeof e==='number'?String(e):React.isValidElement(e)?React.Children.toArray(e.props.children).map(text).join(''):'';
     let tree=render(),all=nodes(tree);const apply=()=>all.find(e=>e.type==='button'&&text(e).startsWith('Apply 100'));
     assert.equal(apply().props.disabled,true);assert.equal(requests,0);
+    const searched=renderToStaticMarkup(tree);assert.equal((searched.match(/<details/g)||[]).length,1);assert.ok(searched.includes('Showing 1 of 100 review accounts'));assert.ok(searched.includes('entire saved review'));
     all.find(e=>e.type==='input'&&e.props.type==='checkbox').props.onChange({target:{checked:true}});
     tree=render();all=nodes(tree);assert.equal(apply().props.disabled,false);
     globalThis.fetch=async(url,options)=>{requests++;assert.equal(url,'/api/ks-roomba-crm?view=service-sync');assert.deepEqual(JSON.parse(options.body),{action:'apply',batchId:original.batchId,confirmed:true});
       return{ok:true,status:200,json:async()=>({mode:'crm-service-sync',providerWrites:false,creditsSpent:false,batch:{...complete,state:'applied',appliedAt:new Date(now).toISOString(),appliedCount:100}})};};
     apply().props.onClick();for(let n=0;n<30&&globalThis.__syncHooks.values[2]!=='idle';n++)await new Promise(resolve=>setImmediate(resolve));
     assert.equal(requests,1);assert.equal(appliedRefresh,1);tree=render();const markup=renderToStaticMarkup(tree);
-    assert.ok(markup.includes('100 CRM records updated together'));assert.ok(!markup.includes('fictional-secret'));assert.ok(!markup.includes('Apply 100 CRM updates'));
+    assert.ok(markup.includes('100 CRM records updated together'));assert.equal((markup.match(/<details/g)||[]).length,1);assert.ok(!markup.includes('fictional-secret'));assert.ok(!markup.includes('Apply 100 CRM updates'));
   }finally{globalThis.fetch=previousFetch;delete globalThis.__syncHooks;await rm(dir,{recursive:true,force:true});}
 });
 console.log(`${checks} bulk sync client/UI checks passed. No connected requests or customer changes.`);

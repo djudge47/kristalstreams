@@ -245,11 +245,15 @@ const CRMOperationsCenter: React.FC = () => {
     };
   }, [customers, payments, reminders]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+  const searchMatches = useMemo(() => {
+    const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
     return customers.filter((c) => {
       const haystack = [c.customer_name, c.username, c.external_id, c.email, c.phone, c.package_name, c.device_name].join(' ').toLowerCase();
-      if (q && !haystack.includes(q)) return false;
+      return terms.every(term => haystack.includes(term));
+    });
+  }, [customers, search]);
+
+  const filtered = useMemo(() => searchMatches.filter((c) => {
       if (filter === 'active') return displayedAccountStatus(c) === 'active';
       if (filter === 'due3') return dueWithin(c, 3);
       if (filter === 'due7') return dueWithin(c, 7);
@@ -257,8 +261,7 @@ const CRMOperationsCenter: React.FC = () => {
       if (filter === 'unpaid') return isUnpaidCustomer(c);
       if (filter === 'overdue') return isOverdue(c);
       return true;
-    });
-  }, [customers, filter, search]);
+    }), [searchMatches, filter]);
 
   const attention = useMemo(() => customers
     .filter((c) => isOverdue(c) || dueWithin(c, 7) || isUnpaidCustomer(c))
@@ -466,9 +469,20 @@ const CRMOperationsCenter: React.FC = () => {
         </div>
       </header>
 
+      <section aria-labelledby="crm-search-title" className="rounded-2xl border border-cyan-400/30 bg-gray-900 p-4 sm:p-5">
+        <label id="crm-search-title" htmlFor="crm-user-search" className="block text-lg font-semibold text-white">Find a customer</label>
+        <p id="crm-search-help" className="mt-1 text-sm text-gray-400">Search by name, username, email, phone, Panel ID, package or device.</p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1"><Search aria-hidden="true" className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-cyan-300" /><input id="crm-user-search" type="search" value={search} aria-describedby="crm-search-help" onChange={(e) => { setSearch(e.target.value); setFilter('all'); }} placeholder="Type a name, username or Panel ID…" className="min-h-12 w-full rounded-xl border border-gray-600 bg-gray-950 py-3 pl-11 pr-4 text-base text-white outline-none focus:border-cyan-400" /></div>
+          {search && <button type="button" onClick={() => { setSearch(''); setFilter('all'); }} className="rounded-xl border border-gray-600 px-4 py-3 text-sm font-semibold text-gray-200">Clear search</button>}
+          <button type="button" onClick={() => document.getElementById('crm-customer-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white">View customer records</button>
+        </div>
+        <p role="status" aria-live="polite" className="mt-3 text-sm text-cyan-200">{loading ? 'Loading customers…' : `${searchMatches.length} of ${customers.length} customers${search.trim() ? ' match your search' : ''}`}</p>
+      </section>
+
       <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200" role="note">Payment and date actions update CRM records only. Account and connection badges reflect saved records. In Preview, use Check XUI status on a customer to read its current provider status.</p>
 
-      <BulkCrmServiceSync customerIds={customers.map(customer=>customer.id)} loading={loading} onApplied={refresh} />
+      <BulkCrmServiceSync customerIds={customers.map(customer=>customer.id)} visibleCustomerIds={searchMatches.map(customer=>customer.id)} searchActive={Boolean(search.trim())} loading={loading} onApplied={refresh} />
       <details className="rounded-2xl border border-gray-700 p-4"><summary className="cursor-pointer text-sm font-semibold text-gray-300">Read-only comparison without saving</summary><div className="mt-4"><BulkXuiCheck customers={customers} loading={loading} /></div></details>
       <PreviewPaidOrders />
       <RoombaCrmLink onLinked={refresh} onShowCustomer={(username) => {
@@ -525,7 +539,7 @@ const CRMOperationsCenter: React.FC = () => {
 
       <section id="crm-customer-list" className="scroll-mt-20 rounded-2xl border border-gray-700 bg-gray-800/90 p-3 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row">
-          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search customer, username, phone, package or device..." className="w-full rounded-xl border border-gray-700 bg-gray-950 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-red-500" /></div>
+          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" /><input type="search" aria-label="Search customer records" value={search} onChange={(e) => { setSearch(e.target.value); setFilter('all'); }} placeholder="Search name, username, email or Panel ID…" className="w-full rounded-xl border border-gray-700 bg-gray-950 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-red-500" /></div>
           <div className="flex gap-2 overflow-x-auto pb-1">{(['all', 'active', 'due3', 'due7', 'due30', 'unpaid', 'overdue'] as Filter[]).map((f) => <button key={f} onClick={() => setFilter(f)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${filter === f ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300'}`}>{filterLabels[f]}</button>)}</div>
         </div>
 

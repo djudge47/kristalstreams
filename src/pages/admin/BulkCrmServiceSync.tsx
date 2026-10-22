@@ -13,7 +13,7 @@ const labels:Record<keyof ServiceValues,string>={package_name:'Package',connecti
 const reasons:Record<string,string>={crm_changed:'CRM record changed; prepare a fresh review.',package_unverified:'The current XUI package could not be identified.',
   trial_classification_changed:'Trial classification changed; review separately.',protected_preview_account:'Protected Preview setup; left unchanged.',read_failed:'XUI details could not be verified.'};
 
-const BulkCrmServiceSync:React.FC<{customerIds:string[];loading:boolean;onApplied:()=>Promise<void>}> = ({customerIds,loading,onApplied})=>{
+const BulkCrmServiceSync:React.FC<{customerIds:string[];loading:boolean;onApplied:()=>Promise<void>;visibleCustomerIds?:string[];searchActive?:boolean}> = ({customerIds,loading,onApplied,visibleCustomerIds,searchActive=false})=>{
   const identityKey=useMemo(()=>[...customerIds].sort().join(','),[customerIds]);
   const [batch,setBatch]=useState<ServiceSyncBatch|null>(null);
   const [reference,setReference]=useState(savedReference);
@@ -75,6 +75,8 @@ const BulkCrmServiceSync:React.FC<{customerIds:string[];loading:boolean;onApplie
   };
   const items=batch?.items??[],ready=items.filter(i=>i.state==='ready'),pending=items.filter(i=>i.state==='pending').length;
   const skipped=items.filter(i=>i.state==='blocked'||i.state==='failed').length,matched=items.filter(i=>i.state==='matched').length;
+  const visibleIds=visibleCustomerIds ? new Set(visibleCustomerIds) : null;
+  const displayedItems=searchActive&&visibleIds ? items.filter(item=>visibleIds.has(item.customerId)) : items;
   const expired=Boolean(batch&&Date.parse(batch.expiresAt)<=clock),busy=phase!=='idle';
   const button='inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 disabled:opacity-50';
   return <section aria-labelledby="bulk-sync-title" className="rounded-2xl border border-cyan-400/30 bg-gray-900 p-5 sm:p-6">
@@ -99,7 +101,9 @@ const BulkCrmServiceSync:React.FC<{customerIds:string[];loading:boolean;onApplie
       <button type="button" disabled={busy||!confirmed} onClick={()=>void execute('apply')} className={`${button} mt-4 border-cyan-400 bg-cyan-600 text-white`}>{phase==='applying'?'Applying CRM updates…':`Apply ${ready.length} CRM updates`}</button>
     </div>}
     {batch?.state==='applied'&&<p className="mt-4 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-200">Saved: {batch.appliedCount} CRM records updated together. No provider change or credit spend.</p>}
-    {items.length>0&&<div className="mt-5 max-h-[34rem] space-y-2 overflow-y-auto">{items.map(item=><details key={item.customerId} className="rounded-xl border border-gray-700 bg-gray-950/60 p-3">
+    {searchActive&&batch&&<p className="mt-4 text-sm text-cyan-200">Showing {displayedItems.length} of {items.length} review accounts matching your search. Bulk actions still cover the entire saved review.</p>}
+    {searchActive&&batch&&displayedItems.length===0&&<p className="mt-3 text-sm text-gray-400">No review accounts match this search. Clear the search to see all accounts.</p>}
+    {displayedItems.length>0&&<div className="mt-5 max-h-[34rem] space-y-2 overflow-y-auto">{displayedItems.map(item=><details key={item.customerId} className="rounded-xl border border-gray-700 bg-gray-950/60 p-3">
       <summary className="cursor-pointer text-sm text-white"><span className="font-semibold">{item.username}</span><span className="ml-2 text-gray-400">Panel {item.panelId}</span><span className={`ml-3 ${item.state==='ready'?'text-cyan-200':item.state==='matched'?'text-green-300':'text-amber-200'}`}>{item.state==='ready'?(batch?.state==='applied'?'Updated in CRM':'Proposed update'):item.state==='matched'?'Already matches':item.state==='pending'?'Waiting to check':'Left unchanged'}</span></summary>
       {item.reason&&<p className="mt-3 text-sm text-amber-200">{reasons[item.reason]??'Review this account separately.'}</p>}
       {item.after&&<div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><caption className="sr-only">Proposed CRM correction for {item.username}</caption><thead><tr className="text-gray-400"><th scope="col" className="p-2">Detail</th><th scope="col" className="p-2">Saved CRM</th><th scope="col" className="p-2">Proposed from XUI</th></tr></thead><tbody>{(Object.keys(labels) as (keyof ServiceValues)[]).map(key=><tr key={key} className="border-t border-gray-800 text-gray-200"><th scope="row" className="p-2 font-medium">{labels[key]}</th><td className="p-2">{show(key,item.before[key])}</td><td className={`p-2 ${item.before[key]!==item.after?.[key]?'text-cyan-200':''}`}>{show(key,item.after![key])}</td></tr>)}</tbody></table></div>}
