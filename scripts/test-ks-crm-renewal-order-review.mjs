@@ -173,7 +173,8 @@ try{
     const f=fixture();connect(f);assert.equal(f.calls.auth,0);
     find(render(),'select','Requested connections').props.onChange({target:{value:'3'}});await click();
     const markup=renderToStaticMarkup(render());
-    for(const text of ['Package supports the current channel selection','27.125 credits','10, 11, 12','Nothing has been submitted','provider verification'])assert.ok(markup.includes(text));
+    for(const text of ['Package supports the current channel selection','27.125 credits','10, 11, 12','Nothing has been submitted','provider verification',
+      'Unused service time may not carry over','Check the expiration shown in XUI'])assert.ok(markup.includes(text));
     assert.ok(markup.includes('<td>6</td><td>12</td>'));assert.ok(markup.includes('<td>4</td><td>3</td>'));
     assert.ok(!markup.includes('type="submit"'));assert.ok(!markup.includes('Approve renewal'));assert.deepEqual(f.calls.provider,['user_info','get_line','packages']);
   });

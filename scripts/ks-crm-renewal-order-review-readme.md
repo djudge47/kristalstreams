@@ -25,6 +25,15 @@ time, connection-limit timing and the exact debit still require provider
 verification before a real changed-order renewal. The UI states that limit and
 has no save, approval or execute control for this review.
 
+The UI also explicitly warns that a changed package can start from today and
+unused service time may not carry over, as shown by the provider purchase preview.
+That preview warning is not proof of the API's committed behavior, nor a rule
+that every package change resets time. The response still keeps
+`providerChangeVerified: false`. Do not calculate a future expiry or enable a
+changed-order write from this quote. Any later execution design must bind the
+reviewed start basis and accepted loss of unused service time to its own consent
+and independently verified provider result.
+
 Each requested term/allowance has a separate cache key; only current and matching
 candidate packages are retained. Cached reviews still recheck administrator and
 saved identity/expiration and preserve candidate ambiguity. Evidence expires 30
