@@ -5,6 +5,10 @@ approved installing the protected records with live sending off. This approval
 does not authorize a provider renewal, credit spend, activation or Production
 promotion. No Aurevion or older inactive Kristal project is in scope.
 
+Installed with execution disabled as migration `20261022014159`. All eight
+connected checks passed; see `ks-crm-live-renewal-connected-verification.md`
+for the preserved-record comparison, CI evidence and remaining boundaries.
+
 `ks-crm-live-renewal-installation-schema.sql` creates six private RLS tables
 under `ks_crm_live_renewal_`, ten invoker-only functions with empty search paths,
 immutable approval/version/completion evidence and a disabled control row. Browser

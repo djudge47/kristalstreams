@@ -60,8 +60,9 @@ Only a confirmed completion removes a pending reference automatically.
 
 ## Deployment boundary
 
-This change does not install the live SQL draft, provision a signing key, change
-environment values, enable either SQL switch, promote Production or send a real
+The separate approved installation is now installed with both SQL switches off;
+see `ks-crm-live-renewal-connected-verification.md`. It did not provision a
+signing key, change environment values, promote Production or send a real
 renewal. `fixtures/ks-crm-renewal/live.sql` remains hard guarded to the disposable
 test database and is not a connected installation migration.
 
