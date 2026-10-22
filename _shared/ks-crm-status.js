@@ -1,7 +1,8 @@
 const time = value => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? Date.parse(value) : 0;
 export const isTrialCustomer = customer => customer.trial === true || customer.payment_status === 'trial';
 export const isPreviewPaidCustomer = customer => customer.source === 'roomba_preview_paid' || customer.payment_status === 'preview_test';
-export const isBillingExcluded = customer => isTrialCustomer(customer) || isPreviewPaidCustomer(customer);
+export const isPersonalCustomer = customer => customer.payment_status === 'personal';
+export const isBillingExcluded = customer => isTrialCustomer(customer) || isPreviewPaidCustomer(customer) || isPersonalCustomer(customer);
 export const isUnpaidCustomer = customer => !isBillingExcluded(customer) && customer.payment_status !== 'paid';
 export const isBillingOverdue = (customer, now = Date.now()) => !isBillingExcluded(customer)
   && (customer.account_status === 'expired' || (time(customer.renewal_at) > 0 && time(customer.renewal_at) < now)

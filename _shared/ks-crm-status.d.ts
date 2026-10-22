@@ -15,3 +15,5 @@ export function displayedAccountStatus(customer: CrmStatusInput, now?: number): 
 
 export function isPreviewPaidCustomer(customer: CrmStatusInput): boolean;
 export function isBillingExcluded(customer: CrmStatusInput): boolean;
+
+export function isPersonalCustomer(customer: CrmStatusInput): boolean;

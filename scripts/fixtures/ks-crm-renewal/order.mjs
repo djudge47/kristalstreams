@@ -121,6 +121,7 @@ export async function runOrderChecks({admin,worker,check}){
   });
   assert.equal(await json(admin,'current_database()'),'ks_disposable_crm_renewal_test');
   await admin.request(await readFile(new URL('../../ks-crm-renewal-retail-pricing-schema.sql',import.meta.url),'utf8'));
+  await admin.request(await readFile(new URL('../../ks-crm-personal-credit-accounts-schema.sql',import.meta.url),'utf8'));
   await check('all 20 completed-renewal prices match the shared website and checkout catalog',async()=>{
     for(const plan of Object.values(retailPlans)) for(let connections=1;connections<=5;connections++){
       const price=getRetailPrice(plan.months,connections);
@@ -186,6 +187,14 @@ export async function runOrderChecks({admin,worker,check}){
     assert.equal(s.customer.connections_allowed,3);assert.equal(s.customer.package_name,'6 Months + 3 Connections');
     assert.equal(s.customer.monthly_price,25);assert.equal(s.customer.renewal_at,s.customer.expiration_at);
     for(const key of Object.keys(before).filter(k=>!['expiration_at','connections_allowed','package_name','monthly_price','renewal_at'].includes(k)))assert.deepEqual(s.customer[key],before[key],key);
+  });
+  await check('a personal account keeps zero customer revenue through a verified renewal',async()=>{
+    const f=await orderFixture(admin,worker);
+    await admin.request(`update public.iptv_customers set payment_status='personal',monthly_price=0 where id=${literal(f.customer)}`);
+    const before=(await f.summary()).customer;assert.equal((await f.run()).state,'complete');
+    const s=await f.summary();assert.equal(s.customer.monthly_price,0);assert.equal(s.customer.payment_status,'personal');
+    assert.equal(s.customer.last_payment_at,before.last_payment_at);assert.equal(s.customer.renewal_at,s.customer.expiration_at);
+    assert.equal(s.completions,1);assert.equal(f.state.calls,1);assert.equal(s.slots,0);
   });
   await check('retail persistence failure rolls back completion and recovers without another provider purchase',async()=>{
     const f=await orderFixture(admin,worker),before=(await f.summary()).customer;

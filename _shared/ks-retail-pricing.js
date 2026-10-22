@@ -14,7 +14,7 @@ export function getRetailPrice(months, connections) {
   return { months, connections, totalCents, monthlyCents: Math.round(totalCents / months) };
 }
 export function getCustomerRetailPrice(customer) {
-  if (customer.trial || ['trial', 'preview_test'].includes(customer.payment_status)
+  if (customer.trial || ['trial', 'preview_test', 'personal'].includes(customer.payment_status)
     || ['roomba_preview_trial', 'roomba_preview_paid'].includes(customer.source)) return null;
   const match = typeof customer.package_name === 'string'
     ? customer.package_name.match(/^(1|3|6|12) months? \+ ([1-5]) connections?$/i) : null;

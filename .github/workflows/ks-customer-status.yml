@@ -21,6 +21,8 @@ on:
       - 'scripts/ks-crm-renewal-simulation-readme.md'
       - 'scripts/ks-crm-renewal-screen-readme.md'
       - '_shared/ks-retail-pricing.*'
+      - '_shared/ks-crm-status.*'
+      - 'scripts/ks-crm-personal-credit-accounts-schema.sql'
       - '_server/ks-payment-validation.js'
       - 'src/components/PricingPlans.tsx'
       - 'src/pages/pricing/**'

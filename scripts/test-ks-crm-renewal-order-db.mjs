@@ -72,7 +72,7 @@ try {
   for(const file of ['_server/ks-crm-renewal-order-plan.js','_server/ks-crm-renewal-order-consent.js',
     '_server/ks-crm-renewal-order-http.js','_server/ks-crm-renewal-order-ledger.js','_server/ks-crm-renewal-order-execution.js',
     '_server/ks-crm-renewal-live-provider.js','_server/ks-roomba-crm-route.js','src/pages/admin/OrderRenewalControls.tsx',
-    '_shared/ks-retail-pricing.js','scripts/ks-crm-renewal-retail-pricing-schema.sql',
+    '_shared/ks-retail-pricing.js','scripts/ks-crm-renewal-retail-pricing-schema.sql','scripts/ks-crm-personal-credit-accounts-schema.sql',
     'scripts/ks-crm-order-renewal-installation-schema.sql','scripts/ks-crm-order-renewal-installation-verify.sql',
     'scripts/fixtures/ks-crm-renewal/order.mjs','scripts/fixtures/ks-crm-renewal/order-ui.mjs']){
     report.sourceHashes[file]=createHash('sha256').update(await readFile(new URL('../'+file,import.meta.url))).digest('hex');

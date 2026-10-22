@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { isPersonalCustomer,isBillingExcluded,isUnpaidCustomer,isBillingOverdue,isDueWithin } from '../_shared/ks-crm-status.js';
 import { getRetailPrice, getCustomerRetailPrice, retailPlans } from '../_shared/ks-retail-pricing.js';
 import { getPlan, validateOrder, validatePaidSession } from '../_server/ks-payment-validation.js';
 import { build } from 'esbuild';
@@ -35,6 +36,12 @@ check('trials and preview payments cannot become customer revenue from a catalog
 check('provider credits and a selected catalog price cannot be treated as a paid customer receipt',()=>{
   assert.throws(()=>validateOrder({plan:'gold',connections:3,interval:'6 months',price:15}));
   assert.throws(()=>validatePaidSession({status:'complete',mode:'payment',payment_status:'unpaid',livemode:true},true));
+});
+check('personal credit-funded accounts have no customer payment due or customer revenue',()=>{
+  const owner={...customer,payment_status:'personal',renewal_at:'2026-10-01T00:00:00Z',expiration_at:'2026-10-01T00:00:00Z',account_status:'active'};
+  assert.equal(isPersonalCustomer(owner),true);assert.equal(isBillingExcluded(owner),true);
+  assert.equal(isUnpaidCustomer(owner),false);assert.equal(isBillingOverdue(owner),false);assert.equal(isDueWithin(owner,7),false);
+  assert.equal(getCustomerRetailPrice(owner),null);assert.equal(isBillingExcluded(customer),false);
 });
 const directory=await mkdtemp(join(process.cwd(),'node_modules','.ks-retail-chart-'));
 try{
