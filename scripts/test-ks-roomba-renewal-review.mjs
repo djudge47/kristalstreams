@@ -193,12 +193,16 @@ try {
     plugins: [{ name: 'renewal-fixture', setup(builder) {
       builder.onResolve({ filter: /^react$/ }, () => ({ path: 'hooks', namespace: 'fixture' }));
       builder.onResolve({ filter: /\/lib\/supabase$/ }, () => ({ path: 'auth', namespace: 'fixture' }));
+      // The requested-order child has its own component/route tests. Keep its
+      // hooks outside this parent fixture's intentionally flat hook store.
+      builder.onResolve({ filter: /^\.\/RequestedRenewalReview$/ }, () => ({ path: 'requested-order', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ loader: 'js', contents: args.path === 'hooks'
         ? `import React from ${JSON.stringify(reactPath)}; export default React;
            export const useState=initial=>{const s=globalThis.__ksRenewalHooks;const i=s.cursor++;if(!(i in s.values))s.values[i]=initial;return[s.values[i],v=>{s.values[i]=typeof v==='function'?v(s.values[i]):v;}];};
            export const useRef=initial=>{const s=globalThis.__ksRenewalHooks;const i=s.cursor++;if(!(i in s.values))s.values[i]={current:initial};return s.values[i];};
            export const useEffect=()=>{};`
-        : 'export const supabase={auth:{getSession:async()=>({data:{session:{access_token:"fictional-token"}}})}};' }));
+        : args.path === 'requested-order' ? 'export default function RequestedRenewalReview(){return null;}'
+          : 'export const supabase={auth:{getSession:async()=>({data:{session:{access_token:"fictional-token"}}})}};' }));
       builder.onResolve({ filter: new RegExp('^' + reactPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$') }, () => ({ path: reactPath, external: true }));
     } }] });
   const path = join(directory, 'component.mjs'); await writeFile(path, built.outputFiles[0].text);

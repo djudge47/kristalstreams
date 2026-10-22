@@ -9,11 +9,13 @@ export function createRoombaCrmRoute(settings = {}) {
   const saved = createRoombaCrmHandler(settings);
   const status = createCustomerStatusHandler(settings);
   const renewal = createCustomerStatusHandler({ ...settings, reviewRenewal: true });
+  const requestedOrder = createCustomerStatusHandler({ ...settings, reviewRenewal: true, reviewRequestedOrder: true });
   const testApproval = createRenewalTestApprovalHandler(settings);
   const liveRenewal = createLiveRenewalHttpHandler(settings);
   return (req, res) => {
     if (req.query?.view === 'customer-status') return status(req, res);
     if (req.query?.view === 'customer-renewal') return renewal(req, res);
+    if (req.query?.view === 'customer-renewal-order') return requestedOrder(req, res);
     if (req.query?.view === 'renewal-test-approval') return testApproval(req, res);
     if (['renewal-live-readiness','renewal-live-review','renewal-live-execute','renewal-live-status'].includes(req.query?.view)) return liveRenewal(req, res);
     if (req.query?.view !== undefined) {

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import LiveRenewalControls from './LiveRenewalControls';
+import RequestedRenewalReview from './RequestedRenewalReview';
 
 interface LineStatus {
   customerId: string; lineId: string; username: string; checkedAt: string; expiresAt: string;
@@ -231,6 +232,7 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username, 
       </details>}
       <p className="text-gray-400">Checked {new Date(line.checkedAt).toLocaleString()}. This does not confirm playback or whether the customer is online.</p>
     </div>}</div>
+    {line && <RequestedRenewalReview key={`${customerId}:${panelId}:${username}`} customerId={customerId} panelId={panelId} username={username} currentConnections={line.connectionsAllowed} />}
     {renewal && preservation && line && <section className="mt-3 rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-4 text-sm leading-6" aria-label="Renewal approval preview">
       <p className="text-xs font-semibold uppercase tracking-widest text-cyan-300">Renewal approval preview</p>
       <h3 className="mt-1 break-all text-base font-semibold text-white">{line.username}</h3>
