@@ -127,7 +127,7 @@ export async function runOrderChecks({admin,worker,check}){
       assert.equal(Number(await json(worker,`public.ks_crm_retail_monthly_price('${plan.months} Months + ${connections} Connections',${connections})`)),price.monthlyCents/100);
     }
     for(const [name,count] of [['6 Months + 3 Connections',4],['not a catalog package',3],['0 Months + 3 Connections',3]])
-      assert.equal(await json(worker,`public.ks_crm_retail_monthly_price(${literal(name)},${count})`),null);
+      assert.equal(await json(worker,`coalesce(to_jsonb(public.ks_crm_retail_monthly_price(${literal(name)},${count})),'null'::jsonb)`),null);
     for(const role of ['anon','authenticated']){
       assert.equal(await json(admin,`has_function_privilege('${role}','public.ks_crm_retail_monthly_price(text,integer)','execute')`),false);
       assert.equal(await json(admin,`has_function_privilege('${role}','public.ks_crm_sync_completed_renewal_pricing()','execute')`),false);
