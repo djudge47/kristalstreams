@@ -6,6 +6,18 @@ package. The main card shows the customer username/line, package, term, exact
 provider credit cost, balance at check, existing expiration, connection allowance
 and exact channel group IDs to preserve.
 
+The status and renewal cards display provider expiration explicitly in
+`America/New_York`, including seconds and the applicable EST/EDT abbreviation.
+**Compare expiration timestamps** shows both the current provider expiration and
+the saved CRM expiration in that timezone and as complete UTC ISO timestamps.
+Comparison uses the exact instants, including seconds, and does not infer a
+timezone for a saved wall-clock value with no offset. Missing or unreadable saved
+values are unverified. Matching clock text from the provider's own panel is not
+authority to correct a stored date. This display uses the existing authenticated
+provider read and the customer's already-loaded CRM expiration; it adds no API
+calls, database writes, approval capability or provider changes. Existing server
+expiry equality gates remain authoritative and unchanged.
+
 A valid selection may be smaller than the package catalog. The preview uses the
 same preserving planner as the offline renewal work; it never expands the line's
 selection to the package's full list. The stricter full-package comparison remains

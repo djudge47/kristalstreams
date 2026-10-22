@@ -248,6 +248,39 @@ try {
     assert.ok(markup.includes('The channel selections match.'));
     assert.deepEqual(f.calls.actions, ['user_info', 'get_line', 'packages']);
   });
+  await test('expiration comparison shows exact UTC seconds and fixed New York times across device timezones', async () => {
+    const previousZone = process.env.TZ;
+    try {
+      for (const zone of ['UTC', 'America/New_York', 'Asia/Tokyo']) {
+        process.env.TZ = zone;
+        const f = fixture(); connect(f); await click();
+        const tree = render({ savedExpiresAt: '2027-08-04T17:46:37.000Z' });
+        const markup = renderToStaticMarkup(tree);
+        assert.ok(markup.includes('Compare expiration timestamps'));
+        assert.ok(markup.includes('05:46:37 PM EDT') || markup.includes('5:46:37 PM EDT'));
+        assert.ok(markup.includes('1:46:37 PM EDT'));
+        assert.ok(markup.includes('2027-08-04T21:46:37.000Z'));
+        assert.ok(markup.includes('2027-08-04T17:46:37.000Z'));
+        assert.ok(markup.includes('The exact expiration timestamps differ.'));
+        assert.equal(findButton(tree, 'Approve renewal').props.disabled, true);
+        assert.deepEqual(f.calls.actions, ['user_info', 'get_line', 'packages']);
+      }
+    } finally {
+      if (previousZone === undefined) delete process.env.TZ; else process.env.TZ = previousZone;
+    }
+  });
+  await test('comparison matches instants across offsets and does not guess an offset for missing or naive saved dates', async () => {
+    const f = fixture(); connect(f); await click();
+    const matching = renderToStaticMarkup(render({ savedExpiresAt: '2027-08-04T17:46:37-04:00' }));
+    assert.ok(matching.includes('The exact expiration timestamps match.'));
+    for (const value of [undefined, null, '', 'invalid', '2027-08-04T21:46:37']) {
+      const markup = renderToStaticMarkup(render({ savedExpiresAt: value }));
+      assert.ok(markup.includes('The saved CRM expiration could not be compared.'));
+      assert.ok(!markup.includes('The exact expiration timestamps match.'));
+    }
+    const secondMismatch = renderToStaticMarkup(render({ savedExpiresAt: '2027-08-04T21:46:36Z' }));
+    assert.ok(secondMismatch.includes('The exact expiration timestamps differ.'));
+  });
   await test('actual component renders fixed manual-review reasons for changed groups', async () => {
     const f = fixture({ line: { bouquetIds: [10, 99] } }); connect(f); await click(); const markup = renderToStaticMarkup(render());
     assert.ok(markup.includes('Renewal needs manual review')); assert.ok(markup.includes('channel groups do not match')); assert.ok(!markup.includes('Current package reviewed'));

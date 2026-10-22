@@ -8,7 +8,7 @@ interface LineStatus {
   connectionsAllowed: number; trial: boolean; enabled: boolean; adminEnabled: boolean;
   access: 'expired' | 'disabled' | 'within_service_period';
 }
-interface Props { customerId: string; panelId: number; username: string }
+interface Props { customerId: string; panelId: number; username: string; savedExpiresAt?: string | null }
 interface RenewalReview {
   status: 'manual_review' | 'review_ready'; executionEnabled: false; sent: false; checkedAt: string;
   packageName: string | null; durationMonths: number | null; estimatedCredits: number | null;
@@ -27,8 +27,20 @@ type TestReview = { available: false; reason: string } | {
 type SavedTest = { operationId: string; approvalId: string };
 const uuid = (value: unknown): value is string => typeof value === 'string'
   && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
+const expirationDate = (value?: string | null) => {
+  if (!value) return null;
+  // Accept timestamp values with an explicit offset only. A panel's wall-clock
+  // text is not enough evidence to correct a stored provider expiration.
+  if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}(?::?\d{2})?)$/.test(value)) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+};
+const easternExpiration = (date: Date) => date.toLocaleString('en-US', {
+  timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short',
+});
 
-const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }) => {
+const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username, savedExpiresAt }) => {
   const [storedLine, setLine] = useState<LineStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -184,6 +196,10 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
     && Date.parse(testReview.expiresAt) > reviewNow && line && Date.parse(line.expiresAt) > reviewNow;
   const canConfirm = testReviewOpen || reviewFresh;
   const confirmUntil = testReview?.available ? testReview.expiresAt : preservation?.validUntil;
+  const providerExpiration = line ? expirationDate(line.expiresAt) : null;
+  const savedExpiration = expirationDate(savedExpiresAt);
+  const expirationsMatch = providerExpiration && savedExpiration
+    ? providerExpiration.getTime() === savedExpiration.getTime() : null;
   return <div className="border-t border-gray-800 px-4 py-3">
     <div className="flex flex-wrap gap-2"><button type="button" disabled={busy || saveUnknown} onClick={() => void check()}
       className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-cyan-500/30 px-3 py-2 text-xs font-semibold text-cyan-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 disabled:opacity-50">
@@ -196,8 +212,23 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
     </button></div>
     <div aria-live="polite" role="status">{line && <div className="mt-3 space-y-1 text-xs leading-5 text-gray-300">
       <p className="font-semibold text-cyan-300">{expired ? 'Expired' : line.access === 'disabled' ? 'Disabled' : 'Enabled · within service period'}{line.trial ? ' · Trial' : ''}</p>
-      <p>Provider expires: {new Date(line.expiresAt).toLocaleString()}</p>
+      <p>Provider expires: {providerExpiration ? easternExpiration(providerExpiration) : 'Unverified'} (America/New_York)</p>
       <p>Connections allowed: {line.connectionsAllowed} · Line {line.enabled ? 'enabled' : 'disabled'} · Provider {line.adminEnabled ? 'enabled' : 'disabled'}</p>
+      {providerExpiration && <details className="rounded-lg border border-gray-700 p-3">
+        <summary className="cursor-pointer text-cyan-200">Compare expiration timestamps</summary>
+        <dl className="mt-2 space-y-2">
+          <div><dt className="text-gray-400">XUI expiration · America/New_York</dt><dd>{easternExpiration(providerExpiration)}</dd>
+            <dd className="break-all"><code>{providerExpiration.toISOString()}</code> (UTC)</dd></div>
+          <div><dt className="text-gray-400">Saved CRM expiration · America/New_York</dt><dd>{savedExpiration ? easternExpiration(savedExpiration) : 'Unverified'}</dd>
+            {savedExpiration && <dd className="break-all"><code>{savedExpiration.toISOString()}</code> (UTC)</dd>}</div>
+        </dl>
+        <p className={`mt-2 ${expirationsMatch === false ? 'text-amber-200' : 'text-gray-300'}`}>
+          {expirationsMatch === true ? 'The exact expiration timestamps match.'
+            : expirationsMatch === false ? 'The exact expiration timestamps differ. Reconcile them before saving a renewal approval.'
+              : 'The saved CRM expiration could not be compared.'}
+        </p>
+        <p className="mt-1 text-gray-400">These times are shown in America/New_York regardless of your device timezone. This comparison changes no records.</p>
+      </details>}
       <p className="text-gray-400">Checked {new Date(line.checkedAt).toLocaleString()}. This does not confirm playback or whether the customer is online.</p>
     </div>}</div>
     {renewal && preservation && line && <section className="mt-3 rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-4 text-sm leading-6" aria-label="Renewal approval preview">
@@ -208,7 +239,7 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
       <dl className="mt-3 grid gap-3 sm:grid-cols-2">
         <div><dt className="text-xs text-gray-400">Renewal length</dt><dd className="font-semibold text-white">{renewal.durationMonths ? `${renewal.durationMonths} calendar month${renewal.durationMonths === 1 ? '' : 's'}` : 'Needs review'}</dd></div>
         <div><dt className="text-xs text-gray-400">Provider credit cost</dt><dd className="font-semibold text-white">{renewal.estimatedCredits === null ? 'Unverified' : `${renewal.estimatedCredits} credits`}</dd></div>
-        <div><dt className="text-xs text-gray-400">Current provider expiration</dt><dd className="text-gray-200">{new Date(line.expiresAt).toLocaleString()}</dd></div>
+        <div><dt className="text-xs text-gray-400">Current provider expiration · America/New_York</dt><dd className="text-gray-200">{providerExpiration ? easternExpiration(providerExpiration) : 'Unverified'}</dd></div>
         <div><dt className="text-xs text-gray-400">Connections to preserve</dt><dd className="text-gray-200">{line.connectionsAllowed}</dd></div>
       </dl>
       <div className="mt-4 rounded-lg border border-gray-700 bg-gray-950/50 p-3">
