@@ -9,6 +9,7 @@ import { createOrderRenewalHttpHandler } from './ks-crm-renewal-order-http.js';
 export function createRoombaCrmRoute(settings = {}) {
   const saved = createRoombaCrmHandler(settings);
   const status = createCustomerStatusHandler(settings);
+  const comparison = createCustomerStatusHandler({ ...settings, comparePackage: true });
   const renewal = createCustomerStatusHandler({ ...settings, reviewRenewal: true });
   const requestedOrder = createCustomerStatusHandler({ ...settings, reviewRenewal: true, reviewRequestedOrder: true });
   const testApproval = createRenewalTestApprovalHandler(settings);
@@ -16,6 +17,7 @@ export function createRoombaCrmRoute(settings = {}) {
   const orderRenewal = createOrderRenewalHttpHandler(settings);
   return (req, res) => {
     if (req.query?.view === 'customer-status') return status(req, res);
+    if (req.query?.view === 'customer-comparison') return comparison(req, res);
     if (req.query?.view === 'customer-renewal') return renewal(req, res);
     if (req.query?.view === 'customer-renewal-order') return requestedOrder(req, res);
     if (req.query?.view === 'renewal-test-approval') return testApproval(req, res);

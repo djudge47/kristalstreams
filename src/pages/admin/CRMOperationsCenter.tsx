@@ -25,6 +25,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import RoombaCrmLink from './RoombaCrmLink';
 import RoombaCustomerStatus from './RoombaCustomerStatus';
+import BulkXuiCheck from './BulkXuiCheck';
 import PreviewPaidOrders from './PreviewPaidOrders';
 import { displayedAccountStatus, isPersonalCustomer, isBillingExcluded, isPreviewPaidCustomer, isBillingOverdue, isDueWithin, isTrialCustomer, isUnpaidCustomer, trialBadge } from '../../../_shared/ks-crm-status.js';
 
@@ -465,6 +466,7 @@ const CRMOperationsCenter: React.FC = () => {
 
       <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200" role="note">Payment and date actions update CRM records only. Account and connection badges reflect saved records. In Preview, use Check XUI status on a customer to read its current provider status.</p>
 
+      <BulkXuiCheck customers={customers} loading={loading} />
       <PreviewPaidOrders />
       <RoombaCrmLink onLinked={refresh} onShowCustomer={(username) => {
         setSearch(username); setFilter('all');

@@ -38,7 +38,7 @@ function failureReply(error, reviewRenewal) {
 // The server selects the line reference, verifies the current reseller, and
 // never persists provider data. Requested term/allowance are read-only inputs.
 export function createCustomerStatusHandler({ createClient, env = process.env, now = Date.now,
-  readFactory, dispatcherFactory = createFixieDispatcher, reviewRenewal = false, reviewRequestedOrder = false } = {}) {
+  readFactory, dispatcherFactory = createFixieDispatcher, reviewRenewal = false, reviewRequestedOrder = false, comparePackage = false } = {}) {
   let dispatcher;
   let proxySetting;
   const sharedDispatcher = setting => {
@@ -150,23 +150,30 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
           if (!Number.isFinite(Date.parse(line.expiresAt)) || !Number.isInteger(line.connections) || line.connections < 1 || line.connections > 32
             || ![line.trial, line.enabled, line.adminEnabled].every(value => typeof value === 'boolean')) throw new StatusReadFailure('line', 'verification_failed');
           let renewalContext;
-          if (reviewRenewal) {
+          let packageComparison;
+          if (reviewRenewal || comparePackage) {
             const catalog = await read(factory({ readAction: 'packages' }), 'packages');
             if (catalog.status !== 'packages_ready' || !Array.isArray(catalog.packages)) throw new StatusReadFailure('packages', 'verification_failed');
             let packages;
             try { packages = buildPackageSummary(catalog.packages, startedAt).packages; }
             catch { throw new StatusReadFailure('packages', 'verification_failed'); }
-            const { id, username, resellerId, packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds } = line;
-            renewalContext = { line: { id, username, resellerId, packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds },
-              account: { id: String(account.account.id), credits: account.account.credits }, packages, checkedAt: startedAt };
-            if (reviewRequestedOrder) {
-              buildRequestedRenewalReview({ ...renewalContext, customer }, requested, now());
-              // Retain current and all matching candidates, so ambiguity stays
-              // blocked on cache hits. Do not retain the whole private catalog.
-              renewalContext.packages = packages.filter(pkg => pkg.id === packageId || requestedPackageMatches(pkg, requested));
-            } else {
-              buildRenewalReview(renewalContext, now());
-              renewalContext.packages = [packages.find(pkg => pkg.id === packageId) || packages[0]];
+            if (comparePackage) {
+              const pkg = packages.find(item => item.id === line.packageId);
+              packageComparison = { packageId: line.packageId, packageName: pkg?.name ?? null };
+            }
+            if (reviewRenewal) {
+              const { id, username, resellerId, packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds } = line;
+              renewalContext = { line: { id, username, resellerId, packageId, expiresAt, connections, trial, enabled, adminEnabled, bouquetIds },
+                account: { id: String(account.account.id), credits: account.account.credits }, packages, checkedAt: startedAt };
+              if (reviewRequestedOrder) {
+                buildRequestedRenewalReview({ ...renewalContext, customer }, requested, now());
+                // Retain current and all matching candidates, so ambiguity stays
+                // blocked on cache hits. Do not retain the whole private catalog.
+                renewalContext.packages = packages.filter(pkg => pkg.id === packageId || requestedPackageMatches(pkg, requested));
+              } else {
+                buildRenewalReview(renewalContext, now());
+                renewalContext.packages = [packages.find(pkg => pkg.id === packageId) || packages[0]];
+              }
             }
           }
           const safe = {
@@ -174,6 +181,7 @@ export function createCustomerStatusHandler({ createClient, env = process.env, n
             connectionsAllowed: line.connections, trial: line.trial, enabled: line.enabled, adminEnabled: line.adminEnabled,
             checkedAt: new Date(now()).toISOString(),
             ...(reviewRenewal ? { renewalContext } : {}),
+            ...(comparePackage ? packageComparison : {}),
           };
           if (cache.size >= 100) cache.delete(cache.keys().next().value);
           cache.set(key, safe);

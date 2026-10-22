@@ -14,6 +14,9 @@ on:
       - 'src/pages/admin/LiveRenewalControls.tsx'
       - 'src/pages/admin/OrderRenewalControls.tsx'
       - 'src/pages/admin/CRMOperationsCenter.tsx'
+      - 'src/pages/admin/BulkXuiCheck.tsx'
+      - '_shared/ks-crm-bulk-check.*'
+      - 'scripts/test-ks-crm-bulk-check.mjs'
       - 'scripts/test-ks-roomba-customer-status.mjs'
       - 'scripts/test-ks-roomba-renewal-review.mjs'
       - 'scripts/test-ks-crm-renewal-*.mjs'
@@ -51,6 +54,7 @@ jobs:
           node scripts/test-ks-crm-renewal-retail-pricing.mjs
           node scripts/test-ks-payments.mjs
           node scripts/test-ks-roomba-customer-status.mjs
+          node scripts/test-ks-crm-bulk-check.mjs
           node scripts/test-ks-roomba-renewal-review.mjs
           node scripts/test-ks-crm-renewal-order-review.mjs
           node scripts/test-ks-crm-renewal-simulation.mjs
@@ -69,5 +73,6 @@ jobs:
           src/pages/admin/LiveRenewalControls.tsx
           src/pages/admin/OrderRenewalControls.tsx
           src/pages/admin/CRMOperationsCenter.tsx
+          src/pages/admin/BulkXuiCheck.tsx
           --rule '@typescript-eslint/no-unused-expressions: ["error", {"allowShortCircuit": false,"allowTernary": false,"allowTaggedTemplates": false}]'
       - run: npm run build
