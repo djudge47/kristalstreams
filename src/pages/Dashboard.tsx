@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { isAuthSessionMissingError } from '@supabase/supabase-js';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { subscribeToTickets, getUnreadTicketCount, useNotificationStore } from '../lib/api';
 import InstallPrompt from '../components/InstallPrompt';
@@ -409,7 +409,12 @@ const Dashboard: React.FC = () => {
 };
 
 const PwaInstallBanner: React.FC = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<(Event & {
+    prompt: () => Promise<void>;
+    userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+  }) | null>(null);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [installError, setInstallError] = useState<string | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -422,18 +427,28 @@ const PwaInstallBanner: React.FC = () => {
 
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as NonNullable<typeof deferredPrompt>);
     };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') setIsInstalled(true);
-    setDeferredPrompt(null);
+    setInstallError(null);
+    if (!deferredPrompt) {
+      setShowInstructions(true);
+      return;
+    }
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') setIsInstalled(true);
+    } catch {
+      setInstallError('The shortcut prompt could not open. Follow the steps below to add it manually.');
+      setShowInstructions(true);
+    } finally {
+      setDeferredPrompt(null);
+    }
   };
 
   if (isInstalled || dismissed) return null;
@@ -449,46 +464,46 @@ const PwaInstallBanner: React.FC = () => {
           <p className="text-gray-400 text-sm mb-4">
             Add a shortcut to your website dashboard, plans and support. Your streaming player uses the separate download and setup instructions supplied for your device.
           </p>
-          <div className="flex flex-wrap gap-4 mb-4">
-            {[
-              { icon: Download, label: 'Home screen shortcut' },
-              { icon: User, label: 'Account dashboard' },
-              { icon: MessageSquare, label: 'Support access' },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2 text-sm text-gray-300">
-                <Icon className="w-4 h-4 text-primary flex-shrink-0" />
-                {label}
-              </div>
-            ))}
+          <div className="flex flex-col items-start gap-2 mb-4">
+            <button type="button" onClick={() => void handleInstall()} aria-expanded={showInstructions || isIOS} aria-controls="shortcut-instructions" className="inline-flex min-h-11 items-center gap-2 text-left text-sm text-gray-300 underline underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded">
+              <Download className="w-4 h-4 text-primary flex-shrink-0" aria-hidden="true" />
+              Home screen shortcut
+            </button>
+            <Link to="/client/account" className="inline-flex min-h-11 items-center gap-2 text-sm text-gray-300 underline underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded">
+              <User className="w-4 h-4 text-primary flex-shrink-0" aria-hidden="true" />
+              Account dashboard
+            </Link>
+            <Link to="/client/support" className="inline-flex min-h-11 items-center gap-2 text-sm text-gray-300 underline underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded">
+              <MessageSquare className="w-4 h-4 text-primary flex-shrink-0" aria-hidden="true" />
+              Support access
+            </Link>
           </div>
-          {isIOS ? (
-            <div className="bg-dark-200 rounded-lg p-4 text-sm text-gray-300">
-              <p className="font-semibold text-white mb-2">Add the website on iPhone or iPad:</p>
-              <ol className="space-y-1 list-decimal list-inside">
-                <li>Tap the Share button (square with arrow up)</li>
-                <li>Scroll down and tap "Add to Home Screen"</li>
-                <li>Tap "Add" to confirm</li>
-              </ol>
-            </div>
-          ) : (
-            <div className="flex gap-3">
-              {deferredPrompt && (
-                <button
-                  onClick={handleInstall}
-                  className="bg-primary hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
-                >
-                  <Download className="w-4 h-4" />
-                  Add Website
-                </button>
-              )}
-              <button
-                onClick={() => setDismissed(true)}
-                className="text-gray-400 hover:text-white px-5 py-2.5 rounded-lg border border-gray-700 hover:border-gray-500 font-medium transition-colors text-sm"
-              >
-                Not Now
-              </button>
-            </div>
-          )}
+          <div id="shortcut-instructions" aria-live="polite">
+            {(showInstructions || isIOS) && (
+              <div className="bg-dark-200 rounded-lg p-4 text-sm text-gray-300 mb-4">
+                {installError && <p role="alert" className="mb-2">{installError}</p>}
+                <p className="font-semibold text-white mb-2">Add the website to your home screen:</p>
+                {isIOS ? (
+                  <ol className="space-y-1 list-decimal list-inside">
+                    <li>Open this website in Safari.</li>
+                    <li>Tap Share, then “Add to Home Screen”.</li>
+                    <li>Tap “Add” to confirm.</li>
+                  </ol>
+                ) : (
+                  <p>Open your browser’s menu (⋮) and choose “Add to Home screen” or “Install app”, then confirm. On a computer, look for the install icon in the address bar or the install option in the browser menu. If neither appears, bookmark this dashboard for quick access.</p>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={() => void handleInstall()} className="bg-primary hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm">
+              <Download className="w-4 h-4" aria-hidden="true" />
+              Add to Home Screen
+            </button>
+            <button type="button" onClick={() => setDismissed(true)} className="text-gray-400 hover:text-white px-5 py-2.5 rounded-lg border border-gray-700 hover:border-gray-500 font-medium transition-colors text-sm">
+              Not Now
+            </button>
+          </div>
         </div>
       </div>
     </div>
