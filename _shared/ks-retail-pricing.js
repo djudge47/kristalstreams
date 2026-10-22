@@ -22,7 +22,7 @@ export function getCustomerRetailPrice(customer) {
   const price = getRetailPrice(Number(match[1]), Number(match[2]));
   const saved = Number(customer.monthly_price);
   // Retain a recorded custom/previous rate rather than silently repricing a saved account.
-  if (Number.isFinite(saved) && saved > 0 && Math.round(saved * 100) !== price.monthlyCents) {
+  if (customer.payment_status !== 'legacy_paid' && Number.isFinite(saved) && saved > 0 && Math.round(saved * 100) !== price.monthlyCents) {
     return { ...price, monthlyCents: Math.round(saved * 100), totalCents: Math.round(saved * 100 * price.months) };
   }
   return price;

@@ -14,6 +14,9 @@ on:
       - 'src/pages/admin/LiveRenewalControls.tsx'
       - 'src/pages/admin/OrderRenewalControls.tsx'
       - 'src/pages/admin/CRMOperationsCenter.tsx'
+      - 'src/pages/admin/CRMPremiumOverview.tsx'
+      - 'scripts/test-ks-crm-legacy-payments.mjs'
+      - 'scripts/ks-crm-legacy-payment-confirmation.sql'
       - 'src/pages/admin/BulkXuiCheck.tsx'
       - '_shared/ks-crm-bulk-check.*'
       - '_shared/ks-crm-service-sync-client.*'
@@ -60,6 +63,7 @@ jobs:
         run: |
           KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-crm-service-sync.mjs
           node scripts/test-ks-crm-service-sync-client.mjs
+          KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-crm-legacy-payments.mjs
       - name: Synthetic provider and CRM checks (no connected credentials)
         run: |
           node scripts/test-ks-crm-renewal-retail-pricing.mjs
@@ -84,6 +88,7 @@ jobs:
           src/pages/admin/LiveRenewalControls.tsx
           src/pages/admin/OrderRenewalControls.tsx
           src/pages/admin/CRMOperationsCenter.tsx
+          src/pages/admin/CRMPremiumOverview.tsx
           src/pages/admin/BulkXuiCheck.tsx
           src/pages/admin/BulkCrmServiceSync.tsx
           --rule '@typescript-eslint/no-unused-expressions: ["error", {"allowShortCircuit": false,"allowTernary": false,"allowTaggedTemplates": false}]'
