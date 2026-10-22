@@ -86,19 +86,28 @@ export default function RequestedRenewalReview(props: Props) {
     <h3 className="font-semibold text-cyan-200">Change renewal order</h3>
     <p className="mt-1 text-xs text-gray-400">Choose the term and connection allowance requested for {username}. This checks XUI without submitting a renewal.</p>
     <div className="mt-3 grid gap-3 sm:grid-cols-2">
-      <label className="text-xs text-gray-300"><span className="mb-1 block">Requested months</span>
-        <select aria-label="Requested months" value={months} disabled={busy} onChange={event => { setMonths(Number(event.target.value)); setStored(null); setError(null); }}
-          className="min-h-11 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-white">
-          {monthsAllowed.map(value => <option key={value} value={value}>{value} month{value === 1 ? '' : 's'}</option>)}
-        </select>
-      </label>
-      <label className="text-xs text-gray-300"><span className="mb-1 block">Requested connections</span>
-        <select aria-label="Requested connections" value={connections} disabled={busy} onChange={event => { setConnections(Number(event.target.value)); setStored(null); setError(null); }}
-          className="min-h-11 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-white">
-          {[1, 2, 3, 4, 5].map(value => <option key={value} value={value}>{value} connection{value === 1 ? '' : 's'}</option>)}
-        </select>
-      </label>
+      <fieldset className="min-w-0 text-xs text-gray-300" disabled={busy}>
+        <legend className="mb-1">Requested months</legend>
+        <div className="flex flex-wrap gap-2">
+          {monthsAllowed.map(value => <button key={value} type="button" aria-label={`${value} month${value === 1 ? '' : 's'}`} aria-pressed={months === value} disabled={busy}
+            onClick={() => { setMonths(value); setStored(null); setError(null); }}
+            className={`min-h-11 rounded-lg border px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 disabled:opacity-50 ${months === value ? 'border-cyan-300 bg-cyan-500/20 font-semibold text-cyan-100' : 'border-gray-700 bg-gray-950 text-white hover:border-cyan-400/60'}`}>
+            {value} month{value === 1 ? '' : 's'}
+          </button>)}
+        </div>
+      </fieldset>
+      <fieldset className="min-w-0 text-xs text-gray-300" disabled={busy}>
+        <legend className="mb-1">Requested connections</legend>
+        <div className="flex flex-wrap gap-2">
+          {[1, 2, 3, 4, 5].map(value => <button key={value} type="button" aria-label={`${value} connection${value === 1 ? '' : 's'}`} aria-pressed={connections === value} disabled={busy}
+            onClick={() => { setConnections(value); setStored(null); setError(null); }}
+            className={`min-h-11 rounded-lg border px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 disabled:opacity-50 ${connections === value ? 'border-cyan-300 bg-cyan-500/20 font-semibold text-cyan-100' : 'border-gray-700 bg-gray-950 text-white hover:border-cyan-400/60'}`}>
+            {value} connection{value === 1 ? '' : 's'}
+          </button>)}
+        </div>
+      </fieldset>
     </div>
+    <p className="mt-2 text-xs text-cyan-200">Requested: <strong>{months} months · {connections} connection{connections === 1 ? '' : 's'}</strong></p>
     <button type="button" disabled={busy} onClick={() => void check()}
       className="mt-3 min-h-11 rounded-lg border border-cyan-400/40 px-3 py-2 text-xs font-semibold text-cyan-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 disabled:opacity-50">
       {busy ? 'Checking requested order…' : 'Review requested order'}

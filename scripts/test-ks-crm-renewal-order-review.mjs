@@ -170,9 +170,22 @@ try{
     const r=await f.request({query:Object.fromEntries(parsed.searchParams)});return new Response(JSON.stringify(r.body),{status:r.code});
   };};
   const click=async()=>{find(render(),'button','Review requested order').props.onClick();await new Promise(resolve=>setImmediate(resolve));};
-  await test('actual selector and button cross the authenticated route and render the changed order without any write',async()=>{
+  await test('visible order choices and review cross the authenticated route without any write',async()=>{
     const f=fixture();connect(f);assert.equal(f.calls.auth,0);
-    find(render(),'select','Requested connections').props.onChange({target:{value:'3'}});await click();
+    for(const label of ['1 month','3 months','6 months','12 months','1 connection','2 connections','3 connections','4 connections','5 connections']) {
+      const choice=find(render(),'button',label);assert.ok(choice);assert.equal(choice.props.type,'button');assert.equal(choice.props.disabled,false);
+    }
+    assert.equal(find(render(),'button','12 months').props['aria-pressed'],true);
+    assert.equal(find(render(),'button','4 connections').props['aria-pressed'],true);
+    find(render(),'button','6 months').props.onClick();
+    find(render(),'button','3 connections').props.onClick();
+    assert.equal(find(render(),'button','6 months').props['aria-pressed'],true);
+    assert.equal(find(render(),'button','12 months').props['aria-pressed'],false);
+    assert.equal(find(render(),'button','3 connections').props['aria-pressed'],true);
+    assert.equal(find(render(),'button','4 connections').props['aria-pressed'],false);
+    assert.ok(renderToStaticMarkup(render()).includes('6 months · 3 connections'));
+    assert.equal(f.calls.auth,0);assert.equal(f.calls.provider.length,0);
+    find(render(),'button','12 months').props.onClick();await click();
     const markup=renderToStaticMarkup(render());
     for(const text of ['Package supports the current channel selection','27.125 credits','10, 11, 12','This requested-order check did not submit','provider verification',
       'Unused service time may not carry over','Check the expiration shown in XUI'])assert.ok(markup.includes(text));
@@ -180,20 +193,20 @@ try{
     assert.ok(!markup.includes('type="submit"'));assert.ok(!markup.includes('Approve renewal'));assert.deepEqual(f.calls.provider,['user_info','get_line','packages']);
   });
   await test('changing order values or customer identity hides the previous result immediately',async()=>{
-    const f=fixture();connect(f);find(render(),'select','Requested connections').props.onChange({target:{value:'3'}});await click();
+    const f=fixture();connect(f);find(render(),'button','3 connections').props.onClick();await click();
     assert.ok(!renderToStaticMarkup(render({username:'another_customer'})).includes('Requested order review ·'));
-    find(render(),'select','Requested months').props.onChange({target:{value:'6'}});
+    find(render(),'button','6 months').props.onClick();
     assert.ok(!renderToStaticMarkup(render()).includes('27.125 credits'));assert.equal(f.calls.provider.length,3);
   });
   await test('expired or failed refresh removes compatible messaging and never enables a live action',async()=>{
-    const f=fixture();connect(f);find(render(),'select','Requested connections').props.onChange({target:{value:'3'}});await click();
+    const f=fixture();connect(f);find(render(),'button','3 connections').props.onClick();await click();
     f.state.now+=30001;let markup=renderToStaticMarkup(render());assert.ok(markup.includes('snapshot has expired'));assert.ok(!markup.includes('Package supports the current channel selection'));
     f.state.fail='packages';await click();markup=renderToStaticMarkup(render());assert.ok(markup.includes('role="alert"'));assert.ok(!markup.includes('27.125 credits'));
   });
   await test('malformed, wrong-order and capability-bearing responses never become a successful quote',async()=>{
     for(const mutate of [p=>p.requestedOrder.requestedConnections=4,p=>p.line.lineId='9',p=>p.requestedOrder.currentGroupIds=[10,10],
       p=>p.requestedOrder.executionEnabled=true,p=>p.requestedOrder.providerChangeVerified=true,p=>p.testApproval={token:'forged'}]){
-      const f=fixture();connect(f);find(render(),'select','Requested connections').props.onChange({target:{value:'3'}});
+      const f=fixture();connect(f);find(render(),'button','3 connections').props.onClick();
       const fetch=globalThis.fetch;globalThis.fetch=async(...args)=>{const r=await fetch(...args),p=await r.json();mutate(p);return new Response(JSON.stringify(p),{status:200});};
       await click();const markup=renderToStaticMarkup(render());assert.ok(markup.includes('could not be verified'));assert.ok(!markup.includes('27.125 credits'));
     }
