@@ -6,10 +6,13 @@ import { normalizePackages } from '../_shared/ks-roomba-setup.js';
 
 const endpoint = 'https://cdn.rooomba.tv/WDXTMHmN/';
 const id = value => typeof value === 'string' && /^[1-9]\d{0,14}$/.test(value);
-// Documented active, same-package renewal only. The trusted executor owns the
-// fresh plan and durable decision; this transport alone is not authorization.
+// The trusted executor owns approval and the committed durable decision. The
+// changed-order bridge must explicitly select its separate server release gate.
+// Neither transport option is authorization, and clients cannot select one.
 export function createLiveRenewalProvider({ env = process.env, fetchImpl = fetch,
-  dispatcherFactory = createFixieDispatcher, now = Date.now } = {}) {
+  dispatcherFactory = createFixieDispatcher, now = Date.now, writePolicy = 'same-package' } = {}) {
+  if (!['same-package','changed-order'].includes(writePolicy)) throw Error('renewal_write_policy_required');
+  const releaseGate = writePolicy === 'changed-order' ? 'KS_CRM_ORDER_RENEWAL_ENABLED' : 'KS_CRM_LIVE_RENEWAL_ENABLED';
   if (env.VERCEL_ENV !== 'preview' || env.ROOMBA_API_URL !== endpoint
     || typeof env.ROOMBA_API_KEY !== 'string' || !env.ROOMBA_API_KEY || /\s/.test(env.ROOMBA_API_KEY)) throw Error('live_renewal_provider_unavailable');
   const proxy = fixieProxyUrl(env.FIXIE_URL);
@@ -19,7 +22,7 @@ export function createLiveRenewalProvider({ env = process.env, fetchImpl = fetch
     const writing = action === 'edit_line';
     if (!['user_info','packages','get_line','edit_line'].includes(action)
       || (['get_line','edit_line'].includes(action) && !id(lineId))) throw Error('live_renewal_request_invalid');
-    if (writing && env.KS_CRM_LIVE_RENEWAL_ENABLED !== 'true') throw Error('live_renewal_sending_disabled');
+    if (writing && env[releaseGate] !== 'true') throw Error('live_renewal_sending_disabled');
     const remaining = deadline - now();
     if (!Number.isSafeInteger(remaining) || remaining <= 0) throw Error('live_renewal_request_expired');
     let dispatcher;

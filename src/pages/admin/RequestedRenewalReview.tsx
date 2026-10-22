@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import OrderRenewalControls from './OrderRenewalControls';
 
 interface Props { customerId: string; panelId: number; username: string; currentConnections: number }
 interface OrderReview {
@@ -113,9 +114,11 @@ export default function RequestedRenewalReview(props: Props) {
       {review.blockers.length > 0 && <ul className="list-disc pl-4 text-amber-200">{review.blockers.map(reason => <li key={reason}>{reason}</li>)}</ul>}
       {expired && <p className="text-amber-200">This snapshot has expired. Review the requested order again for current details.</p>}
       <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-amber-200">XUI can start a changed package from today. Unused service time may not carry over. Check the expiration shown in XUI’s purchase review before approving a purchase.</p>
-      <p className="text-amber-200">Read-only review. Changing an existing XUI package, its remaining time and its connection allowance still needs provider verification. Live renewal remains unavailable for this order.</p>
-      <p>Nothing has been submitted. No credits were spent and no customer records changed.</p>
+      <p className="text-amber-200">Read-only review. Changing an existing XUI package, its remaining time and its connection allowance still needs provider verification. This quote alone cannot authorize a purchase.</p>
+      <p>This requested-order check did not submit a purchase or change records.</p>
     </div>}</div>
     {error && <p role="alert" className="mt-3 text-xs text-amber-200">{error}</p>}
+    <OrderRenewalControls customerId={customerId} panelId={panelId} username={username} months={months} connections={connections}
+      hasSourceReview={Boolean(review?.status === 'catalog_compatible' && !expired)} />
   </section>;
 }

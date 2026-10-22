@@ -59,6 +59,17 @@ await check('write switch, malformed forms, IDs and destinations stop before any
     assert.throws(() => createLiveRenewalProvider({ ...settings, env:{ ...env,...patch } }));
   assert.equal(calls, 0);
 });
+await check('changed-order transport requires its own release flag and cannot borrow the same-package flag', async () => {
+  let calls = 0;
+  const settings = { env, writePolicy: 'changed-order', dispatcherFactory: () => ({ dispatch() {}, async close() {} }),
+    fetchImpl: async () => { calls++; return new Response(JSON.stringify({ status: 'STATUS_SUCCESS', data: line })); } };
+  await assert.rejects(() => createLiveRenewalProvider(settings).renew(line.id,form()), /sending_disabled/);
+  const changed = { ...env, KS_CRM_LIVE_RENEWAL_ENABLED: 'false', KS_CRM_ORDER_RENEWAL_ENABLED: 'true' };
+  await createLiveRenewalProvider({ ...settings, env: changed }).renew(line.id,form());
+  await assert.rejects(() => createLiveRenewalProvider({ ...settings, env: changed, writePolicy: 'same-package' }).renew(line.id,form()), /sending_disabled/);
+  assert.throws(() => createLiveRenewalProvider({ ...settings, writePolicy: 'uncontrolled' }));
+  assert.equal(calls,1);
+});
 await check('fresh snapshot uses only the three documented reads and retains no provider password or API key', async () => {
   const actions = [];
   const provider = createLiveRenewalProvider({ env, dispatcherFactory: () => ({ dispatch() {}, async close() {} }), fetchImpl: async (url, options) => {

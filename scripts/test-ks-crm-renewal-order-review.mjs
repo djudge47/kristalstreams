@@ -151,9 +151,10 @@ const directory=await mkdtemp(join(process.cwd(),'node_modules','.ks-order-view-
 const originalFetch=globalThis.fetch,originalWindow=globalThis.window,originalNow=Date.now;
 try{
   const built=await build({entryPoints:['src/pages/admin/RequestedRenewalReview.tsx'],bundle:true,write:false,platform:'node',format:'esm',jsx:'automatic',external:['react/jsx-runtime','react-dom'],plugins:[{name:'order-fixture',setup(builder){
+    builder.onResolve({filter:/^\.\/OrderRenewalControls$/},()=>({path:'controls',namespace:'fixture'}));
     builder.onResolve({filter:/^react$/},()=>({path:'hooks',namespace:'fixture'}));
     builder.onResolve({filter:/\/lib\/supabase$/},()=>({path:'auth',namespace:'fixture'}));
-    builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',contents:args.path==='hooks'
+    builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',contents:args.path==='controls' ? 'export default function Controls(){return null;}' : args.path==='hooks'
       ?`export const useState=initial=>{const s=globalThis.__ksOrderHooks;const i=s.cursor++;if(!(i in s.values))s.values[i]=initial;return[s.values[i],v=>{s.values[i]=typeof v==='function'?v(s.values[i]):v;}];};export const useRef=initial=>{const s=globalThis.__ksOrderHooks;const i=s.cursor++;if(!(i in s.values))s.values[i]={current:initial};return s.values[i];};export const useEffect=()=>{};`
       :'export const supabase={auth:{getSession:async()=>({data:{session:{access_token:"fictional-token"}}})}};'}));
   }}]});
@@ -173,7 +174,7 @@ try{
     const f=fixture();connect(f);assert.equal(f.calls.auth,0);
     find(render(),'select','Requested connections').props.onChange({target:{value:'3'}});await click();
     const markup=renderToStaticMarkup(render());
-    for(const text of ['Package supports the current channel selection','27.125 credits','10, 11, 12','Nothing has been submitted','provider verification',
+    for(const text of ['Package supports the current channel selection','27.125 credits','10, 11, 12','This requested-order check did not submit','provider verification',
       'Unused service time may not carry over','Check the expiration shown in XUI'])assert.ok(markup.includes(text));
     assert.ok(markup.includes('<td>6</td><td>12</td>'));assert.ok(markup.includes('<td>4</td><td>3</td>'));
     assert.ok(!markup.includes('type="submit"'));assert.ok(!markup.includes('Approve renewal'));assert.deepEqual(f.calls.provider,['user_info','get_line','packages']);
