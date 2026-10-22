@@ -26,7 +26,8 @@ This consent module contains no route, ledger, enablement, migration or XUI edit
 A subsequent isolated executor/ledger draft is described in
 `ks-crm-renewal-live-execution-readme.md`; the subsequent Preview HTTP/transport
 bridge is described in `ks-crm-renewal-live-connection-readme.md`. No live
-database installation or real sending is enabled. The signed `identify()` helper can
+execution is enabled. The separate live foundation is installed with execution
+disabled; see `ks-crm-live-renewal-connected-verification.md`. The signed `identify()` helper can
 recover the immutable attempt identity after expiry, solely for status lookup.
 It never bypasses `verify()` for new work or extends the consent deadline.
 Consent verification alone must never be used as permission to send a renewal.

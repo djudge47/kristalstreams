@@ -4,8 +4,9 @@ When a provider accepts a renewal but its response is lost, retrying the edit
 could spend credits twice. This draft records a committed dispatch decision
 before one provider call and uses durable status to recover without resending.
 The subsequent Preview bridge and documented transport are described in
-`ks-crm-renewal-live-connection-readme.md`. Live SQL installation and actual
-provider sending remain disabled; no real renewal has been performed.
+`ks-crm-renewal-live-connection-readme.md`. The separately reviewed live SQL is
+installed with execution disabled; see `ks-crm-live-renewal-connected-verification.md`.
+Actual provider sending remains disabled; no real renewal has been performed.
 
 ## Components and authority
 
@@ -80,8 +81,8 @@ All identities and provider effects are fictional; external fetch is forbidden.
 
 The Preview bridge now supplies owner-only authentication, same-origin request
 controls, an explicit single-send provider transport and safe normalizers.
-Before real activation: review a connected installation separately, issue a
-dedicated key and complete a separately approved controlled provider test. The
+Before real activation: issue a dedicated key under a separate release approval
+and complete a separately approved controlled provider test. The
 27–32 day/month bounds reject gross duration errors but do not establish exact
 calendar, DST or month-end behavior. Actual credential retention is also still
 unverified. Production enablement, real renewal and credit spend are not included.

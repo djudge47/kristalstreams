@@ -38,6 +38,11 @@ try{
     await assert.rejects(()=>db.exec(live),/disposable_live_renewal_database_required/);await db.exec('rollback');
     assert.equal((await db.query("select to_regclass('public.ks_crm_live_renewal_control') as target")).rows[0].target,null);
   });
+  if(installing)await check('connected live installation refuses a database missing the reviewed foundation',async()=>{
+    const live=await readFile(new URL('./ks-crm-live-renewal-installation-schema.sql',import.meta.url),'utf8');
+    await assert.rejects(()=>db.exec(live),/installed_test_renewal_foundation_required/);await db.exec('rollback');
+    assert.equal((await db.query("select to_regclass('public.ks_crm_live_renewal_control') as target")).rows[0].target,null);
+  });
   await db.exec('create database ks_disposable_crm_renewal_test');await db.close();
   db=new PGlite({dataDir,database:'ks_disposable_crm_renewal_test'});
   await bootstrap(admin,{pglitePreflight:true});
