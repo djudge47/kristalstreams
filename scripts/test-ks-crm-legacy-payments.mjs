@@ -49,7 +49,7 @@ await assert.rejects(db.exec(sql),/actual_payment_or_rate_requires_review/);awai
 assert.equal((await db.query('select count(*)::int n from public.iptv_customer_activity')).rows[0].n,16);
 console.log('PASS: existing actual payment blocks bulk reclassification without altering records');
 await db.close();
-const customer={id:id(5),external_id:5555,username:'fictional_customer',customer_name:null,trial:false,source:'panel_screenshot_import',payment_status:'legacy_paid',monthly_price:20,package_name:'6 Months + 3 Connections',connections_allowed:3,active_connections:0,account_status:'active',expiration_at:'2027-04-22T05:56:49Z',renewal_at:'2026-09-05T00:00:00Z',last_payment_at:null};
+const customer={id:id(5),external_id:5555,username:'fictional_customer',customer_name:null,trial:false,source:'panel_screenshot_import',online:true,payment_status:'legacy_paid',monthly_price:20,package_name:'6 Months + 3 Connections',connections_allowed:3,active_connections:0,account_status:'active',expiration_at:'2027-04-22T05:56:49Z',renewal_at:'2026-09-05T00:00:00Z',last_payment_at:null};
 const now=Date.parse('2026-10-22T14:00:00Z');
 assert.equal(isUnpaidCustomer(customer),false);assert.equal(isLegacyPaidCustomer(customer),true);
 assert.equal(isBillingOverdue(customer,now),false);assert.equal(billingRenewalAt(customer),customer.expiration_at);
@@ -74,7 +74,8 @@ try{
   const file=join(directory,entry+'.mjs');await writeFile(file,result.outputFiles[0].text);const{default:Component}=await import(pathToFileURL(file));
   globalThis.__legacyIndex=0;globalThis.__legacyCustomer=customer;
   const html=renderToStaticMarkup(React.createElement(MemoryRouter,null,React.createElement(Component)));
-  if(entry==='CRMOperationsCenter'){assert.ok(html.includes('Paid under old pricing'));assert.ok(html.includes('Next renewal price'));assert.ok(html.includes('$150.00'));assert.ok(html.includes('Old amount and payment date are not recorded'));assert.ok(!html.includes('legacy_paid'));assert.ok(!html.includes('No payment recorded'));}
+  assert.ok(html.includes('Live activity unavailable'));assert.ok(html.includes('Online now'));
+  if(entry==='CRMOperationsCenter'){assert.ok(html.includes('Connection limit'));assert.ok(html.includes('Current streams unavailable'));assert.ok(html.includes('Paid under old pricing'));assert.ok(html.includes('Next renewal price'));assert.ok(html.includes('$150.00'));assert.ok(html.includes('Old amount and payment date are not recorded'));assert.ok(!html.includes('legacy_paid'));assert.ok(!html.includes('No payment recorded'));}
   else{assert.ok(!html.includes('legacy_paid'));assert.ok(html.includes('unknown amounts are excluded'));}
   console.log('PASS: actual '+entry+' renders old payment confirmation separately from new price and excludes unknown receipts/revenue');
  }
