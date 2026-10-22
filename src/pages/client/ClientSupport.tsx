@@ -17,6 +17,7 @@ interface TicketReply {
   id: string;
   message: string;
   is_staff: boolean;
+  delivery_status?: string;
   created_at: string;
   user_id: string;
 }
@@ -238,6 +239,7 @@ const ClientSupport: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-gray-300">{reply.message}</p>
+                  {reply.is_staff && reply.delivery_status && reply.delivery_status !== 'not_requested' && <p className="mt-1 text-xs text-gray-500">{reply.delivery_status === 'sent' ? 'Email accepted for sending' : 'Saved in your ticket; email delivery is not confirmed'}</p>}
                 </div>
               ))}
             </div>

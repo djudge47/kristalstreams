@@ -85,11 +85,7 @@ const Dashboard: React.FC = () => {
             const newProfile = {
               id: user.id,
               email: user.email,
-              full_name: null,
-              subscription_tier: 'basic',
-              subscription_status: 'inactive',
-              connections_allowed: 1,
-              active_connections: 0
+              full_name: null
             };
 
             const { data: createdProfile, error: createError } = await supabase

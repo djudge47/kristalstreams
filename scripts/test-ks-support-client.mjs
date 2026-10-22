@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import ts from 'typescript';
+const values=new Map();const original=globalThis.sessionStorage;
+globalThis.sessionStorage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+const source=(await readFile(new URL('../src/lib/support-mail.ts',import.meta.url),'utf8')).replace("import {supabase} from './supabase';",'const supabase=globalThis.__supportFixture;');
+const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ let session={access_token:'fictional-token',user:{id:'10000000-0000-4000-8000-000000000003'}},call,ready=true;
+globalThis.__supportFixture={auth:{getSession:async()=>({data:{session},error:null})},functions:{invoke:async(name,args)=>{assert.equal(name,'resend-email');if(args.method==='GET')return {data:ready?{capability:'ks-support/v1',ready:true}:{success:false},error:null};return call(args);}}};
+let version=0;const load=async()=>import('data:text/javascript;base64,'+Buffer.from(js).toString('base64')+'#'+(++version));
+const input={type:'ticket_reply',ticketId:'10000000-0000-4000-8000-000000000020',message:'Fictional answer'};
+try{
+ let api=await load(),calls=0,release;
+ call=async args=>{calls++;assert.deepEqual(Object.keys(args.body).sort(),['message','requestId','ticketId','type']);assert.equal(args.headers.Authorization,'Bearer fictional-token');await new Promise(resolve=>release=resolve);return{data:{requestId:args.body.requestId,state:'sent',success:true,ticketId:input.ticketId}};};
+ const first=api.requestSupportMail(input),second=api.requestSupportMail(input);
+ for(let n=0;n<20&&!release;n++)await new Promise(resolve=>setTimeout(resolve,5));
+ assert.equal(calls,1);release();assert.equal((await first).success,true);assert.equal((await second).success,true);assert.equal(values.size,0);
+ console.log('PASS: actual client coalesces double clicks, binds the captured sign-in, and never supplies a staff recipient');
+ let savedId;call=async args=>{savedId=args.body.requestId;return{error:new Error('fictional network loss')};};
+ assert.equal((await api.requestSupportMail(input)).success,false);assert.equal(values.size,1);
+ assert.ok(!JSON.stringify([...values]).includes('Fictional answer'));
+ api=await load();call=async args=>{assert.equal(args.body.requestId,savedId);return{data:{requestId:savedId,state:'unknown',success:false,ticketId:input.ticketId}};};
+ assert.equal((await api.requestSupportMail(input)).success,false);assert.equal(values.size,1);
+ call=async()=>({data:{requestId:savedId,state:'sent',success:true,ticketId:input.ticketId}});
+ assert.equal((await api.requestSupportMail(input)).success,true);assert.equal(values.size,0);
+ console.log('PASS: reload retains the same request after a lost result, stores no email/message, and distinguishes saved/unknown from sent');
+ session=null;calls=0;call=async()=>{calls++;throw Error('must not call');};assert.equal((await api.requestSupportMail(input)).success,false);assert.equal(calls,0);
+ console.log('PASS: signed-out staff and account confirmations fail before invocation');
+ session={access_token:'fictional-token',user:{id:'10000000-0000-4000-8000-000000000003'}};
+ call=async args=>({data:{requestId:args.body.requestId,state:'sent',success:false}});
+ assert.equal((await api.requestSupportMail(input)).success,false);
+ console.log('PASS: inconsistent success/state responses are rejected');
+ ready=false;calls=0;call=async()=>{calls++;throw Error('must not post');};assert.equal((await api.requestSupportMail(input)).success,false);assert.equal(calls,0);ready=true;
+ console.log('PASS: the new client never posts a message to a legacy or unready backend');
+ const emailService=await readFile(new URL('../src/lib/email-service.ts',import.meta.url),'utf8');
+ assert.ok(!emailService.includes(".from('support_tickets')"));assert.ok(!emailService.includes('sendAutomaticCustomerResponse'));
+ console.log('PASS: contact submission delegates to the server and cannot double-insert tickets or initiate anonymous customer mail');
+}finally{delete globalThis.__supportFixture;if(original===undefined)delete globalThis.sessionStorage;else globalThis.sessionStorage=original;}
