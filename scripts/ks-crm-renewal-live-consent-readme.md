@@ -22,7 +22,12 @@ service, sufficient credits and matching saved/provider expiry. Verifying fresh,
 unchanged evidence after operator review does not extend the original consent.
 Every result explicitly says `mayDispatch: false`.
 
-No route, live worker, ledger, enablement, migration or XUI edit is included.
+This consent module contains no route, ledger, enablement, migration or XUI edit.
+A subsequent isolated executor/ledger draft is described in
+`ks-crm-renewal-live-execution-readme.md`; it is not connected to an HTTP route,
+real provider transport or live database. The signed `identify()` helper can
+recover the immutable attempt identity after expiry, solely for status lookup.
+It never bypasses `verify()` for new work or extends the consent deadline.
 Consent verification alone must never be used as permission to send a renewal.
 Before execution can be considered, a separately reviewed implementation must:
 

@@ -78,6 +78,16 @@ await test('old evidence cannot verify valid consent and an expired intent canno
   assert.equal(f.consent.verify(issued.token, f.input()).mayDispatch, false);
   f.state.now = Date.parse(issued.expiresAt); assert.throws(() => f.consent.verify(issued.token, f.input()));
 });
+await test('read-only identity after expiry preserves immutable keys without allowing fresh verification or actor substitution', () => {
+  const f = fixture(), issued = f.consent.issue(f.input()); f.state.now += 360000;
+  const identity = f.consent.identify(issued.token, { actorId: f.state.user.id, customerId: f.state.customer.id });
+  assert.equal(identity.operationId, issued.operationId); assert.equal(identity.consentId, issued.consentId);
+  assert.equal(identity.fingerprint, issued.fingerprint); assert.equal(identity.expiresAt, issued.expiresAt);
+  assert.equal(identity.mayDispatch, false); assert.ok(Object.isFrozen(identity));
+  assert.throws(() => f.consent.verify(issued.token, f.input()));
+  assert.throws(() => f.consent.identify(issued.token, { actorId: '00000000-0000-4000-8000-000000000001', customerId: f.state.customer.id }));
+  assert.throws(() => f.consent.identify(issued.token, { actorId: f.state.user.id, customerId: '00000000-0000-4000-8000-000000000002' }));
+});
 await test('actor substitution, wrong key, malformed tokens and any signature alteration are rejected', () => {
   const f = fixture(), issued = f.consent.issue(f.input());
   assert.throws(() => f.consent.verify(issued.token, { ...f.input(), actorId: '00000000-0000-4000-8000-000000000071' }));
