@@ -4,6 +4,7 @@ import { createRenewalTestApprovalHandler } from './ks-crm-renewal-test-approval
 import { createLiveRenewalHttpHandler } from './ks-crm-renewal-live-http.js';
 import { createOrderRenewalHttpHandler } from './ks-crm-renewal-order-http.js';
 import { createServiceSyncHandler } from './ks-crm-service-sync.js';
+import { createRenewalPaymentHandler } from './ks-crm-renewal-payment.js';
 
 // Share the existing CRM function so the deployment remains at 12 functions.
 // The saved-receipt handler and its POST behavior are unchanged.
@@ -12,6 +13,7 @@ export function createRoombaCrmRoute(settings = {}) {
   const status = createCustomerStatusHandler(settings);
   const comparison = createCustomerStatusHandler({ ...settings, comparePackage: true });
   const serviceSync = createServiceSyncHandler(settings);
+  const renewalPayment = createRenewalPaymentHandler(settings);
   const renewal = createCustomerStatusHandler({ ...settings, reviewRenewal: true });
   const requestedOrder = createCustomerStatusHandler({ ...settings, reviewRenewal: true, reviewRequestedOrder: true });
   const testApproval = createRenewalTestApprovalHandler(settings);
@@ -23,6 +25,7 @@ export function createRoombaCrmRoute(settings = {}) {
       res.setHeader('Cache-Control', 'private, no-store');
       return res.status(413).json({ error: 'CRM request is too large.' });
     }
+    if (req.query?.view === 'renewal-payment') return renewalPayment(req, res);
     if (req.query?.view === 'customer-status') return status(req, res);
     if (req.query?.view === 'customer-comparison') return comparison(req, res);
     if (req.query?.view === 'customer-renewal') return renewal(req, res);

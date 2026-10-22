@@ -6,7 +6,7 @@ Existing regular screenshot-imported accounts can be classified `legacy_paid`, d
 
 For this classification only, the CRM uses the verified service expiration as the next-renewal date for display and due filters, preserving the stored billing dates. The current shared website catalog supplies **Next renewal price**. A saved old custom rate cannot override the next-renewal catalog for a legacy account. Ordinary customer custom rates retain their prior behavior. Unknown historical payments are excluded from MRR and payment totals. Both CRM screens share the classification and due-date rules.
 
-The one-month payment shortcut is disabled for these accounts because it would turn a missing amount into a $0 receipt. Normal actual-paid status supersedes the legacy classification when real payment details are recorded; this work does not enable recurring charging or provider execution. The existing four $0 manual entries are retained, not reinterpreted as actual amounts.
+The old one-month shortcut is replaced by an explicit received-payment form: actual positive amount/date/method are required, requested term/connections and website price are saved separately, and service is never extended by recording money. A new renewal receipt records actual money separately while the legacy classification continues to describe the old service term. This work does not enable recurring charging or provider execution. The existing four $0 manual entries are retained, not reinterpreted as actual amounts.
 
 ## Operational transaction
 
