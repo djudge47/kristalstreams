@@ -5,6 +5,7 @@ import { createLiveRenewalConsent } from '../../../_server/ks-crm-renewal-live-c
 import { createLiveRenewalLedger } from '../../../_server/ks-crm-renewal-live-ledger.js';
 import { createLiveRenewalExecutor } from '../../../_server/ks-crm-renewal-live-execution.js';
 import { buildLiveRenewalEvidence } from '../../../_server/ks-crm-renewal-live-plan.js';
+import { createRoombaCrmRoute } from '../../../_server/ks-roomba-crm-route.js';
 import { adminId, json, literal, fixture as setupFixture, prepareAttempt, reserveReview, begin as setupBegin } from '../ks-reviewed-handoff/fixtures.mjs';
 import { renewalFixture, begin as testBegin } from './scenarios.mjs';
 
@@ -36,7 +37,8 @@ export async function liveFixture(admin, worker, { fault = '', base } = {}) {
     packages: [{ id: '19', name: '12 Months + 1 Connection', maxConnections: 1, trial: null,
       paid: { count: 12, unit: 'months', credits: 12 }, bouquets: Array.from({ length: 107 }, (_, i) => i + 1), issues: [] }],
     checkedAt: new Date(state.now).toISOString() });
-  const consent = createLiveRenewalConsent({ key: randomBytes(32), now: () => state.now });
+  const key = randomBytes(32);
+  const consent = createLiveRenewalConsent({ key, now: () => state.now });
   const consentInput = () => ({ actorId: adminId, customer: customer(), context: context(),
     preserveCurrentSelectionConfirmed: true, creditSpendConfirmed: true });
   const receipt = consent.issue(consentInput());
@@ -44,13 +46,19 @@ export async function liveFixture(admin, worker, { fault = '', base } = {}) {
     preserveCurrentSelectionConfirmed: true, creditSpendConfirmed: true };
   const captured = [];
   const client = { supabaseUrl: project,
-    from(table) { assert.equal(table, 'ks_crm_live_renewal_control'); return {
-      select(columns) { assert.equal(columns, 'execution_enabled'); return this; },
-      eq(key, value) { assert.equal(key, 'singleton'); assert.equal(value, true); return this; },
+    from(table) {
+      assert.ok(['ks_crm_live_renewal_control','ks_crm_renewal_control','iptv_customers'].includes(table));
+      let selected, field, match;
+      return {
+      select(columns) { selected = columns; assert.equal(columns, table === 'iptv_customers' ? 'id,external_id,username,expiration_at' : 'execution_enabled'); return this; },
+      eq(key, value) { field = key; match = value; assert.equal(key, table === 'iptv_customers' ? 'id' : 'singleton'); return this; },
       async maybeSingle() {
+        if (table === 'iptv_customers') return { data: await json(worker, `coalesce((select to_jsonb(selected)
+          from (select ${selected} from public.iptv_customers where ${field}=${literal(match)}) selected),'null'::jsonb)`), error: null };
+        assert.equal(match, true);
         state.gateReads++;
         if (fault === 'gate_read_failure') throw Error('fictional gate read lost');
-        const enabled = await json(worker, '(select execution_enabled from public.ks_crm_live_renewal_control)');
+        const enabled = await json(worker, `(select execution_enabled from public.${table})`);
         return { data: { execution_enabled: enabled }, error: null };
       } }; },
     async rpc(name, params) {
@@ -91,7 +99,26 @@ export async function liveFixture(admin, worker, { fault = '', base } = {}) {
     'username',username,'expiration_at',expiration_at) from public.iptv_customers where id=${literal(f.customer)})`); } };
   // Every invocation recreates the worker. Its process memory is not recovery
   // authority; only durable SQL and the original signed identity survive.
-  return { ...f, receipt, args, client, ledger, consent, provider, crm, state, captured,
+  const env = { VERCEL_ENV: 'preview', VITE_SUPABASE_URL: project, VITE_SUPABASE_ANON_KEY: 'fictional-anon',
+    SUPABASE_SERVICE_ROLE_KEY: 'fictional-service', ROOMBA_PREVIEW_SECRET: 'fictional-test-secret-not-the-live-signing-key',
+    KS_CRM_LIVE_RENEWAL_ENABLED: 'true', KS_CRM_LIVE_RENEWAL_CONSENT_KEY: key.toString('hex') };
+  const handler = createRoombaCrmRoute({ env, now: () => state.now,
+    createClient(url, accessKey) {
+      assert.equal(url, project);
+      if (accessKey === env.VITE_SUPABASE_ANON_KEY) return { auth: { async getUser(token) {
+        assert.equal(token, 'fictional-admin'); return { data: { user: { id: adminId, email: 'djudge47@gmail.com', email_confirmed_at: new Date().toISOString(), ...state.user } }, error: null };
+      } } };
+      assert.equal(accessKey, env.SUPABASE_SERVICE_ROLE_KEY); return client;
+    }, liveProviderFactory: () => provider });
+  const request = async (view, body, headers = {}) => {
+    const res = { headers: {}, setHeader(k,v) { this.headers[k] = v; }, status(code) { this.code = code; return this; }, json(data) { this.body = data; return this; } };
+    await handler({ method: body ? 'POST' : 'GET', query: { view, ...(!body ? { customerId: f.customer } : {}) }, body,
+      headers: { authorization: 'Bearer fictional-admin', origin: 'https://fictional.example.invalid', host: 'fictional.example.invalid', 'content-type': 'application/json', ...headers } }, res);
+    assert.equal(res.headers['Cache-Control'], 'private, no-store');
+    for (const secret of [env.SUPABASE_SERVICE_ROLE_KEY,env.KS_CRM_LIVE_RENEWAL_CONSENT_KEY,'claimToken','fingerprint','p_approval_hash'].filter(Boolean)) assert.ok(!JSON.stringify(res.body).includes(secret));
+    return res;
+  };
+  return { ...f, receipt, args, client, ledger, consent, provider, crm, state, captured, env, request,
     input: consentInput,
     async reserve() {
       const { plan } = buildLiveRenewalEvidence(consentInput(), state.now);
@@ -295,8 +322,65 @@ export async function runLiveChecks({ admin, worker, check }) {
     await admin.request('update public.ks_crm_live_renewal_control set execution_enabled=true');
     assert.equal((await f.run()).state, 'complete'); assert.equal(f.state.calls, 1);
   });
+  await runLiveHttpSqlChecks({ admin, worker, check });
   await admin.request('update public.ks_crm_live_renewal_control set execution_enabled=false');
   assert.equal(await json(worker, '(select execution_enabled from public.ks_crm_renewal_control)'), false);
+}
+
+async function runLiveHttpSqlChecks({ admin, worker, check }) {
+  await check('real authenticated live HTTP route reviews, executes and replays through durable SQL once', async () => {
+    const f = await liveFixture(admin, worker);
+    assert.equal((await f.request('renewal-live-readiness')).body.state, 'ready_for_review');
+    const reviewed = await f.request('renewal-live-review', { customerId: f.customer, preserveCurrentSelectionConfirmed: true, creditSpendConfirmed: true });
+    assert.equal(reviewed.code, 200); assert.equal(reviewed.body.state, 'review_ready');
+    assert.deepEqual(reviewed.body.review.currentGroupIds, [2,13,18,40]); assert.equal(reviewed.body.review.costUnits, '12000000');
+    assert.equal(f.captured.some(r => r.name.endsWith('reserve_renewal')), false);
+    const body = { customerId: f.customer, token: reviewed.body.review.token, preserveCurrentSelectionConfirmed: true, creditSpendConfirmed: true };
+    assert.equal((await f.request('renewal-live-execute', body)).body.state, 'complete');
+    f.state.now += 360000;
+    assert.equal((await f.request('renewal-live-execute', body)).body.state, 'complete'); assert.equal(f.state.calls, 1);
+    await admin.request('update public.ks_crm_live_renewal_control set execution_enabled=false');
+    try {
+      const status = await f.request('renewal-live-status', { customerId: f.customer, token: body.token });
+      assert.equal(status.body.state, 'complete'); assert.equal(status.body.canStartNewReview, false);
+      assert.equal((await f.request('renewal-live-execute', body)).body.state, 'disabled');
+    } finally { await admin.request('update public.ks_crm_live_renewal_control set execution_enabled=true'); }
+  });
+  await check('live HTTP controls require owner Auth, both consent flags, same-origin and original signed customer', async () => {
+    const f = await liveFixture(admin, worker);
+    const body = { customerId: f.customer, preserveCurrentSelectionConfirmed: true, creditSpendConfirmed: true };
+    for (const user of [{ email: 'ordinary@example.invalid' },{ is_anonymous: true },{ email_confirmed_at: null }]) {
+      f.state.user = user; assert.equal((await f.request('renewal-live-review', body)).code, 403);
+    }
+    f.state.user = {};
+    assert.equal((await f.request('renewal-live-review', body, { origin: 'https://other.invalid' })).code, 403);
+    assert.equal((await f.request('renewal-live-review', body, { authorization: '' })).code, 401);
+    assert.equal((await f.request('renewal-live-review', { ...body, creditSpendConfirmed: false })).code, 400);
+    assert.equal((await f.request('renewal-live-review', { ...body, packageId: '1' })).code, 400);
+    const review = (await f.request('renewal-live-review', body)).body.review;
+    const result = await f.request('renewal-live-execute', { ...body, token: review.token + 'x' });
+    assert.equal(result.body.state, 'review_required'); assert.equal(f.state.calls, 0);
+  });
+  await check('release flag and dedicated live key cannot be replaced with test settings; expired missing status is read-only', async () => {
+    const f = await liveFixture(admin, worker);
+    f.env.KS_CRM_LIVE_RENEWAL_ENABLED = 'false';
+    assert.equal((await f.request('renewal-live-readiness')).body.state, 'disabled'); assert.equal(f.state.snapshots, 0);
+    f.env.KS_CRM_LIVE_RENEWAL_ENABLED = 'true';
+    const key = f.env.KS_CRM_LIVE_RENEWAL_CONSENT_KEY;
+    for (const invalid of ['',f.env.ROOMBA_PREVIEW_SECRET,'0'.repeat(64)]) {
+      f.env.KS_CRM_LIVE_RENEWAL_CONSENT_KEY = invalid;
+      assert.equal((await f.request('renewal-live-readiness')).body.state, 'unavailable');
+    }
+    f.env.KS_CRM_LIVE_RENEWAL_CONSENT_KEY = key;
+    const body = { customerId: f.customer, token: f.receipt.token };
+    assert.equal((await f.request('renewal-live-status', body)).body.canStartNewReview, false);
+    f.state.now += 360001;
+    const status = await f.request('renewal-live-status', body);
+    assert.equal(status.body.state, 'not_found'); assert.equal(status.body.canStartNewReview, true);
+    assert.equal(f.state.calls, 0); assert.equal(f.captured.some(r => r.name.endsWith('reserve_renewal')), false);
+  });
+  const { runLiveUiChecks } = await import('./live-ui.mjs');
+  await runLiveUiChecks({ admin, worker, check, liveFixture });
 }
 
 export async function runLiveNativeChecks({ admin, a, b, check, race }) {

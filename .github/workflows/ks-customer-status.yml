@@ -10,6 +10,7 @@ on:
       - '_server/ks-crm-renewal-*.js'
       - '_server/ks-fixie-proxy.js'
       - 'src/pages/admin/RoombaCustomerStatus.tsx'
+      - 'src/pages/admin/LiveRenewalControls.tsx'
       - 'src/pages/admin/CRMOperationsCenter.tsx'
       - 'scripts/test-ks-roomba-customer-status.mjs'
       - 'scripts/test-ks-roomba-renewal-review.mjs'
@@ -44,6 +45,7 @@ jobs:
           node scripts/test-ks-crm-renewal-approval.mjs
           node scripts/test-ks-crm-renewal-test-approval.mjs
           node scripts/test-ks-crm-renewal-live-consent.mjs
+          node scripts/test-ks-crm-renewal-live-http.mjs
           node scripts/test-ks-roomba-admin.mjs
           node scripts/test-ks-roomba-preview.mjs
           node scripts/test-ks-roomba-line.mjs
@@ -51,6 +53,7 @@ jobs:
       - name: Check changed React components
         run: >-
           npx eslint src/pages/admin/RoombaCustomerStatus.tsx
+          src/pages/admin/LiveRenewalControls.tsx
           src/pages/admin/CRMOperationsCenter.tsx
           --rule '@typescript-eslint/no-unused-expressions: ["error", {"allowShortCircuit": false,"allowTernary": false,"allowTaggedTemplates": false}]'
       - run: npm run build

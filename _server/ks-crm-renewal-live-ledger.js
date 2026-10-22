@@ -5,7 +5,7 @@ const project = 'https://wftfxerblhlsxiijtfbo.supabase.co';
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
 const states = ['reserved','dispatching','provider_verified','reconciliation_required','complete'];
 
-// Unwired server adapter. The caller must supply an independently authenticated
+// Server adapter. The caller must supply an independently authenticated
 // admin and an explicit service client. No client/key creation or env fallback.
 // There is no switch mutation and no access to the test-approval namespace.
 export function createLiveRenewalLedger({ client, projectUrl } = {}) {

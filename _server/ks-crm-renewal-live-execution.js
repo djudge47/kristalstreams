@@ -2,7 +2,8 @@ import { buildLiveRenewalEvidence } from './ks-crm-renewal-live-plan.js';
 import { creditUnits } from './ks-paid-approval.js';
 
 // Provider adapters must return safe normalized line DTOs, never raw credential
-// responses. No real write transport or HTTP route is wired to this executor.
+// responses. The authenticated Preview bridge requires separate server release
+// and SQL execution gates; this module cannot enable either gate.
 function verifyLine(line, plan, now) {
   const expiry = Date.parse(line?.expiresAt), extension = expiry - Date.parse(plan.previousExpiresAt);
   if (line?.id !== plan.lineId || line.username !== plan.username || line.resellerId !== plan.resellerId

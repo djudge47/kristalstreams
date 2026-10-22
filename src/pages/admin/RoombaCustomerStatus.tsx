@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import LiveRenewalControls from './LiveRenewalControls';
 
 interface LineStatus {
   customerId: string; lineId: string; username: string; checkedAt: string; expiresAt: string;
@@ -266,6 +267,7 @@ const RoombaCustomerStatus: React.FC<Props> = ({ customerId, panelId, username }
       </div>
       <p className="mt-2 text-gray-400">Reviewed {new Date(renewal.checkedAt).toLocaleString()}. Same package only; a new expiration date must come from XUI after an approved renewal. Submission is not enabled, and this review spends no credits or charges the customer.</p>
     </section></details>}
+    <LiveRenewalControls key={`${customerId}:${panelId}:${username}`} customerId={customerId} panelId={panelId} username={username} hasSourceReview={Boolean(renewal && preservation && line && canConfirm)} />
     {error && <p role="alert" className="mt-3 text-xs leading-5 text-amber-200">{error}</p>}
   </div>;
 };
