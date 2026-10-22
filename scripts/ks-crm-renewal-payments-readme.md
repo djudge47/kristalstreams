@@ -14,7 +14,7 @@ The existing CRM function's `view=renewal-payment` accepts a small same-origin J
 
 A versioned per-customer session-storage record retains only the payment reference and bounded payment form values, never login credentials. It is written before dispatch; storage failure prevents dispatch. An uncertain response freezes the form and offers **Check saved result** or **Retry same saved payment**, which always reuse the identical UUID/payload. Reopening the form recovers the same reference and never posts automatically. After a verified result, a second payment needs the explicit **Record another payment** action and new actual amount/date/method. Local submit locking also prevents two same-render submits from replacing the recovery reference.
 
-The receipt/history records the chosen term/connections, actual amount/date/method, website price snapshot and any price-difference reason. `period_start` and `period_end` stay null until there is real service evidence. The current customer classification is deliberately not used as the receipt: legacy payment confirmation still describes the old service term. XUI renewal remains a separate reviewed action, not connected to this form.
+The receipt/history records the chosen term/connections, actual amount/date/method, website price snapshot and any price-difference reason. `period_start` and `period_end` stay null until there is real service evidence. The current customer classification is deliberately not used as the receipt: legacy payment confirmation still describes the old service term. XUI renewal remains a separate reviewed action. The saved result can supply its selection to a new review only when the administrator explicitly chooses that action.
 
 ## Verification
 
@@ -50,3 +50,31 @@ customer update, provider call, credit spend, email, flag or production release.
 `node scripts/test-ks-crm-payment-summary.mjs` checks the actual Supabase client's
 two-page read, error handling, payment selection and actual CRM card rendering
 with fictional accounts, including a New York date boundary.
+
+## Carry a saved selection into a new review
+
+The verified payment confirmation now offers **Review new renewal**. Choosing
+**Done** keeps a past payment in History and opens no review. The new action is
+explicit; saving, recovering or reopening a receipt never starts a renewal review
+automatically.
+
+The new dialog retains the saved customer, receipt reference, amount, method,
+received date and selected months/connections. It prefills the existing requested
+order review with that selection instead of the current connection allowance or
+the former 12-month default. A different-customer receipt cannot render a review.
+If the administrator changes the requested package, the screen warns that it no
+longer matches the payment selection. Partial or adjusted received amounts are
+also called out. The underlying receipt and payment history remain immutable.
+
+Opening the dialog makes no provider request. **Review requested order** uses the
+existing authenticated GET path and fresh identity/package/group/expiry checks.
+Existing protected purchase controls still require their own enabled server
+controls and explicit review/consent; a payment receipt does not authorize credit
+spending. This is a manual selection handoff, not an automatic fulfillment queue,
+payment-allocation ledger or proof that service has been renewed. Closing or
+refreshing the review changes no service and does not create another payment.
+
+The interaction tests cover historical Done, explicit selection handoff with no
+extra POST, actual dialog prefill against a different current package, wrong
+customer rejection, partial-payment messaging, selection-change warnings and the
+existing authenticated read-only quote. All fixtures remain fictional.

@@ -198,6 +198,14 @@ try{
     find(render(),'button','6 months').props.onClick();
     assert.ok(!renderToStaticMarkup(render()).includes('27.125 credits'));assert.equal(f.calls.provider.length,3);
   });
+  await test('saved payment selections prefill only the explicit new review and warn if changed',async()=>{
+    const f=fixture();connect(f);const initialOrder={months:6,connections:3};
+    let tree=render({initialOrder});assert.equal(find(tree,'button','6 months').props['aria-pressed'],true);assert.equal(find(tree,'button','3 connections').props['aria-pressed'],true);
+    assert.equal(f.calls.auth,0);assert.equal(f.calls.provider.length,0);
+    find(tree,'button','12 months').props.onClick();tree=render({initialOrder});assert.ok(renderToStaticMarkup(tree).includes('differ from the recorded payment selection'));
+    find(tree,'button','Review requested order').props.onClick();await new Promise(resolve=>setImmediate(resolve));
+    const html=renderToStaticMarkup(render({initialOrder}));assert.ok(html.includes('27.125 credits'));assert.ok(html.includes('payment record has not changed'));assert.deepEqual(initialOrder,{months:6,connections:3});assert.deepEqual(f.calls.provider,['user_info','get_line','packages']);
+  });
   await test('expired or failed refresh removes compatible messaging and never enables a live action',async()=>{
     const f=fixture();connect(f);find(render(),'button','3 connections').props.onClick();await click();
     f.state.now+=30001;let markup=renderToStaticMarkup(render());assert.ok(markup.includes('snapshot has expired'));assert.ok(!markup.includes('Package supports the current channel selection'));

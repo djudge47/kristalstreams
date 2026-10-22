@@ -30,6 +30,8 @@ import RoombaCustomerStatus from './RoombaCustomerStatus';
 import BulkXuiCheck from './BulkXuiCheck';
 import BulkCrmServiceSync from './BulkCrmServiceSync';
 import RenewalPaymentForm from './RenewalPaymentForm';
+import PaidRenewalReview from './PaidRenewalReview';
+import type { RenewalPaymentReceipt } from '../../../_shared/ks-crm-renewal-payment.js';
 import PreviewPaidOrders from './PreviewPaidOrders';
 import { billingRenewalAt, customerPaymentLabel, isLegacyPaidCustomer, displayedAccountStatus, isPersonalCustomer, isBillingExcluded, isPreviewPaidCustomer, isBillingOverdue, isDueWithin, isTrialCustomer, isUnpaidCustomer, trialBadge } from '../../../_shared/ks-crm-status.js';
 
@@ -185,6 +187,7 @@ const CRMOperationsCenter: React.FC = () => {
   const [historyPayments, setHistoryPayments] = useState<Payment[]>([]);
   const [historyActivities, setHistoryActivities] = useState<ActivityRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [paymentReview, setPaymentReview] = useState<{ customer: Customer; receipt: RenewalPaymentReceipt } | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -548,7 +551,8 @@ const CRMOperationsCenter: React.FC = () => {
         )}
       </section>
 
-      {paymentCustomer && <RenewalPaymentForm customer={paymentCustomer} onClose={() => setPaymentCustomer(null)} onSaved={refresh} />}
+      {paymentCustomer && <RenewalPaymentForm customer={paymentCustomer} onClose={() => setPaymentCustomer(null)} onSaved={refresh} onReview={(receipt) => { if (receipt.customerId !== paymentCustomer.id) return; setPaymentReview({ customer: paymentCustomer, receipt }); setPaymentCustomer(null); }} />}
+      {paymentReview && <PaidRenewalReview key={paymentReview.receipt.receiptId} customer={paymentReview.customer} receipt={paymentReview.receipt} onClose={() => setPaymentReview(null)} />}
 
       {showForm && <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4"><div className="max-h-[94vh] w-full overflow-y-auto rounded-t-3xl border border-gray-700 bg-gray-900 sm:max-w-4xl sm:rounded-3xl"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-800 bg-gray-900/95 px-4 py-4 sm:px-6"><div><p className="text-xs font-semibold uppercase tracking-widest text-red-400">Customer Record</p><h2 className="mt-1 text-xl font-bold text-white">{editing ? 'Edit IPTV Customer' : 'Add IPTV Customer'}</h2></div><button onClick={closeForm} className="rounded-xl bg-gray-800 p-2 text-gray-400"><X className="h-5 w-5" /></button></div><form onSubmit={saveCustomer} className="space-y-6 p-4 sm:p-6">
         <div><h3 className="mb-3 text-sm font-semibold text-white">Customer and panel account</h3><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{field('external_id', 'Panel ID', 'number', true)}{field('customer_name', 'Customer name')}{field('username', 'IPTV username', 'text', true)}{field('iptv_password', 'IPTV password', 'password')}{field('owner', 'Panel owner')}{field('email', 'Email', 'email')}{field('phone', 'Phone', 'tel')}{field('package_name', 'Package')}{field('monthly_price', 'Monthly price', 'number')}</div></div>

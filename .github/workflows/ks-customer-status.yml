@@ -26,6 +26,7 @@ on:
       - '_shared/ks-crm-payment-summary.*'
       - 'scripts/test-ks-crm-payment-summary.mjs'
       - 'src/pages/admin/RenewalPaymentForm.tsx'
+      - 'src/pages/admin/PaidRenewalReview.tsx'
       - 'scripts/ks-crm-renewal-payments-schema.sql'
       - 'src/pages/admin/BulkCrmServiceSync.tsx'
       - 'scripts/test-ks-crm-service-sync*.mjs'
@@ -98,6 +99,7 @@ jobs:
           src/pages/admin/OrderRenewalControls.tsx
           src/pages/admin/CRMOperationsCenter.tsx
           src/pages/admin/RenewalPaymentForm.tsx
+          src/pages/admin/PaidRenewalReview.tsx
           src/pages/admin/CRMPremiumOverview.tsx
           src/pages/admin/BulkXuiCheck.tsx
           src/pages/admin/BulkCrmServiceSync.tsx

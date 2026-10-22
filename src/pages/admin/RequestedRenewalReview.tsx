@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import OrderRenewalControls from './OrderRenewalControls';
 import { getRetailPrice } from '../../../_shared/ks-retail-pricing.js';
 
-interface Props { customerId: string; panelId: number; username: string; currentConnections: number }
+interface Props { customerId: string; panelId: number; username: string; currentConnections: number; initialOrder?: { months: number; connections: number } }
 interface OrderReview {
   kind: 'requested-renewal-review'; mode: 'read-only'; executionEnabled: false; sent: false;
   providerChangeVerified: false; status: 'needs_review' | 'catalog_compatible';
@@ -42,10 +42,10 @@ function validReview(payload: { [key: string]: unknown }, props: Props, months: 
 }
 
 export default function RequestedRenewalReview(props: Props) {
-  const { customerId, panelId, username, currentConnections } = props;
+  const { customerId, panelId, username, currentConnections, initialOrder } = props;
   const identity = `${customerId}:${panelId}:${username}`;
-  const [months, setMonths] = useState(12);
-  const [connections, setConnections] = useState(Math.max(1, Math.min(5, currentConnections)));
+  const [months, setMonths] = useState(initialOrder && monthsAllowed.includes(initialOrder.months) ? initialOrder.months : 12);
+  const [connections, setConnections] = useState(initialOrder && Number.isInteger(initialOrder.connections) && initialOrder.connections >= 1 && initialOrder.connections <= 5 ? initialOrder.connections : Math.max(1, Math.min(5, currentConnections)));
   const [stored, setStored] = useState<{ identity: string; review: OrderReview } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +110,7 @@ export default function RequestedRenewalReview(props: Props) {
       </fieldset>
     </div>
     <p className="mt-2 text-xs text-cyan-200">Requested: <strong>{months} months · {connections} connection{connections === 1 ? '' : 's'}</strong></p>
+    {initialOrder && (months !== initialOrder.months || connections !== initialOrder.connections) && <p role="note" className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200">These choices differ from the recorded payment selection ({initialOrder.months} months · {initialOrder.connections} connections). Check the payment arrangement before approving service. The payment record has not changed.</p>}
     {retailPrice && <p className="mt-1 text-xs text-gray-300">Customer plan price: <strong>${(retailPrice.totalCents / 100).toFixed(2)} / {months} month{months === 1 ? '' : 's'}</strong>. Payment is recorded separately.</p>}
     <button type="button" disabled={busy} onClick={() => void check()}
       className="mt-3 min-h-11 rounded-lg border border-cyan-400/40 px-3 py-2 text-xs font-semibold text-cyan-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 disabled:opacity-50">

@@ -65,7 +65,7 @@ try{
   const result=await build({entryPoints:[`src/pages/admin/${entry}.tsx`],bundle:true,write:false,platform:'node',format:'esm',jsx:'automatic',packages:'external',plugins:[{name:'offline-render',setup(builder){
    builder.onResolve({filter:/^react$/},()=>({path:'hooks',namespace:'fixture'}));
    builder.onResolve({filter:/\/lib\/supabase$/},()=>({path:'auth',namespace:'fixture'}));
-   builder.onResolve({filter:/^\.\/(RoombaCrmLink|RoombaCustomerStatus|BulkXuiCheck|BulkCrmServiceSync|PreviewPaidOrders|RenewalPaymentForm)$/},()=>({path:'child',namespace:'fixture'}));
+   builder.onResolve({filter:/^\.\/(RoombaCrmLink|RoombaCustomerStatus|BulkXuiCheck|BulkCrmServiceSync|PreviewPaidOrders|RenewalPaymentForm|PaidRenewalReview)$/},()=>({path:'child',namespace:'fixture'}));
    builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:args.path==='hooks'
     ? `import React from ${JSON.stringify(reactPath)};export default React;export const useState=initial=>{const n=globalThis.__legacyIndex++;return[n===0?[globalThis.__legacyCustomer]:n===1?[]:initial===true?false:typeof initial==='function'?initial():initial,()=>{}];};export const useEffect=()=>{};export const useMemo=f=>f();`
     :args.path==='auth'?`export const supabase=new Proxy({}, {get(){throw Error('Network forbidden');}});`:`export default ()=>null;`,loader:'js'}));
