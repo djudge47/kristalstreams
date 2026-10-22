@@ -520,9 +520,9 @@ const CRMOperationsCenter: React.FC = () => {
           <p className="mt-3 text-xs leading-5 text-gray-400">Only recorded positive payments are shown. Older entries without a received amount remain in customer History.</p>
         </div>
 
-        <div className="rounded-2xl border border-gray-700 bg-gray-800/90 p-4 sm:p-5">
-          <div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-cyan-400">Audit Trail</p><h2 className="mt-1 font-bold text-white">Recent Activity</h2></div><Activity className="h-5 w-5 text-cyan-400" /></div>
-          <div className="mt-4 space-y-2">{activities.length === 0 ? <p className="py-6 text-center text-sm text-gray-500">No activity recorded yet.</p> : activities.slice(0, 6).map((a) => <div key={a.id} className="rounded-xl border border-gray-700 bg-gray-900/80 p-3"><div className="flex items-start justify-between gap-3"><p className="text-sm font-semibold text-white">{a.title}</p><span className="shrink-0 text-[11px] text-gray-500">{dateTime(a.created_at)}</span></div><p className="mt-1 text-xs text-gray-400">{labelFor(a.customer_id)}{a.details ? ` · ${a.details}` : ''}</p></div>)}</div>
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-800/90 p-4 sm:p-5">
+          <div className="flex shrink-0 items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-cyan-400">Audit Trail</p><h2 id="crm-recent-activity-title" className="mt-1 font-bold text-white">Recent Activity</h2></div><Activity className="h-5 w-5 text-cyan-400" /></div>
+          <div role="region" aria-labelledby="crm-recent-activity-title" tabIndex={0} className="mt-4 max-h-80 space-y-2 overflow-y-auto overscroll-contain rounded-lg pr-2 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60">{activities.length === 0 ? <p className="py-6 text-center text-sm text-gray-500">No activity recorded yet.</p> : activities.slice(0, 6).map((a) => <div key={a.id} className="rounded-xl border border-gray-700 bg-gray-900/80 p-3"><div className="flex items-start justify-between gap-3"><p className="text-sm font-semibold text-white">{a.title}</p><span className="shrink-0 text-[11px] text-gray-500">{dateTime(a.created_at)}</span></div><p className="mt-1 break-words text-xs text-gray-400">{labelFor(a.customer_id)}{a.details ? ` · ${a.details}` : ''}</p></div>)}</div>
         </div>
 
         <div className="rounded-2xl border border-gray-700 bg-gray-800/90 p-4 sm:p-5">
