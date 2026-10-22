@@ -11,6 +11,8 @@ on:
       - 'scripts/fixtures/ks-reviewed-handoff/**'
       - 'scripts/*-schema.sql'
       - 'scripts/ks-crm-renewal-installation-verify.sql'
+      - 'src/pages/admin/LiveRenewalControls.tsx'
+      - 'src/pages/admin/RoombaCustomerStatus.tsx'
 
 permissions:
   contents: read

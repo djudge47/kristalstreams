@@ -3,7 +3,9 @@
 When a provider accepts a renewal but its response is lost, retrying the edit
 could spend credits twice. This draft records a committed dispatch decision
 before one provider call and uses durable status to recover without resending.
-It is not connected to an application route or a real provider write transport.
+The subsequent Preview bridge and documented transport are described in
+`ks-crm-renewal-live-connection-readme.md`. Live SQL installation and actual
+provider sending remain disabled; no real renewal has been performed.
 
 ## Components and authority
 
@@ -48,8 +50,9 @@ have neither table nor function access. Claims remain server-only.
    reserve or begin replies stop; replay or lookup cannot recreate permission.
 4. Recheck the gate and deadline after begin. Invoke `provider.renew` once with
    the preserving multipart form. The transport contract forbids automatic HTTP
-   retries, direct fallback or redirects that replay an edit. No real transport
-   implementation is included or inferred from the existing read endpoints.
+   retries, direct fallback or redirects that replay an edit. The subsequent
+   transport implements the supplied guide's documented `edit_line` contract;
+   real sending remains separately gated off.
 5. Require safe normalized return and independent readback to match line,
    reseller, package, connections, exact sorted groups and paid/active flags.
    Require equal provider expiry and exact account credit debit, then persist a
@@ -75,10 +78,10 @@ and readback drift, changed CRM expiry, replay races, retained reservations,
 shared setup/test exclusions, native contention, rollback and atomic completion.
 All identities and provider effects are fictional; external fetch is forbidden.
 
-Before real activation: review a connected installation separately, wire the
-existing owner-only admin authentication and same-origin request controls, issue
-a dedicated key, implement/document a single-send provider transport and safe
-normalizers, and complete a separately approved controlled provider test. The
+The Preview bridge now supplies owner-only authentication, same-origin request
+controls, an explicit single-send provider transport and safe normalizers.
+Before real activation: review a connected installation separately, issue a
+dedicated key and complete a separately approved controlled provider test. The
 27–32 day/month bounds reject gross duration errors but do not establish exact
 calendar, DST or month-end behavior. Actual credential retention is also still
 unverified. Production enablement, real renewal and credit spend are not included.

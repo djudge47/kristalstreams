@@ -105,7 +105,10 @@ try{
     'scripts/fixtures/ks-crm-renewal/http.mjs','scripts/fixtures/ks-crm-renewal/http-sql.mjs',
     '_server/ks-crm-renewal-live-consent.js','_server/ks-crm-renewal-live-plan.js',
     '_server/ks-crm-renewal-live-ledger.js','_server/ks-crm-renewal-live-execution.js',
-    'scripts/fixtures/ks-crm-renewal/live.sql','scripts/fixtures/ks-crm-renewal/live.mjs'])
+    'scripts/fixtures/ks-crm-renewal/live.sql','scripts/fixtures/ks-crm-renewal/live.mjs',
+    'scripts/fixtures/ks-crm-renewal/live-ui.mjs','_server/ks-crm-renewal-live-http.js',
+    '_server/ks-crm-renewal-live-provider.js','src/pages/admin/LiveRenewalControls.tsx',
+    '_server/ks-roomba-crm-route.js'])
     report.sourceHashes[name]=createHash('sha256').update(await readFile(new URL('../'+name,import.meta.url))).digest('hex');
   await a.request('set role service_role');await b.request('set role service_role');
   if(installing)await installationDisabledChecks({admin,worker:a,check});
