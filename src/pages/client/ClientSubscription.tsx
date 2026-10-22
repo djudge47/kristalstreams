@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Calendar, Clock, CreditCard, Monitor, Package, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { restoreSessionAfterStripe } from '../../lib/stripe';
-import CustomerCrmService from '../../components/CustomerCrmService';
+import CustomerCrmService, {type CustomerServiceState} from '../../components/CustomerCrmService';
 
 interface ProfileSubscription {
   id: string;
@@ -57,6 +57,7 @@ const ClientSubscription: React.FC = () => {
   const [subscription, setSubscription] = useState<ProfileSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [serviceState, setServiceState] = useState<CustomerServiceState | null>(null);
 
   useEffect(() => {
     const loadSubscription = async () => {
@@ -95,6 +96,10 @@ const ClientSubscription: React.FC = () => {
 
   const isActive = subscription?.subscription_status === 'active';
   const isDemo = subscription?.subscription_tier === 'demo';
+  // A website entitlement must never replace or contradict a verified streaming
+  // service. Wait for this account's check before exposing the legacy plan.
+  const showWebsitePlan = !subscription?.id || (serviceState?.accountId === subscription.id
+    && ['unlinked', 'hidden'].includes(serviceState.status));
   const planName = useMemo(() => {
     if (isDemo) return '36-Hour Demo';
     const tier = subscription?.subscription_tier || 'No plan';
@@ -118,12 +123,12 @@ const ClientSubscription: React.FC = () => {
         <h1 className="text-3xl font-bold text-white">Subscription Details</h1>
       </div>
 
-      {subscription?.id && <CustomerCrmService key={subscription.id} accountId={subscription.id} />}
+      {subscription?.id && <CustomerCrmService key={subscription.id} accountId={subscription.id} onServiceStateChange={setServiceState} />}
       {error ? (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-500">
           {error}
         </div>
-      ) : subscription && isActive ? (
+      ) : !showWebsitePlan ? null : subscription && isActive ? (
         <div className="space-y-6">
           {isDemo && (
             <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-5 text-yellow-100">
@@ -171,8 +176,9 @@ const ClientSubscription: React.FC = () => {
           <div className="bg-dark-100 rounded-xl p-8 border border-gray-800">
             <div className="flex items-center mb-6">
               <Calendar className="text-primary w-6 h-6 mr-3" />
-              <h2 className="text-xl font-semibold text-white">Access Period</h2>
+              <h2 className="text-xl font-semibold text-white">Website Plan Access Period</h2>
             </div>
+            <p className="mb-5 text-sm text-gray-400">These dates describe the website plan record and do not confirm streaming-service expiration.</p>
             <div className="grid md:grid-cols-3 gap-6">
               <div>
                 <div className="text-sm text-gray-400 mb-2">Started / Updated</div>

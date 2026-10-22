@@ -7,7 +7,9 @@ import {paymentMethodLabel} from '../../_shared/ks-crm-renewal-payment.js';
 const date=(value:string|null)=>value?new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}):'Not recorded';
 const money=(cents:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100);
 
-export default function CustomerCrmService({accountId}:{accountId:string}) {
+export type CustomerServiceState={accountId:string;status:'loading'|'linked'|'unlinked'|'unavailable'|'hidden'|'signed_out'};
+
+export default function CustomerCrmService({accountId,onServiceStateChange}:{accountId:string;onServiceStateChange?:(state:CustomerServiceState)=>void}) {
   const [snapshot,setSnapshot]=useState<CustomerCrmSnapshot|null>(null);
   const [loading,setLoading]=useState(true),[error,setError]=useState(''),[hidden,setHidden]=useState(false),[signedOut,setSignedOut]=useState(false);
   const request=useRef<AbortController|null>(null);
@@ -49,6 +51,9 @@ export default function CustomerCrmService({accountId}:{accountId:string}) {
     });
     return()=>{request.current?.abort();request.current=null;subscription.unsubscribe();};
   },[accountId,load]);
+  const serviceStatus:CustomerServiceState['status']=signedOut?'signed_out':hidden?'hidden':snapshot?.accountId===accountId
+    ?snapshot.services.length?'linked':'unlinked':error?'unavailable':'loading';
+  useEffect(()=>{onServiceStateChange?.({accountId,status:serviceStatus});},[accountId,serviceStatus,onServiceStateChange]);
   if(hidden)return null;
   return <section aria-labelledby="crm-service-heading" className="mb-8 rounded-2xl border border-cyan-400/20 bg-dark-100 p-5 sm:p-7">
     <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="crm-service-heading" className="text-2xl font-bold text-white">Your streaming service</h2>
