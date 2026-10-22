@@ -11,6 +11,8 @@ on:
       - 'scripts/fixtures/ks-reviewed-handoff/**'
       - 'scripts/*-schema.sql'
       - 'scripts/ks-crm-renewal-installation-verify.sql'
+      - 'scripts/ks-crm-live-renewal-installation-verify.sql'
+      - 'supabase/migrations/*_ks_crm_live_renewal_disabled_foundation.sql'
       - 'src/pages/admin/LiveRenewalControls.tsx'
       - 'src/pages/admin/RoombaCustomerStatus.tsx'
 

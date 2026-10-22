@@ -138,7 +138,25 @@ export async function liveFixture(admin, worker, { fault = '', base } = {}) {
 export async function runLiveChecks({ admin, worker, check }) {
   assert.equal(await json(admin, 'current_database()'), 'ks_disposable_crm_renewal_test');
   const old = await json(admin, '(select jsonb_agg(to_jsonb(a) order by approval_id) from public.ks_crm_renewal_approvals a)');
-  const source = await readFile(new URL('./live.sql', import.meta.url), 'utf8');
+  // Execute the exact connected installation draft unchanged. The original
+  // disposable-only prototype remains guarded and is never an installation.
+  const source = await readFile(new URL('../../ks-crm-live-renewal-installation-schema.sql', import.meta.url), 'utf8');
+  const prototype = await readFile(new URL('./live.sql', import.meta.url), 'utf8');
+  assert.equal(source.slice(source.indexOf('create table public.ks_crm_live_renewal_control')),
+    prototype.slice(prototype.indexOf('create table public.ks_crm_live_renewal_control')));
+  for (const [alter,restore,reason,label] of [
+    ['alter table public.iptv_customers rename column external_id to fictional_external_id',
+      'alter table public.iptv_customers rename column fictional_external_id to external_id', /reviewed_live_renewal_columns_required/,'changed customer identity columns'],
+    ['alter table public.ks_crm_renewal_reseller_slots disable trigger ks_reseller_reservation_exclusion',
+      'alter table public.ks_crm_renewal_reseller_slots enable trigger ks_reseller_reservation_exclusion', /reviewed_three_protocol_triggers_required/,'disabled original exclusion trigger'],
+    ['update public.ks_crm_renewal_control set execution_enabled=true',
+      'update public.ks_crm_renewal_control set execution_enabled=false', /test_renewal_execution_must_remain_disabled/,'enabled test execution'],
+  ]) await check(`live installation rejects ${label} without creating objects`, async () => {
+    await admin.request(alter);
+    try { await assert.rejects(() => admin.request(source), reason); await admin.request('rollback');
+      assert.equal(await json(admin, "to_regclass('public.ks_crm_live_renewal_control') is null"), true);
+    } finally { await admin.request('rollback'); await admin.request(restore); }
+  });
   await check('live draft refuses a changed installed guard and rolls back before creating objects', async () => {
     await admin.request('alter function public.ks_guard_reseller_reservation_exclusion() stable');
     try { await assert.rejects(() => admin.request(source), /reviewed_three_protocol_guard_required/); await admin.request('rollback');
@@ -146,6 +164,16 @@ export async function runLiveChecks({ admin, worker, check }) {
     } finally { await admin.request('rollback'); await admin.request('alter function public.ks_guard_reseller_reservation_exclusion() volatile'); }
   });
   await admin.request(source);
+  await check('unchanged live installation verifier confirms both disabled controls, private privileges and all four exclusions', async () => {
+    const sql = await readFile(new URL('../../ks-crm-live-renewal-installation-verify.sql', import.meta.url), 'utf8');
+    const query = sql.slice(sql.indexOf('select')).trim().replace(/;$/,'');
+    const result = await json(admin, `(select to_jsonb(v) from (${query}) v)`);
+    assert.equal(Object.keys(result).length, 8); assert.ok(Object.values(result).every(v => v === true));
+  });
+  await check('an already-present live installation is never reapplied as a reset', async () => {
+    await assert.rejects(() => admin.request(source), /live_renewal_installation_already_present/); await admin.request('rollback');
+    assert.equal(await json(worker, '(select execution_enabled from public.ks_crm_live_renewal_control)'), false);
+  });
   await check('new live namespace is private, starts disabled and preserves every installed test approval', async () => {
     assert.equal(await json(worker, '(select execution_enabled from public.ks_crm_live_renewal_control)'), false);
     assert.equal(await json(worker, '(select execution_enabled from public.ks_crm_renewal_control)'), false);
@@ -165,6 +193,8 @@ export async function runLiveChecks({ admin, worker, check }) {
   });
   await check('disabled gate blocks worker and every live mutation before provider reads or new work', async () => {
     const f = await liveFixture(admin, worker); assert.equal((await f.run()).state, 'disabled');
+    const readiness = await f.request('renewal-live-readiness');
+    assert.equal(readiness.code, 200); assert.equal(readiness.body.state, 'disabled'); assert.equal(readiness.body.ready, false);
     assert.equal(f.state.snapshots, 0); assert.equal(f.state.calls, 0); assert.equal(f.captured.length, 0);
     for (const call of ['reserve_renewal(null,null,null,null,null,null)','begin_renewal(null,null)',
       'verify_renewal(null,null,null,null,null)','complete_renewal(null,null,null)'])

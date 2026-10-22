@@ -93,6 +93,9 @@ try{
       const live=await readFile(new URL('./fixtures/ks-crm-renewal/live.sql',import.meta.url),'utf8');
       const rejected=spawnSync(psql,['--no-psqlrc','--quiet','--set=ON_ERROR_STOP=on','--dbname',wrong.href],{input:live,encoding:'utf8',timeout:10000});
       assert.equal(rejected.status,3);assert.match(rejected.stderr,/disposable_live_renewal_database_required/);
+      const connected=await readFile(new URL('./ks-crm-live-renewal-installation-schema.sql',import.meta.url),'utf8');
+      const missing=spawnSync(psql,['--no-psqlrc','--quiet','--set=ON_ERROR_STOP=on','--dbname',wrong.href],{input:connected,encoding:'utf8',timeout:10000});
+      assert.equal(missing.status,3);assert.match(missing.stderr,/installed_test_renewal_foundation_required/);
     }
   });
   report.foundationManifest=await bootstrap(admin);
@@ -108,7 +111,8 @@ try{
     'scripts/fixtures/ks-crm-renewal/live.sql','scripts/fixtures/ks-crm-renewal/live.mjs',
     'scripts/fixtures/ks-crm-renewal/live-ui.mjs','_server/ks-crm-renewal-live-http.js',
     '_server/ks-crm-renewal-live-provider.js','src/pages/admin/LiveRenewalControls.tsx',
-    '_server/ks-roomba-crm-route.js'])
+    '_server/ks-roomba-crm-route.js','scripts/ks-crm-live-renewal-installation-schema.sql',
+    'scripts/ks-crm-live-renewal-installation-verify.sql'])
     report.sourceHashes[name]=createHash('sha256').update(await readFile(new URL('../'+name,import.meta.url))).digest('hex');
   await a.request('set role service_role');await b.request('set role service_role');
   if(installing)await installationDisabledChecks({admin,worker:a,check});
