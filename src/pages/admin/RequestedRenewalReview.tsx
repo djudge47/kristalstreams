@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import OrderRenewalControls from './OrderRenewalControls';
+import { getRetailPrice } from '../../../_shared/ks-retail-pricing.js';
 
 interface Props { customerId: string; panelId: number; username: string; currentConnections: number }
 interface OrderReview {
@@ -82,6 +83,7 @@ export default function RequestedRenewalReview(props: Props) {
     }
   };
   const expired = review && Date.parse(review.validUntil) <= Math.max(clock, Date.now());
+  const retailPrice = getRetailPrice(months, connections);
   return <section className="mt-3 rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-4 text-sm leading-6" aria-label="Change renewal order">
     <h3 className="font-semibold text-cyan-200">Change renewal order</h3>
     <p className="mt-1 text-xs text-gray-400">Choose the term and connection allowance requested for {username}. This checks XUI without submitting a renewal.</p>
@@ -108,6 +110,7 @@ export default function RequestedRenewalReview(props: Props) {
       </fieldset>
     </div>
     <p className="mt-2 text-xs text-cyan-200">Requested: <strong>{months} months · {connections} connection{connections === 1 ? '' : 's'}</strong></p>
+    {retailPrice && <p className="mt-1 text-xs text-gray-300">Customer plan price: <strong>${(retailPrice.totalCents / 100).toFixed(2)} / {months} month{months === 1 ? '' : 's'}</strong>. Payment is recorded separately.</p>}
     <button type="button" disabled={busy} onClick={() => void check()}
       className="mt-3 min-h-11 rounded-lg border border-cyan-400/40 px-3 py-2 text-xs font-semibold text-cyan-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 disabled:opacity-50">
       {busy ? 'Checking requested order…' : 'Review requested order'}
@@ -117,7 +120,7 @@ export default function RequestedRenewalReview(props: Props) {
       <table className="w-full text-left"><thead><tr><th scope="col">Order</th><th scope="col">Current</th><th scope="col">Requested</th></tr></thead>
         <tbody><tr><th scope="row" className="font-normal">Months</th><td>{review.currentMonths ?? 'Unverified'}</td><td>{review.requestedMonths}</td></tr>
           <tr><th scope="row" className="font-normal">Connections</th><td>{review.currentConnections}</td><td>{review.requestedConnections}</td></tr></tbody></table>
-      <p>Requested package cost: <strong>{review.credits === null ? 'Unverified' : `${review.credits} credits`}</strong></p>
+      <p>Provider package cost: <strong>{review.credits === null ? 'Unverified' : `${review.credits} credits`}</strong></p>
       <p>Reseller balance at check: {review.creditsAvailable === null ? 'Unverified' : `${review.creditsAvailable} credits`}</p>
       {review.currentGroupIds.length > 0 && <p>Groups to preserve: <code>{review.currentGroupIds.join(', ')}</code>. Additional package groups will not be added.</p>}
       {review.blockers.length > 0 && <ul className="list-disc pl-4 text-amber-200">{review.blockers.map(reason => <li key={reason}>{reason}</li>)}</ul>}

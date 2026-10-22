@@ -8,6 +8,8 @@ on:
       - '_server/ks-crm-renewal-*.js'
       - 'scripts/test-ks-crm-renewal-*.mjs'
       - 'scripts/fixtures/ks-crm-renewal/**'
+      - '_shared/ks-retail-pricing.*'
+      - 'scripts/ks-crm-renewal-retail-pricing-schema.sql'
       - 'scripts/fixtures/ks-reviewed-handoff/**'
       - 'scripts/*-schema.sql'
       - 'scripts/ks-crm-renewal-installation-verify.sql'

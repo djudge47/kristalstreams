@@ -1,3 +1,4 @@
+import { getRetailPrice } from '../../_shared/ks-retail-pricing.js';
 import { Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -19,51 +20,27 @@ const pricingOptions: Plan[] = [
     name: "Bronze",
     duration: "1 Month",
     description: "Great for getting started",
-    devices: [
-      { count: 1, price: 20 },
-      { count: 2, price: 35 },
-      { count: 3, price: 50 },
-      { count: 4, price: 65 },
-      { count: 5, price: 80 },
-    ],
+    devices: [1, 2, 3, 4, 5].map(count => ({ count, price: getRetailPrice(1, count)!.totalCents / 100 })),
   },
   {
     name: "Silver",
     duration: "3 Months • 27.8% OFF",
     description: "More time, better value",
-    devices: [
-      { count: 1, price: 45 },
-      { count: 2, price: 75 },
-      { count: 3, price: 110 },
-      { count: 4, price: 140 },
-      { count: 5, price: 175 },
-    ],
+    devices: [1, 2, 3, 4, 5].map(count => ({ count, price: getRetailPrice(3, count)!.totalCents / 100 })),
   },
   {
     name: "Gold",
     duration: "6 Months • 50% OFF",
     badge: "Most Popular",
     description: "The best balance of value and savings",
-    devices: [
-      { count: 1, price: 60 },
-      { count: 2, price: 105 },
-      { count: 3, price: 150 },
-      { count: 4, price: 195 },
-      { count: 5, price: 240 },
-    ],
+    devices: [1, 2, 3, 4, 5].map(count => ({ count, price: getRetailPrice(6, count)!.totalCents / 100 })),
   },
   {
     name: "Platinum",
     duration: "12 Months • 61.1% OFF",
     badge: "Best Value",
     description: "Maximum savings for long-term access",
-    devices: [
-      { count: 1, price: 95 },
-      { count: 2, price: 165 },
-      { count: 3, price: 235 },
-      { count: 4, price: 305 },
-      { count: 5, price: 375 },
-    ],
+    devices: [1, 2, 3, 4, 5].map(count => ({ count, price: getRetailPrice(12, count)!.totalCents / 100 })),
   },
 ];
 

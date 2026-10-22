@@ -1,3 +1,4 @@
+import { getRetailPrice, retailPlans } from '../../../_shared/ks-retail-pricing.js';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -119,6 +120,19 @@ export async function runOrderChecks({admin,worker,check}){
     }
   });
   assert.equal(await json(admin,'current_database()'),'ks_disposable_crm_renewal_test');
+  await admin.request(await readFile(new URL('../../ks-crm-renewal-retail-pricing-schema.sql',import.meta.url),'utf8'));
+  await check('all 20 completed-renewal prices match the shared website and checkout catalog',async()=>{
+    for(const plan of Object.values(retailPlans)) for(let connections=1;connections<=5;connections++){
+      const price=getRetailPrice(plan.months,connections);
+      assert.equal(Number(await json(worker,`public.ks_crm_retail_monthly_price('${plan.months} Months + ${connections} Connections',${connections})`)),price.monthlyCents/100);
+    }
+    for(const [name,count] of [['6 Months + 3 Connections',4],['not a catalog package',3],['0 Months + 3 Connections',3]])
+      assert.equal(await json(worker,`public.ks_crm_retail_monthly_price(${literal(name)},${count})`),null);
+    for(const role of ['anon','authenticated']){
+      assert.equal(await json(admin,`has_function_privilege('${role}','public.ks_crm_retail_monthly_price(text,integer)','execute')`),false);
+      assert.equal(await json(admin,`has_function_privilege('${role}','public.ks_crm_sync_completed_renewal_pricing()','execute')`),false);
+    }
+  });
   await admin.request('update public.ks_crm_order_renewal_control set execution_enabled=true');
   await check('calendar expectation covers DST and month ends without extending the previous expiry',()=>{
     for(const [from,months,to] of [['2026-10-22T03:56:00Z',6,'2027-04-22T03:56:00Z'],['2026-10-28T17:36:18Z',6,'2027-04-28T17:36:18Z'],
@@ -165,12 +179,20 @@ export async function runOrderChecks({admin,worker,check}){
     await assert.rejects(()=>worker.request(`delete from public.ks_crm_order_renewal_reseller_slots where operation_id=${literal(f.receipt.operationId)}`),/unresolved_renewal_remains_locked/);
     assert.equal((await f.summary()).completions,0);assert.equal((await f.summary()).slots,1);
   });
-  await check('one verified changed-order purchase atomically updates only expiration, package and connections',async()=>{
+  await check('one verified changed-order purchase atomically saves service, catalog price and renewal date without inventing payment',async()=>{
     const f=await orderFixture(admin,worker),before=(await f.summary()).customer;
     assert.equal((await f.run()).state,'complete');assert.equal((await f.run()).state,'complete');assert.equal(f.state.calls,1);
     const s=await f.summary();assert.equal(s.completions,1);assert.equal(s.versions,1);assert.equal(s.slots,0);
     assert.equal(s.customer.connections_allowed,3);assert.equal(s.customer.package_name,'6 Months + 3 Connections');
-    for(const key of Object.keys(before).filter(k=>!['expiration_at','connections_allowed','package_name'].includes(k)))assert.deepEqual(s.customer[key],before[key],key);
+    assert.equal(s.customer.monthly_price,25);assert.equal(s.customer.renewal_at,s.customer.expiration_at);
+    for(const key of Object.keys(before).filter(k=>!['expiration_at','connections_allowed','package_name','monthly_price','renewal_at'].includes(k)))assert.deepEqual(s.customer[key],before[key],key);
+  });
+  await check('retail persistence failure rolls back completion and recovers without another provider purchase',async()=>{
+    const f=await orderFixture(admin,worker),before=(await f.summary()).customer;
+    await admin.request('revoke update(monthly_price,renewal_at) on public.iptv_customers from service_role');
+    try{await f.run();const s=await f.summary();assert.equal(s.state,'provider_verified');assert.equal(s.completions,0);assert.equal(s.slots,1);assert.deepEqual(s.customer,before);assert.equal(f.state.calls,1);}
+    finally{await admin.request('grant update(monthly_price,renewal_at) on public.iptv_customers to service_role');}
+    assert.equal((await f.run()).state,'complete');const s=await f.summary();assert.equal(s.customer.monthly_price,25);assert.equal(s.customer.renewal_at,s.customer.expiration_at);assert.equal(f.state.calls,1);
   });
   for(const fault of ['accepted_timeout','returned_mismatch','readback_mismatch','wrong_debit','wrong_account','carryover','short_term',
     'reserve_reply_lost','begin_reply_lost','verify_reply_lost','complete_not_saved','complete_reply_lost','deadline_after_commit','disabled_after_commit']){

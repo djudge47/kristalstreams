@@ -20,6 +20,11 @@ on:
       - 'scripts/fixtures/ks-crm-renewal/**'
       - 'scripts/ks-crm-renewal-simulation-readme.md'
       - 'scripts/ks-crm-renewal-screen-readme.md'
+      - '_shared/ks-retail-pricing.*'
+      - '_server/ks-payment-validation.js'
+      - 'src/components/PricingPlans.tsx'
+      - 'src/pages/pricing/**'
+      - 'scripts/ks-crm-renewal-retail-pricing-schema.sql'
       - 'package*.json'
 
 permissions:
@@ -41,6 +46,8 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Synthetic provider and CRM checks (no connected credentials)
         run: |
+          node scripts/test-ks-crm-renewal-retail-pricing.mjs
+          node scripts/test-ks-payments.mjs
           node scripts/test-ks-roomba-customer-status.mjs
           node scripts/test-ks-roomba-renewal-review.mjs
           node scripts/test-ks-crm-renewal-order-review.mjs

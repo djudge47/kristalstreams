@@ -1,13 +1,10 @@
+import { retailPlans as tiers } from '../_shared/ks-retail-pricing.js';
+
 export class PaymentError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
 
-const tiers = {
-  bronze: { aliases: ['bronze', 'basic'], interval: 'monthly', days: 30, prices: [2000, 3500, 5000, 6500, 8000] },
-  silver: { aliases: ['silver', 'standard'], interval: '3 months', days: 90, prices: [4500, 7500, 11000, 14000, 17500] },
-  gold: { aliases: ['gold', 'premium'], interval: '6 months', days: 180, prices: [6000, 10500, 15000, 19500, 24000] },
-  platinum: { aliases: ['platinum', 'ultimate'], interval: 'yearly', days: 365, prices: [9500, 16500, 23500, 30500, 37500] },
-};
+
 
 export function getPlan(plan, connections) {
   const name = typeof plan === 'string' ? plan.trim().toLowerCase() : '';
