@@ -23,6 +23,8 @@ on:
       - '_server/ks-crm-service-sync.js'
       - '_server/ks-crm-renewal-payment.js'
       - '_shared/ks-crm-renewal-payment.*'
+      - '_shared/ks-crm-payment-summary.*'
+      - 'scripts/test-ks-crm-payment-summary.mjs'
       - 'src/pages/admin/RenewalPaymentForm.tsx'
       - 'scripts/ks-crm-renewal-payments-schema.sql'
       - 'src/pages/admin/BulkCrmServiceSync.tsx'
@@ -69,6 +71,7 @@ jobs:
           node scripts/test-ks-crm-service-sync-client.mjs
           KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-crm-renewal-payments.mjs
           node scripts/test-ks-crm-renewal-payment-ui.mjs
+          node scripts/test-ks-crm-payment-summary.mjs
           KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-crm-legacy-payments.mjs
       - name: Synthetic provider and CRM checks (no connected credentials)
         run: |

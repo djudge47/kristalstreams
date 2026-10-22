@@ -28,3 +28,25 @@ node scripts/test-ks-crm-renewal-payment-ui.mjs
 Nine SQL/HTTP scenarios cover all 20 catalog totals, actual full-term payments, the old customer payment trigger, unchanged service/customer fields, strict auth/environment/origin/confirmation, exclusions, idempotency, actor/content conflicts, lost-response recovery, private grants and rollback. Three actual React interaction scenarios cover selectable pricing, blank actual amounts/dates, duplicate submission, uncertain-result recovery, reopening and explicit next-payment flow. Fixtures are fictional; no connected payment is created to test the form.
 
 Installed in the active project as migration `20261022154007_ks_crm_renewal_payments`. Source/migration SHA256: `7ec4511b1cd15f9706fa23f10151e8fe80d81581f560185e42dc971310242cef`. Connected SELECT verification found zero new renewal receipts, the same four payment rows and 46 activity rows, and identical safe customer snapshot digest `23edac4df15d8d47ed01138531ff2edf` before and after installation. RLS, browser revocations and both private invoker functions passed permission checks. All three XUI purchase controls remain off; the one existing operation/completion was preserved. Security advisors retain the one pre-existing warning; the new no-policy INFO is intentional for server-only receipt storage. No real payment or XUI action was used for validation.
+## Payment details on customer cards
+
+The CRM customer card now shows **Last recorded payment** with the positive paid
+amount, payment method and actual received date in America/New_York. The date
+comes from payment history, not the date the receipt was entered into the CRM.
+The current package, service expiration, legacy payment classification and next
+renewal price keep their existing behavior.
+
+Payment history is read using the signed-in client's existing RLS permissions,
+with six explicit fields and all 200-row pages in stable paid-at/ID order. This
+avoids losing a customer's receipt behind the previous global 100-row limit.
+Only positive rows marked paid can populate the card; newer $0, pending or
+refunded entries cannot replace the latest received payment. A failed page
+discards the partial result and reports an error rather than presenting partial
+history as complete. Legacy wording now points to recorded history rather than
+claiming every amount and payment date is unknown.
+
+This addition performs SELECT reads only. It adds no database migration, payment,
+customer update, provider call, credit spend, email, flag or production release.
+`node scripts/test-ks-crm-payment-summary.mjs` checks the actual Supabase client's
+two-page read, error handling, payment selection and actual CRM card rendering
+with fictional accounts, including a New York date boundary.

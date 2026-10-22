@@ -75,7 +75,7 @@ try{
   globalThis.__legacyIndex=0;globalThis.__legacyCustomer=customer;
   const html=renderToStaticMarkup(React.createElement(MemoryRouter,null,React.createElement(Component)));
   assert.ok(html.includes('Live activity unavailable'));assert.ok(html.includes('Online now'));
-  if(entry==='CRMOperationsCenter'){assert.ok(html.includes('Connection limit'));assert.ok(html.includes('Current streams unavailable'));assert.ok(html.includes('Paid under old pricing'));assert.ok(html.includes('Next renewal price'));assert.ok(html.includes('$150.00'));assert.ok(html.includes('Old amount and payment date are not recorded'));assert.ok(!html.includes('legacy_paid'));assert.ok(!html.includes('No payment recorded'));}
+  if(entry==='CRMOperationsCenter'){assert.ok(html.includes('Connection limit'));assert.ok(html.includes('Current streams unavailable'));assert.ok(html.includes('Paid under old pricing'));assert.ok(html.includes('Next renewal price'));assert.ok(html.includes('$150.00'));assert.ok(html.includes('See History for recorded payment details'));assert.ok(!html.includes('legacy_paid'));assert.ok(!html.includes('No payment recorded'));}
   else{assert.ok(!html.includes('legacy_paid'));assert.ok(html.includes('unknown amounts are excluded'));}
   console.log('PASS: actual '+entry+' renders old payment confirmation separately from new price and excludes unknown receipts/revenue');
  }
