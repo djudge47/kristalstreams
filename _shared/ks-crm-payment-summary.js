@@ -21,12 +21,17 @@ export async function loadCrmPayments(client) {
   }
 }
 
+export function isReceivedPayment(payment) {
+  const amount = Number(payment.amount);
+  return payment.payment_status === 'paid' && Number.isFinite(amount) && amount > 0
+    && Number.isFinite(Date.parse(payment.paid_at));
+}
+
 export function latestReceivedPayments(payments) {
   const latest = new Map();
   for (const payment of payments) {
-    const amount = Number(payment.amount);
     const paidAt = Date.parse(payment.paid_at);
-    if (payment.payment_status !== 'paid' || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(paidAt)) continue;
+    if (!isReceivedPayment(payment)) continue;
     const previous = latest.get(payment.customer_id);
     if (!previous || paidAt > Date.parse(previous.paid_at)
       || (paidAt === Date.parse(previous.paid_at) && payment.id > previous.id)) {
@@ -39,5 +44,12 @@ export function latestReceivedPayments(payments) {
 export function receivedPaymentDate(value) {
   return new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric',
+  }).format(new Date(value));
+}
+
+export function receivedPaymentDateTime(value) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
   }).format(new Date(value));
 }

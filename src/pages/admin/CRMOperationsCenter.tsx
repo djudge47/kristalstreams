@@ -1,5 +1,5 @@
 import { paymentMethodLabel } from '../../../_shared/ks-crm-renewal-payment.js';
-import { latestReceivedPayments, loadCrmPayments, receivedPaymentDate, type CrmPaymentSummary } from '../../../_shared/ks-crm-payment-summary.js';
+import { isReceivedPayment, latestReceivedPayments, loadCrmPayments, receivedPaymentDate, receivedPaymentDateTime, type CrmPaymentSummary } from '../../../_shared/ks-crm-payment-summary.js';
 import { getCustomerRetailPrice } from '../../../_shared/ks-retail-pricing.js';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -213,6 +213,7 @@ const CRMOperationsCenter: React.FC = () => {
 
   const customerMap = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
   const receivedPayments = useMemo(() => latestReceivedPayments(payments), [payments]);
+  const recordedPayments = useMemo(() => payments.filter(isReceivedPayment), [payments]);
   const labelFor = (id: string) => {
     const c = customerMap.get(id);
     return c?.customer_name || c?.username || 'Customer';
@@ -249,7 +250,7 @@ const CRMOperationsCenter: React.FC = () => {
       overdue: customers.filter(isOverdue).length,
       unpaid: customers.filter(isUnpaidCustomer).length,
       mrr: customers.filter((c) => displayedAccountStatus(c) === 'active' && !isBillingExcluded(c) && !isLegacyPaidCustomer(c)).reduce((sum, c) => sum + Number(c.monthly_price || 0), 0),
-      paidMonth: payments.filter((p) => ts(p.paid_at) >= monthStart.getTime()).reduce((sum, p) => sum + Number(p.amount || 0), 0),
+      paidMonth: payments.filter((p) => isReceivedPayment(p) && ts(p.paid_at) >= monthStart.getTime()).reduce((sum, p) => sum + Number(p.amount), 0),
       followups: reminders.length,
     };
   }, [customers, payments, reminders]);
@@ -515,7 +516,8 @@ const CRMOperationsCenter: React.FC = () => {
 
         <div className="rounded-2xl border border-gray-700 bg-gray-800/90 p-4 sm:p-5">
           <div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-green-400">Billing</p><h2 className="mt-1 font-bold text-white">Recent Payments</h2></div><CreditCard className="h-5 w-5 text-green-400" /></div>
-          <div className="mt-4 space-y-2">{payments.length === 0 ? <p className="py-6 text-center text-sm text-gray-500">No payment history yet.</p> : payments.slice(0, 6).map((p) => <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-900/80 p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{labelFor(p.customer_id)}</p><p className="mt-1 text-xs text-gray-500">{dateTime(p.paid_at)} · {paymentMethodLabel(p.payment_method)}</p></div><p className="shrink-0 text-sm font-bold text-green-300">{money(p.amount)}</p></div>)}</div>
+          <div aria-label="Recent received payments" className="mt-4 space-y-2">{recordedPayments.length === 0 ? <p className="py-6 text-center text-sm text-gray-500">No received payment amounts recorded yet.</p> : recordedPayments.slice(0, 6).map((p) => <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-900/80 p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{labelFor(p.customer_id)}</p><p className="mt-1 text-xs text-gray-400">Received {receivedPaymentDateTime(p.paid_at)} · {paymentMethodLabel(p.payment_method)}</p></div><p className="shrink-0 text-sm font-bold text-green-300">{money(p.amount)}</p></div>)}</div>
+          <p className="mt-3 text-xs leading-5 text-gray-400">Only recorded positive payments are shown. Older entries without a received amount remain in customer History.</p>
         </div>
 
         <div className="rounded-2xl border border-gray-700 bg-gray-800/90 p-4 sm:p-5">

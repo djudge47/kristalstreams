@@ -78,3 +78,6 @@ The interaction tests cover historical Done, explicit selection handoff with no
 extra POST, actual dialog prefill against a different current package, wrong
 customer rejection, partial-payment messaging, selection-change warnings and the
 existing authenticated read-only quote. All fixtures remain fictional.
+## Recent payment display
+
+Recent Payments and Paid This Month now use the same received-payment rule as the customer cards: paid status, positive finite amount and a valid received date. The recent list filters before its six-row display limit and shows the actual received date/time in America/New_York, including the year. Older zero-dollar administrative entries stay in customer History; they are not evidence of an actual received amount/date. Separate positive receipts for the same customer remain separate. This correction changes no saved payment, service record, date, price or provider operation. Six actual SDK/helper/React scenarios cover pagination, invalid/unreceived entries, the zero-entry duplication case, legitimate repeat payments, empty states and monthly received totals.

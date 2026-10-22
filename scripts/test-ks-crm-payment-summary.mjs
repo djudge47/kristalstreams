@@ -6,7 +6,7 @@ import { build } from 'esbuild';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createClient } from '@supabase/supabase-js';
-import { latestReceivedPayments, loadCrmPayments, receivedPaymentDate } from '../_shared/ks-crm-payment-summary.js';
+import { isReceivedPayment, latestReceivedPayments, loadCrmPayments, receivedPaymentDate, receivedPaymentDateTime } from '../_shared/ks-crm-payment-summary.js';
 
 const id = n => `33333333-3333-4333-8333-${String(n).padStart(12, '0')}`;
 const payment = (n, customer, amount, date, status = 'paid') => ({
@@ -51,6 +51,9 @@ assert.equal(latest.has(id(2)), false);
 assert.deepEqual(rows, original);
 assert.equal(receivedPaymentDate(target.paid_at), 'Aug 3, 2026');
 assert.equal(receivedPaymentDate('2026-08-04T02:00:00Z'), 'Aug 3, 2026');
+assert.equal(receivedPaymentDateTime(target.paid_at), 'Aug 3, 2026, 4:17 PM EDT');
+assert.equal(isReceivedPayment({ ...target, amount: '95.00' }), true);
+for (const patch of [{amount:0},{amount:-1},{amount:NaN},{paid_at:'invalid'},{payment_status:'pending'},{payment_status:'refunded'}]) assert.equal(isReceivedPayment({...target,...patch}),false);
 const tie = { ...target, id: id(999) };
 assert.equal(latestReceivedPayments([tie, target]).get(id(1)).id, tie.id);
 assert.equal(latestReceivedPayments([{ ...target, amount: NaN }, { ...target, paid_at: 'invalid' }]).size, 0);
@@ -101,10 +104,37 @@ try {
   assert.ok(!html.includes('Old amount and payment date are not recorded'));
   assert.deepEqual(globalThis.__cardCustomers, originalCustomers);
   console.log('PASS: actual customer cards show the recorded amount/method/date, retain service date and legacy status, and do not invent a payment for a zero-only account');
+  const nodes = element => !React.isValidElement(element) ? [] : [element, ...React.Children.toArray(element.props.children).flatMap(nodes)];
+  const text = element => typeof element === 'string' || typeof element === 'number' ? String(element) : React.isValidElement(element) ? React.Children.toArray(element.props.children).map(text).join('') : '';
+  const recent = entries => {
+    globalThis.__cardIndex = 0; globalThis.__cardPayments = entries;
+    const tree = CRM();
+    const panel = nodes(tree).find(n => n.props['aria-label'] === 'Recent received payments');
+    assert.ok(panel);
+    return { tree, markup: renderToStaticMarkup(panel) };
+  };
+  const zeros = [payment(701,1,0,'2026-08-05T14:41:52Z'),payment(702,1,0,'2026-08-05T14:41:36Z'),payment(703,2,0,'2026-08-05T14:42:07Z')];
+  const savedRows = [...zeros, target]; const savedBefore = structuredClone(savedRows);
+  const corrected = recent(savedRows).markup;
+  assert.equal((corrected.match(/Fictional 1/g)||[]).length,1);
+  assert.ok(corrected.includes('$95.00')); assert.ok(corrected.includes('Received Aug 3, 2026, 4:17 PM EDT'));
+  assert.ok(!corrected.includes('$0.00')); assert.ok(!corrected.includes('Aug 5'));
+  assert.deepEqual(savedRows,savedBefore);
+  console.log('PASS: actual Recent Payments panel shows one received payment instead of two old zero entries plus the same customer’s real receipt; stored history stays unchanged');
+  const another = payment(704,1,25,'2026-09-03T20:17:00Z');
+  const multiple = recent([another,...zeros,target]).markup;
+  assert.equal((multiple.match(/Fictional 1/g)||[]).length,2); assert.ok(multiple.includes('$25.00')); assert.ok(multiple.includes('$95.00'));
+  assert.ok(recent(zeros).markup.includes('No received payment amounts recorded yet.'));
+  console.log('PASS: two legitimate payments from one customer remain separate and a zero-only history gets an accurate empty received-payments message');
+  const thisMonth = new Date(); thisMonth.setUTCDate(15); thisMonth.setUTCHours(12,0,0,0);
+  const monthly = recent([payment(705,1,42.37,thisMonth.toISOString()),payment(706,1,100,thisMonth.toISOString(),'pending'),payment(707,1,50,thisMonth.toISOString(),'refunded'),...zeros]);
+  const metric = nodes(monthly.tree).find(n => n.type==='div' && n.props.className?.includes('bg-gray-800/90 p-4') && text(n).includes('Paid This Month'));
+  assert.ok(metric); assert.ok(text(metric).includes('$42.37')); assert.ok(!text(metric).includes('$192.37'));
+  console.log('PASS: Paid This Month uses the same positive received-payment rule and excludes pending/refunded amounts');
 } finally {
   delete globalThis.__cardIndex;
   delete globalThis.__cardCustomers;
   delete globalThis.__cardPayments;
   await rm(directory, { recursive: true, force: true });
 }
-console.log('3 payment-summary scenarios passed. No connected writes, charges or provider access.');
+console.log('6 payment-summary scenarios passed. No connected writes, charges or provider access.');

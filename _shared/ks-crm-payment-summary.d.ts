@@ -14,4 +14,6 @@ export function loadCrmPayments(client: SupabaseClient): Promise<{
   error: { message: string } | null;
 }>;
 export function latestReceivedPayments(payments: CrmPaymentSummary[]): Map<string, CrmPaymentSummary>;
+export function isReceivedPayment(payment: CrmPaymentSummary): boolean;
 export function receivedPaymentDate(value: string): string;
+export function receivedPaymentDateTime(value: string): string;
