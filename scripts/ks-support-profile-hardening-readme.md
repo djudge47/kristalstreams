@@ -1,4 +1,4 @@
-# Support email and profile security repair — prepared for review
+# Support email and profile security repair
 
 Scope: active Supabase project `wftfxerblhlsxiijtfbo` only. This change addresses audit F01–F03 and the ticket persistence needed to make those fixes reliable. It does not operate XUI, change prices, create payments, activate subscriptions, send a test email, enable execution flags, or promote production.
 
@@ -22,7 +22,7 @@ All new functions are SECURITY INVOKER with an empty search path. Their EXECUTE 
 
 ## Release gate and order
 
-The CLI-created migration is `supabase/migrations/20261022211913_ks_support_and_profile_hardening.sql`, byte-identical to `scripts/ks-support-profile-hardening-schema.sql`. It is prepared, not applied. The Edge Function repair is prepared, not deployed. Preview frontend publishing is separate from installing the shared backend.
+The CLI-created migration is `supabase/migrations/20261022232307_ks_support_and_profile_hardening.sql`, byte-identical to `scripts/ks-support-profile-hardening-schema.sql`. It was installed on the active project on October 22, 2026. The original CLI-created local filename used timestamp 20261022211913; it was reconciled to the connected migration version 20261022232307 after installation. Edge Function `resend-email` version 6 is deployed. The repaired frontend is published to Preview; the production website has not been promoted.
 
 Before live application, verify the current function/schema and retain the existing deployed function version for rollback. Record aggregate ticket/reply/profile counts and the three OFF renewal controls. Apply the migration to the active project, then deploy **only** `resend-email` with both its index and handler, retaining `verify_jwt=false`. Required runtime variables are the existing Supabase URL/anon/service credentials and Resend key; the support destination defaults to `support@kristalstream.com`. No secret values belong in the browser or review notes. The configured support destination must match the frontend's fixed inbox. The exact production domains and existing review-branch alias are allowed; other Preview domains require a separately reviewed exact-origin addition.
 
@@ -39,3 +39,9 @@ The SQL and function belong to a coordinated release. Reverting to the insecure 
 - Targeted ESLint and Vite build; full TypeScript remains separately assessed against the 45-diagnostic baseline.
 
 Provider references: https://supabase.com/docs/guides/database/postgres/column-level-security and https://resend.com/blog/engineering-idempotency-keys .
+
+## Connected verification after installation
+
+The active project retains six profiles, 20 CRM customers, five payments, one portal link, one support ticket and two existing replies. The new dispatch ledger has zero rows. Before/after profile and saved service digests match, and all three renewal controls remain false. Customer UPDATE on tier and expiration is denied; name/notification updates remain permitted; browser ledger reads and anonymous reserve-RPC execution are denied. Security advisors show the expected 42 service-only no-policy informational entries and the same single existing leaked-password-protection warning. No live customer record was edited, and no message was sent during installation or verification.
+
+All six GitHub workflows passed for implementation commit 30a64945da0318e810d35ed21486e2ca25dc3908, including the native support concurrency checks. Preview deployment dpl_CTK28fNbed3ZKaxUujPuBcY83YYM is READY. Full TypeScript remains at 45 pre-existing diagnostics; targeted lint and Vite build pass. A real inbox-delivery check has not been performed.

@@ -13,7 +13,7 @@ for(const [uid,email,confirmed] of [[owner,'owner@example.invalid',date],[other,
 }
 const before=(await db.query('select to_jsonb(p) v from public.profiles p order by id')).rows;
 const source=await readFile(new URL('./ks-support-profile-hardening-schema.sql',import.meta.url),'utf8');
-assert.equal(source,await readFile(new URL('../supabase/migrations/20261022211913_ks_support_and_profile_hardening.sql',import.meta.url),'utf8'));
+assert.equal(source,await readFile(new URL('../supabase/migrations/20261022232307_ks_support_and_profile_hardening.sql',import.meta.url),'utf8'));
 await db.exec(source);
 assert.deepEqual((await db.query('select to_jsonb(p) v from public.profiles p order by id')).rows,before);
 assert.deepEqual((await db.query('select * from public.unrelated_service')).rows,[{id:1,enabled:false}]);
