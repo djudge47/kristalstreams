@@ -12,6 +12,8 @@ API package change. The API guide explicitly leaves package changes unverified.
 The purchase controls require acceptance of unused-time loss and an explicit
 controlled-test acknowledgment as well as the exact order/channel and credit
 confirmations. Reading a quote does not spend credits.
+The owner-authorized test has a hard server-side ceiling of **15 credits**;
+a higher catalog price prevents both consent preparation and dispatch.
 
 ## Independent authorization
 

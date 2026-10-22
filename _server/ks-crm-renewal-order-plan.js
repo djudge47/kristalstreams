@@ -49,6 +49,9 @@ export function buildOrderRenewalEvidence(input, now) {
     throw Error('changed_order_provider_policy_not_reviewed');
   }
   if (customer.package_name !== null && customer.package_name !== current.name) throw Error('saved_package_mismatch');
+  // The owner authorized this controlled test for at most 15 provider credits.
+  // Rebuilt both at review and immediately before reservation/dispatch.
+  if (creditUnits(target.paid.credits) > 15000000n) throw Error('changed_order_credit_limit_exceeded');
   const canonical = p => ({ ...p, bouquets: [...p.bouquets].sort((a,b) => a-b) });
   const facts = { purpose: orderRenewalPurpose, version: 1, kind: 'changed_order_consent', executionEnabled: false,
     customerId: customer.id, lineId: String(context.line.id), username: context.line.username,

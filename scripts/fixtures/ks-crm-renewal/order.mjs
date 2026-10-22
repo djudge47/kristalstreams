@@ -138,6 +138,9 @@ export async function runOrderChecks({admin,worker,check}){
     const oldReceipt=old.issue(input);assert.throws(()=>f.consent.identify(oldReceipt.token,{actorId:adminId,customerId:f.customer}));
   });
   await check('changed or expired quote rejects before reservation and before any provider purchase',async()=>{
+    const capped=await orderFixture(admin,worker);capped.state.packages[1].paid.credits=15.000001;
+    const cappedInput=await capped.input();
+    assert.throws(()=>buildOrderRenewalEvidence(cappedInput,capped.state.now),/credit_limit_exceeded/);
     for(const change of [f=>f.state.packages[1].paid.credits=16,f=>f.state.line.bouquetIds=[1,60],f=>f.state.balance='67',f=>f.state.now+=300001]){
       const f=await orderFixture(admin,worker);change(f);assert.equal((await f.run()).state,'review_required');assert.equal(f.state.calls,0);assert.equal((await f.summary()).state,null);
     }
