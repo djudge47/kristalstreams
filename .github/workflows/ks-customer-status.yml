@@ -13,9 +13,7 @@ on:
       - 'src/pages/admin/CRMOperationsCenter.tsx'
       - 'scripts/test-ks-roomba-customer-status.mjs'
       - 'scripts/test-ks-roomba-renewal-review.mjs'
-      - 'scripts/test-ks-crm-renewal-simulation.mjs'
-      - 'scripts/test-ks-crm-renewal-approval.mjs'
-      - 'scripts/test-ks-crm-renewal-test-approval.mjs'
+      - 'scripts/test-ks-crm-renewal-*.mjs'
       - 'scripts/fixtures/ks-crm-renewal/**'
       - 'scripts/ks-crm-renewal-simulation-readme.md'
       - 'scripts/ks-crm-renewal-screen-readme.md'
@@ -31,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:

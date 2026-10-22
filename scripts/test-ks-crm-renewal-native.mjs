@@ -8,6 +8,7 @@ import { runSequential, renewalFixture, reserve, begin, verify, complete, summar
 import { runWorkflowChecks } from './fixtures/ks-crm-renewal/workflow.mjs';
 import { installationSql, installationPreflight, installationDisabledChecks, installationStopCheck } from './fixtures/ks-crm-renewal/installation.mjs';
 import { runHttpSqlChecks } from './fixtures/ks-crm-renewal/http-sql.mjs';
+import { runLiveChecks, runLiveNativeChecks } from './fixtures/ks-crm-renewal/live.mjs';
 
 const schema=process.env.KS_RENEWAL_SCHEMA||'prototype';
 assert.ok(['prototype','installation'].includes(schema));
@@ -88,6 +89,11 @@ try{
     assert.equal(output.status,3);assert.match(output.stderr,installing?/renewal_foundation_prerequisites_required/:/disposable_crm_renewal_database_required/);
     const inspect=spawnSync(psql,['--no-psqlrc','--quiet','--no-align','--tuples-only','--set=ON_ERROR_STOP=on','--dbname',wrong.href,'--command',`select to_regclass('public.${installing?'ks_crm_':'ks_proto_'}renewal_approvals') is null`],{encoding:'utf8',timeout:10000});
     assert.equal(inspect.status,0);assert.equal(inspect.stdout.trim(),'t');
+    if(installing){
+      const live=await readFile(new URL('./fixtures/ks-crm-renewal/live.sql',import.meta.url),'utf8');
+      const rejected=spawnSync(psql,['--no-psqlrc','--quiet','--set=ON_ERROR_STOP=on','--dbname',wrong.href],{input:live,encoding:'utf8',timeout:10000});
+      assert.equal(rejected.status,3);assert.match(rejected.stderr,/disposable_live_renewal_database_required/);
+    }
   });
   report.foundationManifest=await bootstrap(admin);
   if(installing)await installationPreflight({admin,source,check});
@@ -96,7 +102,10 @@ try{
     'scripts/ks-crm-renewal-installation-schema.sql','scripts/fixtures/ks-crm-renewal/installation.mjs',
     'scripts/test-ks-crm-renewal-native.mjs','_server/ks-crm-renewal-approval.js','_server/ks-crm-renewal-plan.js',
     '_server/ks-crm-renewal-test-approval.js','_server/ks-crm-renewal-test-review.js',
-    'scripts/fixtures/ks-crm-renewal/http.mjs','scripts/fixtures/ks-crm-renewal/http-sql.mjs'])
+    'scripts/fixtures/ks-crm-renewal/http.mjs','scripts/fixtures/ks-crm-renewal/http-sql.mjs',
+    '_server/ks-crm-renewal-live-consent.js','_server/ks-crm-renewal-live-plan.js',
+    '_server/ks-crm-renewal-live-ledger.js','_server/ks-crm-renewal-live-execution.js',
+    'scripts/fixtures/ks-crm-renewal/live.sql','scripts/fixtures/ks-crm-renewal/live.mjs'])
     report.sourceHashes[name]=createHash('sha256').update(await readFile(new URL('../'+name,import.meta.url))).digest('hex');
   await a.request('set role service_role');await b.request('set role service_role');
   if(installing)await installationDisabledChecks({admin,worker:a,check});
@@ -155,7 +164,10 @@ try{
         await assert.rejects(()=>b.request(sql),/permission denied/);
     }await b.request('reset role;set role service_role');
   });
-  if(installing){await installationStopCheck({admin,worker:a,check});await runHttpSqlChecks({admin,worker:a,check});}
+  if(installing){
+    await installationStopCheck({admin,worker:a,check});await runHttpSqlChecks({admin,worker:a,check});
+    await runLiveChecks({admin,worker:a,check});await runLiveNativeChecks({admin,a,b,check,race});
+  }
   report.result='passed';console.log(`${report.tests.length} native PostgreSQL renewal checks passed. Disposable fixtures only; no provider transport or connected database.`);
 }catch(error){report.result='failed';report.error={message:error.message,code:error.code};console.error('Native renewal checks failed',report.error);process.exitCode=1;}
 finally{

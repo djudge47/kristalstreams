@@ -7,6 +7,7 @@ import { runSequential } from './fixtures/ks-crm-renewal/scenarios.mjs';
 import { runWorkflowChecks } from './fixtures/ks-crm-renewal/workflow.mjs';
 import { installationSql, installationPreflight, installationDisabledChecks, installationStopCheck } from './fixtures/ks-crm-renewal/installation.mjs';
 import { runHttpSqlChecks } from './fixtures/ks-crm-renewal/http-sql.mjs';
+import { runLiveChecks } from './fixtures/ks-crm-renewal/live.mjs';
 
 const schema=process.env.KS_RENEWAL_SCHEMA||'prototype';
 assert.ok(['prototype','installation'].includes(schema));
@@ -32,6 +33,11 @@ try{
     await db.exec('rollback');
     assert.equal((await db.query(`select to_regclass('public.${installing?'ks_crm_':'ks_proto_'}renewal_approvals') as target`)).rows[0].target,null);
   });
+  if(installing)await check('live draft refuses every database except the explicit disposable fixture database',async()=>{
+    const live=await readFile(new URL('./fixtures/ks-crm-renewal/live.sql',import.meta.url),'utf8');
+    await assert.rejects(()=>db.exec(live),/disposable_live_renewal_database_required/);await db.exec('rollback');
+    assert.equal((await db.query("select to_regclass('public.ks_crm_live_renewal_control') as target")).rows[0].target,null);
+  });
   await db.exec('create database ks_disposable_crm_renewal_test');await db.close();
   db=new PGlite({dataDir,database:'ks_disposable_crm_renewal_test'});
   await bootstrap(admin,{pglitePreflight:true});
@@ -41,7 +47,7 @@ try{
   if(installing)await installationDisabledChecks({admin,worker,check});
   await runSequential({admin,worker,check,expectedTables:installing?6:5});
   await runWorkflowChecks({admin,worker,check});
-  if(installing){await installationStopCheck({admin,worker,check});await runHttpSqlChecks({admin,worker,check});}
+  if(installing){await installationStopCheck({admin,worker,check});await runHttpSqlChecks({admin,worker,check});await runLiveChecks({admin,worker,check});}
   console.log(`${checks} isolated SQL renewal checks passed. PGlite is single-session preflight, not native contention evidence. No connected database or provider was used.`);
 }catch(error){console.error('Renewal SQL preflight failed',{message:error.message,code:error.code,where:error.where});process.exitCode=1;}
 finally{await db.close();await rm(dataDir,{recursive:true,force:true});}
