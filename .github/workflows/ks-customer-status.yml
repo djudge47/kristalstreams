@@ -16,6 +16,11 @@ on:
       - 'src/pages/admin/CRMOperationsCenter.tsx'
       - 'src/pages/admin/BulkXuiCheck.tsx'
       - '_shared/ks-crm-bulk-check.*'
+      - '_shared/ks-crm-service-sync-client.*'
+      - '_server/ks-crm-service-sync.js'
+      - 'src/pages/admin/BulkCrmServiceSync.tsx'
+      - 'scripts/test-ks-crm-service-sync*.mjs'
+      - 'scripts/ks-crm-bulk-service-sync-schema.sql'
       - 'scripts/test-ks-crm-bulk-check.mjs'
       - 'scripts/test-ks-roomba-customer-status.mjs'
       - 'scripts/test-ks-roomba-renewal-review.mjs'
@@ -49,6 +54,12 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install pinned isolated SQL test runtime
+        run: npm install --prefix "$RUNNER_TEMP/ks-sync-db" --no-save --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.3.14
+      - name: Bulk CRM sync SQL and client checks (fictional accounts only)
+        run: |
+          KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-crm-service-sync.mjs
+          node scripts/test-ks-crm-service-sync-client.mjs
       - name: Synthetic provider and CRM checks (no connected credentials)
         run: |
           node scripts/test-ks-crm-renewal-retail-pricing.mjs
@@ -74,5 +85,6 @@ jobs:
           src/pages/admin/OrderRenewalControls.tsx
           src/pages/admin/CRMOperationsCenter.tsx
           src/pages/admin/BulkXuiCheck.tsx
+          src/pages/admin/BulkCrmServiceSync.tsx
           --rule '@typescript-eslint/no-unused-expressions: ["error", {"allowShortCircuit": false,"allowTernary": false,"allowTaggedTemplates": false}]'
       - run: npm run build
