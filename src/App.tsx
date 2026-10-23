@@ -2,6 +2,7 @@ import { lazy, Suspense, type ComponentType } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import InstallPrompt from './components/InstallPrompt';
 import Layout from './components/Layout';
+import NotFound from './pages/NotFound';
 
 function lazyRetry(importFn: () => Promise<{ default: ComponentType }>) {
   return lazy(async () => {
@@ -47,6 +48,7 @@ const pages = {
   LandingPage: lazyRetry(() => import('./pages/LandingPage')),
   StandaloneLanding: lazyRetry(() => import('./pages/StandaloneLanding')),
   Privacy: lazyRetry(() => import('./pages/Privacy')),
+  Accessibility: lazyRetry(() => import('./pages/Accessibility')),
   Terms: lazyRetry(() => import('./pages/Terms')),
   RefundPolicy: lazyRetry(() => import('./pages/RefundPolicy')),
   Testimonials: lazyRetry(() => import('./pages/Testimonials')),
@@ -172,6 +174,7 @@ function App() {
             <Route path="landing" element={<P.LandingPage />} />
             <Route path="standalone-landing" element={<P.StandaloneLanding />} />
             <Route path="privacy" element={<P.Privacy />} />
+            <Route path="accessibility" element={<P.Accessibility />} />
             <Route path="terms" element={<P.Terms />} />
             <Route path="refund-policy" element={<P.RefundPolicy />} />
             <Route path="testimonials" element={<P.Testimonials />} />
@@ -237,7 +240,9 @@ function App() {
               <Route path="settings" element={<C.Settings />} />
               <Route path="support" element={<C.Support />} />
               <Route path="support/new" element={<C.NewTicket />} />
+              <Route path="*" element={<NotFound />} />
             </Route>
+            <Route path="*" element={<NotFound />} />
           </Route>
           <Route path="admin" element={<A.Layout />}>
             <Route index element={<A.Dashboard />} />
@@ -254,6 +259,7 @@ function App() {
             <Route path="crm/companies" element={<A.Companies />} />
             <Route path="crm/deals" element={<A.Deals />} />
             <Route path="crm/activities" element={<A.Activities />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </Suspense>

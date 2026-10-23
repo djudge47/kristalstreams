@@ -163,7 +163,8 @@ try {
     ts.forEachChild(node, child => visit(child, parents));
   }
   visit(source);
-  for (const url of new Set(checkedLinks)) assert.ok(matchRoutes(routePaths.map(path => ({ path })), new URL(url, 'https://fixture.invalid').pathname), `Missing App route: ${url}`);
+  // A catch-all must not make a broken help destination pass this contract.
+  for (const url of new Set(checkedLinks)) assert.ok(matchRoutes(routePaths.filter(path => !path.includes('*')).map(path => ({ path })), new URL(url, 'https://fixture.invalid').pathname), `Missing App route: ${url}`);
   assert.equal(redirects.get('/support/technical'), '/support/streaming');
   assert.equal(redirects.get('/support/device-setup'), '/support/devices');
   console.log('PASS: every rendered help link has an actual App route; both historical topic URLs redirect to working pages');

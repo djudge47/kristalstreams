@@ -110,7 +110,7 @@ try {
     ts.forEachChild(node, child => visit(child, parents));
   }
   visit(source);
-  for (const url of new Set(checkedLinks)) assert.ok(matchRoutes(paths.map(path => ({ path })), url), `Missing actual route for ${url}`);
+  for (const url of new Set(checkedLinks)) assert.ok(matchRoutes(paths.filter(path => !path.includes('*')).map(path => ({ path })), url), `Missing actual route for ${url}`);
   assert.ok(paths.includes('/player-demo'));
   console.log('PASS: every rendered internal catalog/detail/sample recovery link matches an actual App route');
   console.log('5 website-playback regression groups passed. No Auth, provider, database, entitlement, media or payment operation occurred.');
