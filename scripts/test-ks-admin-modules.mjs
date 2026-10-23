@@ -14,18 +14,19 @@ const originals = new Map();
 function replace(name, value) { originals.set(name, Object.getOwnPropertyDescriptor(globalThis, name)); Object.defineProperty(globalThis, name, { value, writable: true, configurable: true }); }
 replace('fetch', () => { throw Error('Unavailable modules must not call a service'); });
 replace('window', { innerWidth: 1280 });
-let hooks, authResult, location = '/admin/modules', redirects = [], authReads = 0;
+let hooks, authResult, authListener, location = '/admin/modules', redirects = [], authReads = 0;
 const same = (a, b) => a && b && a.length === b.length && a.every((item, i) => Object.is(item, b[i]));
 replace('__adminModuleHooks', {
   useState(initial) { const i = hooks.stateIndex++; if (!(i in hooks.states)) hooks.states[i] = typeof initial === 'function' ? initial() : initial; return [hooks.states[i], value => { hooks.states[i] = typeof value === 'function' ? value(hooks.states[i]) : value; }]; },
   useEffect(effect, deps) { const i = hooks.effectIndex++; if (!same(hooks.effects[i]?.deps, deps)) { const old = hooks.effects[i]; hooks.effects[i] = { deps }; hooks.pending.push(() => { old?.cleanup?.(); hooks.effects[i].cleanup = effect(); }); } },
 });
 replace('__adminModuleAuth', { auth: {
+  onAuthStateChange(callback) { authListener = callback; return { data: { subscription: { unsubscribe() { authListener = null; } } } }; },
   getUser() { authReads++; return authResult(); }, signOut() { throw Error('Rendering module navigation must not sign out an account'); },
 }, from() { throw Error('Module navigation must not read or write a table'); }, functions: { invoke() { throw Error('Module navigation must not invoke provider services'); } } });
 const navigate = (...args) => redirects.push(args);
 replace('__adminModuleRouter', { useLocation: () => ({ pathname: location, search: '', hash: '' }), useNavigate: () => navigate });
-const hooksSource = `import React from ${JSON.stringify(import.meta.resolve('react'))};export default React;export const {useState,useEffect}=globalThis.__adminModuleHooks;`;
+const hooksSource = `import React from ${JSON.stringify(import.meta.resolve('react'))};export default React;export const {useState,useEffect}=globalThis.__adminModuleHooks;export const useCallback=fn=>fn;export const memo=component=>component;`;
 let number = 0;
 async function compile(entry, layout = false) {
   const built = await build({ entryPoints: [entry], bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', packages: 'external', plugins: [{ name: 'admin-modules-offline', setup(b) {
@@ -137,7 +138,34 @@ try {
   assert.match(dashboard, /import AdminShortcuts from ['"]\.\.\/components\/AdminShortcuts['"]/);
   assert.doesNotMatch(shortcuts, /<button|onclick=/i); assert.match(shortcuts, /aria-label="Admin shortcuts"/);
   console.log('PASS: actual dashboard shortcuts expose the maintained workspace and clearly labeled availability destination through real links, preserving their admin-only rendering condition');
-  console.log('4 admin-module regression groups passed. All identities and Auth responses were fictional; no real customer, database write, provider, mail or payment operation occurred.');
+  window.addEventListener = () => {}; window.removeEventListener = () => {}; window.scrollY = 0;
+  const Header = (await compile('src/components/Header.tsx', true)).default;
+  const owner = { id: 'fictional-admin', email: 'djudge47@gmail.com', email_confirmed_at: '2026-01-01T00:00:00Z', is_anonymous: false };
+  fresh(); authResult = async () => ({ data: { user: owner }, error: null }); renderLayout(Header); await drain(); tree = renderLayout(Header);
+  nodes(tree).find(node => node.props['aria-label'] === 'Open navigation').props.onClick(); tree = renderLayout(Header);
+  const mobile = nodes(tree).find(node => node.props.id === 'mobile-navigation');
+  const mobileLinks = nodes(mobile).filter(node => node.props.to);
+  assert.deepEqual(mobileLinks.slice(0, 2).map(node => node.props.to), ['/admin', '/admin/crm']);
+  for (const link of mobileLinks.slice(0, 2)) { assert.match(link.props.className, /min-h-12/); const route = leaf(link.props.to); assert.ok(route.handle.tag === 'A.Layout' || route.handle.layouts.includes('A.Layout')); }
+  mobileLinks[1].props.onClick(); tree = renderLayout(Header); assert.ok(!nodes(tree).some(node => node.props.id === 'mobile-navigation'));
+  nodes(tree).find(node => node.props['aria-label'] === 'Account menu').props.onClick(); tree = renderLayout(Header);
+  const account = nodes(tree).find(node => node.props.id === 'account-navigation');
+  assert.deepEqual(nodes(account).filter(node => node.props.to).slice(0, 2).map(node => node.props.to), ['/admin', '/admin/crm']);
+  nodes(account).find(node => node.props.to === '/admin').props.onClick(); tree = renderLayout(Header); assert.ok(!nodes(tree).some(node => node.props.id === 'account-navigation'));
+  for (const identity of [null, { ...owner, email: 'customer@example.invalid' }, { ...owner, email_confirmed_at: null }, { ...owner, is_anonymous: true }]) {
+    fresh(); authResult = async () => ({ data: { user: identity }, error: null }); renderLayout(Header); await drain(); tree = renderLayout(Header);
+    nodes(tree).find(node => node.props['aria-label'] === 'Open navigation').props.onClick(); tree = renderLayout(Header);
+    const menu = nodes(tree).find(node => node.props.id === 'mobile-navigation');
+    assert.ok(!nodes(menu).some(node => node.props.to?.startsWith('/admin')));
+    const profileButton = nodes(tree).find(node => node.props['aria-label'] === 'Account menu');
+    if (profileButton) { profileButton.props.onClick(); tree = renderLayout(Header); assert.ok(!nodes(tree).some(node => node.props.to?.startsWith('/admin'))); }
+  }
+  fresh(); authResult = async () => ({ data: { user: owner }, error: null }); renderLayout(Header); await drain(); tree = renderLayout(Header);
+  nodes(tree).find(node => node.props['aria-label'] === 'Open navigation').props.onClick(); renderLayout(Header);
+  authListener('TOKEN_REFRESHED', { user: { ...owner, email: 'customer@example.invalid' } }); tree = renderLayout(Header);
+  assert.ok(!nodes(tree).some(node => node.props.to?.startsWith('/admin')));
+  console.log('PASS: actual phone menu and desktop account menu expose dashboard/customers first only to the confirmed administrator; selections close menus and ordinary/unconfirmed/anonymous/signed-out or changed accounts cannot see admin links');
+  console.log('5 admin/navigation regression groups passed. All identities and Auth responses were fictional; no real customer, database write, provider, mail or payment operation occurred.');
 } finally {
   unmount();
   for (const [name, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; }

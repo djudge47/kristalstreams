@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo, useCallback } from 'react';
-import { Menu, X, User, Home, ChevronDown, Facebook, Twitter, Instagram, Youtube, Smartphone, Trophy } from 'lucide-react';
+import { Menu, X, User, Home, ChevronDown, Facebook, Twitter, Instagram, Youtube, Smartphone, Trophy, LayoutDashboard, Users } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -10,6 +10,8 @@ const Header: React.FC = memo(() => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const navigate = useNavigate();
+  const isAdmin = Boolean(user && !user.is_anonymous && user.email_confirmed_at
+    && user.email?.trim().toLowerCase() === 'djudge47@gmail.com');
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -81,13 +83,18 @@ const Header: React.FC = memo(() => {
 
             {user ? (
               <div className="relative">
-                <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors duration-200">
+                <button aria-label="Account menu" aria-expanded={showProfileMenu} aria-controls="account-navigation" onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors duration-200">
                   <User size={20} />
                   <ChevronDown size={16} className={`transform transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
                 </button>
 
                 {showProfileMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-dark-100 rounded-lg shadow-lg border border-gray-800 py-1 z-50">
+                  <div id="account-navigation" className="absolute right-0 mt-2 w-56 bg-dark-100 rounded-lg shadow-lg border border-gray-800 py-1 z-50">
+                    {isAdmin && <>
+                      <Link to="/admin" className="flex min-h-12 items-center gap-2 px-4 py-3 font-semibold text-red-300 hover:bg-dark-200 hover:text-white" onClick={() => setShowProfileMenu(false)}><LayoutDashboard size={18} aria-hidden="true" />Admin Dashboard</Link>
+                      <Link to="/admin/crm" className="flex min-h-12 items-center gap-2 px-4 py-3 font-semibold text-red-300 hover:bg-dark-200 hover:text-white" onClick={() => setShowProfileMenu(false)}><Users size={18} aria-hidden="true" />Customer Workspace</Link>
+                      <div className="border-t border-gray-800 my-1" />
+                    </>}
                     <Link to="/dashboard" className="block px-4 py-2 text-gray-300 hover:bg-dark-200 hover:text-white transition-colors duration-200" onClick={() => setShowProfileMenu(false)}>Dashboard</Link>
                     <Link to="/client/account" className="block px-4 py-2 text-gray-300 hover:bg-dark-200 hover:text-white transition-colors duration-200" onClick={() => setShowProfileMenu(false)}>Account</Link>
                     <Link to="/client/subscription" className="block px-4 py-2 text-gray-300 hover:bg-dark-200 hover:text-white transition-colors duration-200" onClick={() => setShowProfileMenu(false)}>Subscription</Link>
@@ -119,6 +126,11 @@ const Header: React.FC = memo(() => {
         <div id="mobile-navigation" className="absolute top-full left-0 right-0 lg:hidden bg-dark-200 border-b border-gray-700 shadow-2xl overflow-y-auto overscroll-contain" style={{ maxHeight: "calc(100dvh - 64px)" }}>
           <div className="container mx-auto px-4 py-4">
             <nav aria-label="Mobile navigation" className="flex flex-col space-y-2">
+              {isAdmin && <div className="mb-2 space-y-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
+                <p className="px-1 text-xs font-semibold uppercase tracking-wide text-red-300">Manage Kristal Streams</p>
+                <Link to="/admin" className="flex min-h-12 items-center gap-3 rounded-xl border border-gray-700 bg-dark-100 px-4 py-3 font-semibold text-white hover:border-primary" onClick={closeMenu}><LayoutDashboard size={20} aria-hidden="true" />Admin Dashboard</Link>
+                <Link to="/admin/crm" className="flex min-h-12 items-center gap-3 rounded-xl border border-gray-700 bg-dark-100 px-4 py-3 font-semibold text-white hover:border-primary" onClick={closeMenu}><Users size={20} aria-hidden="true" />Customer Workspace</Link>
+              </div>}
               <Link to="/" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100 flex items-center" onClick={closeMenu}><Home size={18} className="mr-2" />Home</Link>
               <Link to="/ppv" className="text-red-300 hover:text-white font-semibold transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center" onClick={closeMenu}><Trophy size={18} className="mr-2" />Sports &amp; PPV</Link>
               <Link to="/pricing" className="text-gray-300 hover:text-white font-medium transition-colors duration-200 min-h-12 px-4 py-3 rounded-xl hover:bg-dark-100" onClick={closeMenu}>Pricing</Link>
