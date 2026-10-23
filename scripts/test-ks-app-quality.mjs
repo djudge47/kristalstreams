@@ -52,6 +52,7 @@ async function compile(entry, fixtures = {}) {
   const result = await build({
     entryPoints: [entry], bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic',
     external: ['react/jsx-runtime', 'lucide-react', 'zustand'],
+    define: { 'import.meta.env': JSON.stringify({ DEV: false, VITE_SUPABASE_URL: 'https://fixture.invalid' }) },
     plugins: [{ name: 'offline-fixtures', setup(b) {
       b.onResolve({ filter: /^file:/ }, a => ({ path: a.path, external: true }));
       b.onResolve({ filter: /.*/ }, a => Object.hasOwn(fixtures, a.path) ? { path: a.path, namespace: 'fixture' } : undefined);
@@ -74,7 +75,7 @@ try {
   replaceGlobal('__ksQualityDB', {
     from(table) {
       const q = { table, filters: [] };
-      for (const name of ['select', 'order', 'returns', 'single']) q[name] = () => q;
+      for (const name of ['select', 'order', 'returns', 'single', 'limit']) q[name] = () => q;
       q.eq = (...args) => { q.filters.push(args); return q; };
       // Deliberately PromiseLike, without Promise.catch or Promise.finally.
       q.then = (resolve, reject) => { queries.push(q); return Promise.resolve().then(() => execute(q)).then(resolve, reject); };
@@ -83,17 +84,17 @@ try {
     rpc(name) { return { then: (resolve, reject) => Promise.resolve().then(() => execute({ rpc: name })).then(resolve, reject) }; },
   });
   const api = await compile('src/lib/api.ts', { './supabase': 'export const supabase=globalThis.__ksQualityDB;' });
-  const article = { id: 'fictional-article', title: 'Fictional help', content: 'Local fixture' };
-  execute = q => { assert.equal(q.table, 'support_articles'); return { data: article, error: null }; };
+  const links = [{ id: 'fixture-link', title: 'Support', url: '/support', order: 1 }];
+  execute = q => { assert.equal(q.table, 'footer_links'); return { data: links, error: null }; };
   const originalNow = Date.now;
   let now = originalNow();
   Date.now = () => now;
   try {
-    assert.deepEqual(await api.getSupportArticle('fictional-help'), article);
-    assert.deepEqual(await api.getSupportArticle('fictional-help'), article);
-    assert.equal(queries.length, 1, 'A matching cached article should not issue a second request');
+    assert.deepEqual(await api.getFooterLinks(), links);
+    assert.deepEqual(await api.getFooterLinks(), links);
+    assert.equal(queries.length, 1, 'A matching cached response should not issue a second request');
     now += 5 * 60 * 1000 + 1;
-    await api.getSupportArticle('fictional-help');
+    await api.getFooterLinks();
     assert.equal(queries.length, 2, 'Expired cache must refresh through the thenable');
   } finally { Date.now = originalNow; }
   const originalError = console.error;
@@ -103,38 +104,29 @@ try {
   try {
     const problem = new Error('Fictional database failure');
     execute = () => ({ data: null, error: problem });
-    await assert.rejects(api.getSupportArticle('failed-article'), error => error === problem);
+    await assert.rejects(api.getDashboardData('fictional-owner'), error => error === problem);
     execute = () => { throw new TypeError('Failed to fetch'); };
-    assert.equal(await api.getSupportArticle('offline-article'), null);
-    assert.deepEqual(await api.getSetupGuides(), []);
-    execute = () => ({ data: article, error: null });
-    assert.deepEqual(await api.getSupportArticle('failed-article'), article, 'An error must not poison the cache');
+    assert.deepEqual(await api.getDashboardData('fictional-owner'), { profile: null, tickets: null });
+    execute = q => ({ data: q.table === 'profiles' ? { id: 'fictional-owner' } : [], error: null });
+    assert.deepEqual(await api.getDashboardData('fictional-owner'), { profile: { id: 'fictional-owner' }, tickets: [] });
   } finally { console.error = originalError; console.warn = originalWarn; }
   console.log('PASS: real query helpers accept thenables, refresh expired cache and preserve database/network failure outcomes');
 
-  for (const [entry, getter, metric] of [
-    ['src/pages/support/Article.tsx', 'getSupportArticle', 'incrementArticleViews'],
-    ['src/pages/support/Guide.tsx', 'getSetupGuide', 'incrementGuideViews'],
+  for (const [entry, heading] of [
+    ['src/pages/support/Article.tsx', 'Article not found'],
+    ['src/pages/support/Guide.tsx', 'Guide not found'],
   ]) {
-    let metricCalls = 0;
-    replaceGlobal('__ksQualityMetric', () => metricCalls++);
     const Component = (await compile(entry, {
       react: hookSource,
-      'react-router-dom': 'export const useParams=()=>({slug:"fictional"});',
-      '../../lib/api': `export const ${getter}=async()=>null; export const ${metric}=()=>globalThis.__ksQualityMetric(); export const markArticleHelpful=()=>{};`,
+      'react-router-dom': 'export const useParams=()=>({slug:"fictional-unknown"}); export const Link=()=>null;',
+      '../../lib/supabase': 'throw Error("Public help must not read connected data");',
     })).default;
     resetHooks();
-    const savedError = console.error;
-    console.error = () => {};
-    try {
-      render(Component);
-      await new Promise(resolve => setImmediate(resolve));
-      const tree = render(Component);
-      assert.ok(nodes(tree).some(e => e.type === 'p' && e.props.children === (getter === 'getSupportArticle' ? 'Failed to load article' : 'Failed to load guide')));
-      assert.equal(metricCalls, 0, 'Unavailable content must never increment a view counter');
-    } finally { console.error = savedError; unmount(); }
+    const tree = render(Component);
+    assert.ok(nodes(tree).some(e => e.type === 'h1' && e.props.children === heading));
+    unmount();
   }
-  console.log('PASS: actual article and guide screens show an error and skip metrics when their data is unavailable');
+  console.log('PASS: actual article and guide screens provide safe not-found navigation without querying missing sources or counters');
 
   const checkoutAdapter = (await compile('api/confirm-checkout.ts', {
     '../_server/ks-payments.js': `

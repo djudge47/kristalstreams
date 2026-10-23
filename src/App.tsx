@@ -188,6 +188,7 @@ function App() {
             <Route path="support/getting-started" element={<S.GettingStarted />} />
             <Route path="support/billing" element={<S.Billing />} />
             <Route path="support/streaming" element={<S.StreamingHelp />} />
+            <Route path="support/technical" element={<Navigate to="/support/streaming" replace />} />
             <Route path="support/faq" element={<S.FAQ />} />
             <Route path="support/buffering" element={<S.Buffering />} />
             <Route path="support/login-help" element={<S.LoginHelp />} />
@@ -198,6 +199,7 @@ function App() {
             <Route path="support/computer-setup" element={<S.ComputerSetup />} />
             <Route path="support/console-setup" element={<S.ConsoleSetup />} />
             <Route path="support/devices" element={<S.DeviceSetup />} />
+            <Route path="support/device-setup" element={<Navigate to="/support/devices" replace />} />
             <Route path="support/requirements" element={<S.Requirements />} />
             <Route path="support/browsers" element={<S.Browsers />} />
             <Route path="support/apps" element={<S.Apps />} />
