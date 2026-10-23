@@ -124,6 +124,19 @@ try {
   }
   console.log('PASS: four status pages identify unavailable evidence, offer support and omit simulated uptime, incident and maintenance claims');
 
+  for (const file of ['ChatHistory', 'AIHelp', 'AIFaq']) {
+    const Component = (await compile(`src/pages/support/${file}.tsx`)).default;
+    const html = render(Component);
+    assert.doesNotMatch(html, /stored locally in your browser|stored for reference|trained on Kristal Streams|available around the clock|AI can diagnose/);
+    assert.ok(hrefs(html).includes('/client/support/new'));
+    if (file === 'ChatHistory') {
+      assert.match(html, /Saved chat history is unavailable/);
+      assert.match(html, /does not undo a submitted request/);
+    }
+    checkedLinks.push(...hrefs(html));
+  }
+  console.log('PASS: AI help/history pages describe temporary conversation handling and support handoff without false archive/training claims');
+
   // Extract actual JSX route paths rather than inventing a duplicate route fixture.
   const source = ts.createSourceFile('App.tsx', await readFile('src/App.tsx', 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const routePaths = [], redirects = new Map();
@@ -154,7 +167,7 @@ try {
   assert.equal(redirects.get('/support/technical'), '/support/streaming');
   assert.equal(redirects.get('/support/device-setup'), '/support/devices');
   console.log('PASS: every rendered help link has an actual App route; both historical topic URLs redirect to working pages');
-  console.log('5 public-help regression scenarios passed. No database, analytics or external service was called.');
+  console.log('6 public-help regression scenarios passed. No database, analytics or external service was called.');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.__ksHelpSlug;

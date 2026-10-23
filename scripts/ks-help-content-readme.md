@@ -24,3 +24,9 @@ The System Status, Status History, Maintenance Schedule and Known Issues pages n
 The matching 99.9% cards in Demo Reel and Testimonials become links to service information; Reselling no longer promises that unsupported guarantee. Other marketing metrics and capabilities have not been established by this status repair.
 
 The public-help suite now has five groups, including actual rendering of all four status pages, unknown-state labels, support navigation and absence of the former claims. Its existing route-contract check also covers status-page links. The same no-database/no-network boundary applies. Run the commands above; CI runs the expanded suite automatically.
+
+## Temporary chat disclosures
+
+The history, AI-capabilities and AI-FAQ pages describe temporary on-page conversation handling, a support-ticket handoff and the limits of automated advice. They no longer claim a saved archive, local transcript restoration, documentation training, confirmed diagnostics or around-the-clock availability. Clearing the display does not cancel or delete an already submitted remote request.
+
+The expanded suite has six groups: it renders all three pages, checks their disclosures and absence of old claims, and includes their links in the actual App-route contract. Interactive request and account-isolation behavior is covered separately by `scripts/test-ks-general-chat.mjs`; see `scripts/ks-general-chat-readme.md`.
