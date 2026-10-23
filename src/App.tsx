@@ -249,6 +249,7 @@ function App() {
             <Route path="demo-reel" element={<A.UnavailableModule />} />
             <Route path="programs" element={<A.UnavailableModule />} />
             <Route path="crm" element={<A.CRM />} />
+            <Route path="crm/customer/:customerId" element={<A.CRM />} />
             <Route path="crm/contacts" element={<A.UnavailableModule />} />
             <Route path="crm/companies" element={<A.UnavailableModule />} />
             <Route path="crm/deals" element={<A.UnavailableModule />} />

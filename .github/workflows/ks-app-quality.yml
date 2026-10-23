@@ -43,6 +43,7 @@ jobs:
           node scripts/test-ks-payments.mjs
           node scripts/test-ks-support-client.mjs
           node scripts/test-ks-support-ui.mjs
+          node scripts/test-ks-crm-directory.mjs
           node scripts/test-ks-crm-payment-summary.mjs
           node scripts/test-ks-crm-overview-payments.mjs
           TZ=America/New_York node scripts/test-ks-customer-crm-ui.mjs

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 import React from 'react';
+import { StaticRouter } from 'react-router-dom/server.js';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createClient } from '@supabase/supabase-js';
 import { isReceivedPayment, latestReceivedPayments, loadCrmPayments, receivedPaymentDate, receivedPaymentDateTime } from '../_shared/ks-crm-payment-summary.js';
@@ -78,7 +79,7 @@ try {
       b.onResolve({ filter: /\/lib\/supabase$/ }, () => ({ path: 'auth', namespace: 'fixture' }));
       b.onResolve({ filter: /^\.\/(RoombaCrmLink|RoombaCustomerStatus|BulkXuiCheck|BulkCrmServiceSync|PreviewPaidOrders|RenewalPaymentForm|PaidRenewalReview|CustomerPortalLink)$/ }, () => ({ path: 'child', namespace: 'fixture' }));
       b.onLoad({ filter: /.*/, namespace: 'fixture' }, a => ({ loader: 'js', contents: a.path === 'hooks'
-        ? `import React from ${JSON.stringify(reactPath)};export default React;export const useEffect=()=>{};export const useMemo=f=>f();export const useState=initial=>{const i=globalThis.__cardIndex++;return[i===0?globalThis.__cardCustomers:i===1?globalThis.__cardPayments:initial===true?false:initial,()=>{}];};`
+        ? `import React from ${JSON.stringify(reactPath)};export default React;export const useRef=initial=>({current:initial});export const useEffect=()=>{};export const useMemo=f=>f();export const useState=initial=>{const i=globalThis.__cardIndex++;return[i===0?globalThis.__cardCustomers:i===1?globalThis.__cardPayments:initial===true?false:initial,()=>{}];};`
         : a.path === 'auth' ? `export const supabase=new Proxy({}, {get(){throw Error('Connected reads and writes forbidden');}});` : 'export default ()=>null;' }));
     } }],
   });
@@ -94,7 +95,7 @@ try {
     expiration_at: '2027-08-04T12:00:00Z', renewal_at: null,
   }));
   const originalCustomers = structuredClone(globalThis.__cardCustomers);
-  const html = renderToStaticMarkup(React.createElement(CRM));
+  const html = renderToStaticMarkup(React.createElement(StaticRouter, {location:"/admin/crm"}, React.createElement(CRM)));
   assert.equal((html.match(/aria-label="Last recorded payment"/g) || []).length, 1);
   assert.ok(html.includes('$95.00 · PayPal'));
   assert.ok(html.includes('Received <time dateTime="2026-08-03T20:17:00Z">Aug 3, 2026</time>'));
@@ -108,10 +109,14 @@ try {
   const text = element => typeof element === 'string' || typeof element === 'number' ? String(element) : React.isValidElement(element) ? React.Children.toArray(element.props.children).map(text).join('') : '';
   const recent = entries => {
     globalThis.__cardIndex = 0; globalThis.__cardPayments = entries;
-    const tree = CRM();
-    const panel = nodes(tree).find(n => n.props['aria-label'] === 'Recent received payments');
-    assert.ok(panel);
-    return { tree, markup: renderToStaticMarkup(panel) };
+    let tree;
+    const Capture = () => {
+      tree = CRM();
+      const panel = nodes(tree).find(n => n.props['aria-label'] === 'Recent received payments');
+      assert.ok(panel); return panel;
+    };
+    const markup = renderToStaticMarkup(React.createElement(StaticRouter, {location:'/admin/crm'}, React.createElement(Capture)));
+    return { tree, markup };
   };
   const zeros = [payment(701,1,0,'2026-08-05T14:41:52Z'),payment(702,1,0,'2026-08-05T14:41:36Z'),payment(703,2,0,'2026-08-05T14:42:07Z')];
   const savedRows = [...zeros, target]; const savedBefore = structuredClone(savedRows);

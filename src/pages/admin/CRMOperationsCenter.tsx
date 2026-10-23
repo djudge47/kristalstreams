@@ -1,9 +1,14 @@
 import { paymentMethodLabel } from '../../../_shared/ks-crm-renewal-payment.js';
 import { isReceivedPayment, latestReceivedPayments, loadCrmPayments, receivedPaymentDate, receivedPaymentDateTime, type CrmPaymentSummary } from '../../../_shared/ks-crm-payment-summary.js';
 import { getCustomerRetailPrice } from '../../../_shared/ks-retail-pricing.js';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import CrmCustomerDirectory, { CustomerPager } from '../../components/CrmCustomerDirectory';
+import { customerListState, customerPage, loadCrmCustomers, type CustomerFilter, type CustomerSort } from '../../lib/crm-directory';
 import {
   Activity,
+  ArrowLeft,
+  ChevronDown,
   AlertTriangle,
   Bell,
   CalendarDays,
@@ -96,7 +101,7 @@ type Reminder = {
   sent_at?: string | null;
 };
 
-type Filter = 'all' | 'active' | 'due3' | 'due7' | 'due30' | 'unpaid' | 'overdue';
+type Filter = CustomerFilter;
 
 type FormState = {
   external_id: string;
@@ -167,6 +172,10 @@ const addMonthsSafe = (start: Date, months: number) => {
 };
 
 const CRMOperationsCenter: React.FC = () => {
+  const { customerId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const remembered = customerListState(location.state?.crmList);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [payments, setPayments] = useState<CrmPaymentSummary[]>([]);
   const [activities, setActivities] = useState<ActivityRow[]>([]);
@@ -174,8 +183,8 @@ const CRMOperationsCenter: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState(remembered.search);
+  const [filter, setFilter] = useState<Filter>(remembered.filter);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
@@ -190,18 +199,45 @@ const CRMOperationsCenter: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [paymentReview, setPaymentReview] = useState<{ customer: Customer; receipt: RenewalPaymentReceipt } | null>(null);
   const [portalCustomer, setPortalCustomer] = useState<Customer | null>(null);
+  const [mobile, setMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 1024);
+  const [page, setPage] = useState(remembered.page);
+  const [sort, setSort] = useState<CustomerSort>(remembered.sort);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [customerReadError, setCustomerReadError] = useState<string | null>(null);
+  const refreshGeneration = useRef(0);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const media = window.matchMedia('(max-width: 1023px)');
+    const update = () => setMobile(media.matches);
+    update(); media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    setVisiblePasswords({});
+    setShowForm(false); setEditing(null); setPaymentCustomer(null); setPaymentReview(null);
+    setExtendCustomer(null); setHistoryCustomer(null); setPortalCustomer(null);
+    if (typeof document !== 'undefined') document.getElementById('admin-main-content')?.scrollTo({ top: 0 });
+  }, [customerId]);
+
 
   const refresh = async () => {
+    if (!mounted.current) return;
+    const generation = ++refreshGeneration.current;
     setLoading(true);
     setError(null);
     const [c, p, a, r] = await Promise.all([
-      supabase.from('iptv_customers').select('*').order('renewal_at', { ascending: true, nullsFirst: false }),
+      loadCrmCustomers<Customer>(supabase),
       loadCrmPayments(supabase),
       supabase.from('iptv_customer_activity').select('*').order('created_at', { ascending: false }).limit(30),
       supabase.from('iptv_reminder_queue').select('*').eq('status', 'pending').order('scheduled_for', { ascending: true }).limit(100),
     ]);
+    if (!mounted.current || generation !== refreshGeneration.current) return;
     const e = c.error || p.error || a.error || r.error;
     if (e) setError(e.message);
+    setCustomerReadError(c.error?.message || null);
     setCustomers((c.data || []) as Customer[]);
     setPayments(p.data || []);
     setActivities((a.data || []) as ActivityRow[]);
@@ -209,7 +245,7 @@ const CRMOperationsCenter: React.FC = () => {
     setLoading(false);
   };
 
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { mounted.current = true; void refresh(); return () => { mounted.current = false; }; }, []);
 
   const customerMap = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
   const receivedPayments = useMemo(() => latestReceivedPayments(payments), [payments]);
@@ -272,6 +308,20 @@ const CRMOperationsCenter: React.FC = () => {
       if (filter === 'overdue') return isOverdue(c);
       return true;
     }), [searchMatches, filter]);
+
+  const ordered = useMemo(() => [...filtered].sort((a, b) => {
+    const tie = a.id.localeCompare(b.id);
+    if (sort === 'panel') return a.external_id - b.external_id || tie;
+    if (sort === 'renewal') return (ts(billingRenewalAt(a)) || Number.MAX_SAFE_INTEGER) - (ts(billingRenewalAt(b)) || Number.MAX_SAFE_INTEGER) || tie;
+    return (a.customer_name || a.username).localeCompare(b.customer_name || b.username, undefined, { sensitivity: 'base', numeric: true }) || tie;
+  }), [filtered, sort]);
+  const paged = customerPage(ordered, page, mobile ? 5 : 6);
+  const listState = { search, filter, sort, page: paged.page };
+  const selectedCustomer = customerId ? customerMap.get(customerId) : undefined;
+
+  useEffect(() => {
+    if (!customerId && !loading) navigate(location.pathname, { replace: true, state: { crmList: { search, filter, sort, page: paged.page } } });
+  }, [customerId, loading, search, filter, sort, paged.page, navigate, location.pathname]);
 
   const attention = useMemo(() => customers
     .filter((c) => isOverdue(c) || dueWithin(c, 7) || isUnpaidCustomer(c))
@@ -446,13 +496,40 @@ const CRMOperationsCenter: React.FC = () => {
 
   const filterLabels: Record<Filter, string> = { all: 'All', active: 'Active', due3: 'Due 3d', due7: 'Due 7d', due30: 'Due 30d', unpaid: 'Unpaid', overdue: 'Overdue' };
 
+  const customerPanel = (c: Customer) => {
+    const badge = renewalBadge(c); const retail = getCustomerRetailPrice(c); const receivedPayment = receivedPayments.get(c.id);
+    return (
+              <article key={c.id} className="overflow-hidden rounded-2xl border border-gray-700 bg-gray-900/80">
+                <div className="flex items-start justify-between gap-3 border-b border-gray-800 bg-gray-800/70 p-4"><div className="min-w-0"><h2 className="truncate font-semibold text-white"><Link to={`/admin/crm/customer/${c.id}`} state={{ crmList: listState }} className="underline-offset-4 hover:underline">{c.customer_name || c.username}</Link></h2><p className="mt-1 text-xs text-gray-500">Panel ID {c.external_id} · {c.username}</p></div><div className="flex flex-col items-end gap-1.5"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${displayedAccountStatus(c) === 'active' ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'}`}>{displayedAccountStatus(c)}</span><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${badge.cls}`}>{badge.label}</span></div></div>
+                <div className="grid grid-cols-2 gap-3 p-4 text-sm sm:grid-cols-3"><div><p className="text-xs text-gray-500">Package</p><p className="mt-1 text-gray-200">{c.package_name || 'Not assigned'}</p></div><div><p className="text-xs text-gray-500">{isPersonalCustomer(c) ? 'Customer charge' : isLegacyPaidCustomer(c) ? 'Next renewal price' : retail ? 'Plan price' : 'Monthly Price'}</p><p className="mt-1 text-gray-200">{isPersonalCustomer(c) ? 'No customer charge' : isPreviewPaidCustomer(c) ? 'Excluded from revenue' : isTrialCustomer(c) ? 'No charge' : retail ? `${money(retail.totalCents / 100)} / ${retail.months} month${retail.months === 1 ? '' : 's'}` : Number(c.monthly_price) > 0 ? money(c.monthly_price) : 'Not set'}</p>{retail && retail.months > 1 && <p className="mt-1 text-xs text-gray-400">{money(retail.monthlyCents / 100)}/month equivalent</p>}</div><div><p className="text-xs text-gray-500">Customer payment</p><p className={`mt-1 font-semibold ${isPersonalCustomer(c) ? 'text-cyan-300' : ['paid', 'legacy_paid'].includes(c.payment_status || '') ? 'text-green-300' : 'text-yellow-300'}`}>{customerPaymentLabel(c)}</p></div><div><p className="text-xs text-gray-500">{isPreviewPaidCustomer(c) ? 'Provider expires' : isTrialCustomer(c) ? 'Trial expires' : 'Renewal'}</p><p className="mt-1 text-gray-200">{isBillingExcluded(c) ? dateTime(c.expiration_at) : dateOnly(billingRenewalAt(c))}</p></div><div><p className="text-xs text-gray-500">Connection limit</p><p className="mt-1 text-gray-200">{c.connections_allowed} allowed</p><p className="mt-1 text-xs text-gray-400">Current streams unavailable</p></div><div><p className="text-xs text-gray-500">Device</p><p className="mt-1 truncate text-gray-200">{c.device_name || c.device_type || 'Not recorded'}</p></div></div>
+                {receivedPayment && <div aria-label="Last recorded payment" className="border-t border-gray-800 bg-green-500/5 px-4 py-3"><p className="text-xs text-gray-400">Last recorded payment</p><p className="mt-1 text-sm font-semibold text-green-300">{money(Number(receivedPayment.amount))} · {paymentMethodLabel(receivedPayment.payment_method)}</p><p className="mt-1 text-xs text-gray-300">Received <time dateTime={receivedPayment.paid_at}>{receivedPaymentDate(receivedPayment.paid_at)}</time></p></div>}
+                {isLegacyPaidCustomer(c) && <p className="border-t border-gray-800 px-4 py-3 text-xs leading-5 text-cyan-200">Old-pricing payment status was confirmed by owner using XUI activation. See History for recorded payment details. New website pricing applies at the next renewal.</p>}
+                <div className="border-t border-gray-800 px-4 py-3"><p className="text-xs text-gray-500">IPTV password</p><div className="mt-1 flex items-center gap-2"><code className="min-w-0 flex-1 truncate rounded-lg bg-gray-950 px-2.5 py-1.5 text-xs text-gray-300">{visiblePasswords[c.id] ? c.iptv_password || 'Not set' : '••••••••••'}</code><button type="button" aria-label={visiblePasswords[c.id] ? "Hide IPTV password" : "Show IPTV password"} onClick={() => setVisiblePasswords((v) => ({ ...v, [c.id]: !v[c.id] }))} className="min-h-11 min-w-11 rounded-lg p-2 text-gray-400">{visiblePasswords[c.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
+                {pendingIds.has(c.id) && <div className="border-t border-gray-800 bg-yellow-500/5 px-4 py-2 text-xs font-medium text-yellow-300"><Bell className="mr-1.5 inline h-3.5 w-3.5" />Renewal follow-up queued</div>}
+                <div className="grid grid-cols-2 gap-2 border-t border-gray-800 p-3 sm:grid-cols-3"><button disabled={isPreviewPaidCustomer(c)} onClick={() => openEdit(c)} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-200"><Edit3 className="mr-1.5 h-3.5 w-3.5" />Edit</button><button disabled={isBillingExcluded(c)} onClick={() => void recordPayment(c)} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-green-500/10 px-3 py-2 text-xs font-semibold text-green-300 disabled:opacity-50"><CreditCard className="mr-1.5 h-3.5 w-3.5" />Record renewal payment</button><button disabled={isBillingExcluded(c)} title={isTrialCustomer(c) ? 'Trial expiration is recorded from Roomba.' : undefined} onClick={() => setExtendCustomer(c)} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"><CalendarDays className="mr-1.5 h-3.5 w-3.5" />Update Dates (CRM)</button><button disabled={busy === `follow-${c.id}`} onClick={() => void queueFollowup(c)} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-yellow-500/10 px-3 py-2 text-xs font-semibold text-yellow-300 disabled:opacity-50"><Bell className="mr-1.5 h-3.5 w-3.5" />Follow Up</button><button onClick={() => void openHistory(c)} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-purple-500/10 px-3 py-2 text-xs font-semibold text-purple-300"><History className="mr-1.5 h-3.5 w-3.5" />History</button><button disabled={!c.xui_line_url} onClick={() => c.xui_line_url && window.open(c.xui_line_url, '_blank', 'noopener,noreferrer')} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 disabled:opacity-40"><ExternalLink className="mr-1.5 h-3.5 w-3.5" />XUI</button></div>
+                {!isPreviewPaidCustomer(c) && c.source !== 'roomba_preview_trial' && <div className="border-t border-gray-800 px-4 py-3"><button type="button" onClick={() => setPortalCustomer(c)} className="min-h-11 rounded-xl border border-cyan-500/30 px-4 py-2 text-sm font-semibold text-cyan-200">Link website account</button></div>}
+                <RoombaCustomerStatus customerId={c.id} panelId={c.external_id} username={c.username} savedExpiresAt={c.expiration_at} />
+              </article>
+    );
+  };
+
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="min-w-0 space-y-5">
+      {message && <div className="rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300">{message}</div>}
+      {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
+      {customerId ? <>
+        <header className="sticky top-[69px] z-10 -mx-1 rounded-xl bg-gray-900/95 px-1 py-2 backdrop-blur">
+          <Link to="/admin/crm" state={{ crmList: listState }} className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-gray-600 bg-gray-800 px-4 text-sm font-semibold text-white"><ArrowLeft className="h-4 w-4" aria-hidden="true" />Back to customers</Link>
+          <h1 className="mt-4 break-words text-2xl font-bold text-white">{selectedCustomer?.customer_name || selectedCustomer?.username || 'Customer record'}</h1>
+          <p className="mt-1 text-sm text-gray-400">Manage one customer at a time.</p>
+        </header>
+        {loading ? <p className="py-12 text-center text-gray-400">Loading customer record…</p> : customerReadError ? <p role="alert" className="rounded-xl border border-red-500/30 p-4 text-red-300">{customerReadError}</p> : selectedCustomer ? <div className="mx-auto w-full max-w-4xl">{customerPanel(selectedCustomer)}</div> : <p role="alert" className="rounded-xl border border-gray-700 p-5 text-gray-300">This customer record is not available. Return to the customer list and refresh it.</p>}
+      </> : <>
       <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-red-400">Kristal Streams CRM</p>
-          <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">IPTV Subscriber Operations Center</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-400">Review customer records, record payments, update CRM dates, manage follow-ups, and review customer history. Renew streaming service separately in Roomba.</p>
+          <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">{mobile ? 'Customers' : 'IPTV Subscriber Operations Center'}</h1>
+          <p className="mt-2 hidden max-w-3xl text-sm leading-6 text-gray-400 lg:block">Review customer records, record payments, update CRM dates, manage follow-ups, and review customer history. Renew streaming service separately in Roomba.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => void refresh()} className="inline-flex flex-1 items-center justify-center rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm font-semibold text-gray-200 sm:flex-none"><RefreshCw className="mr-2 h-4 w-4" />Refresh</button>
@@ -460,33 +537,37 @@ const CRMOperationsCenter: React.FC = () => {
         </div>
       </header>
 
-      <section aria-labelledby="crm-search-title" className="rounded-2xl border border-cyan-400/30 bg-gray-900 p-4 sm:p-5">
-        <label id="crm-search-title" htmlFor="crm-user-search" className="block text-lg font-semibold text-white">Find a customer</label>
-        <p id="crm-search-help" className="mt-1 text-sm text-gray-400">Search by name, username, email, phone, Panel ID, package or device.</p>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <div className="relative flex-1"><Search aria-hidden="true" className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-cyan-300" /><input id="crm-user-search" type="search" value={search} aria-describedby="crm-search-help" onChange={(e) => { setSearch(e.target.value); setFilter('all'); }} placeholder="Type a name, username or Panel ID…" className="min-h-12 w-full rounded-xl border border-gray-600 bg-gray-950 py-3 pl-11 pr-4 text-base text-white outline-none focus:border-cyan-400" /></div>
-          {search && <button type="button" onClick={() => { setSearch(''); setFilter('all'); }} className="rounded-xl border border-gray-600 px-4 py-3 text-sm font-semibold text-gray-200">Clear search</button>}
-          <button type="button" onClick={() => document.getElementById('crm-customer-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white">View customer records</button>
+      <section id="crm-customer-list" aria-label="Customer workspace directory" className="scroll-mt-20 rounded-2xl border border-gray-700 bg-gray-800/90 p-3 sm:p-5">
+        <div className="sticky top-[69px] z-10 -mx-1 rounded-xl bg-gray-800 px-1 pb-3 pt-1 lg:static">
+          <label htmlFor="crm-user-search" className="block text-lg font-semibold text-white">Find a customer</label>
+          <div className="relative mt-3"><Search aria-hidden="true" className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-cyan-300" /><input id="crm-user-search" type="search" value={search} onChange={(e) => { setSearch(e.target.value); setFilter('all'); setPage(1); }} placeholder="Name, username, phone or Panel ID…" className="min-h-12 w-full rounded-xl border border-gray-600 bg-gray-950 py-3 pl-11 pr-12 text-base text-white outline-none focus:border-cyan-400" />{search && <button type="button" aria-label="Clear customer search" onClick={() => { setSearch(''); setPage(1); }} className="absolute right-1 top-1 inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-300"><X className="h-4 w-4" /></button>}</div>
+          <div aria-label="Customer filters" className="mt-3 flex gap-2 overflow-x-auto pb-1">{(['all', 'active', 'due3', 'due7', 'due30', 'unpaid', 'overdue'] as Filter[]).map((f) => <button type="button" key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setPage(1); }} className={`min-h-11 shrink-0 rounded-xl border px-4 py-2 text-sm font-semibold ${filter === f ? 'border-red-500 bg-red-600 text-white' : 'border-gray-600 bg-gray-900 text-gray-300'}`}>{filterLabels[f]}</button>)}</div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p role="status" aria-live="polite" className="text-sm text-gray-400">{loading ? 'Loading customers…' : customerReadError ? 'Customer list unavailable' : `${filtered.length} of ${customers.length} customers`}</p><label className="flex items-center gap-2 text-xs text-gray-400">Sort<select aria-label="Sort customers" value={sort} onChange={(e) => { setSort(e.target.value as CustomerSort); setPage(1); }} className="min-h-11 rounded-lg border border-gray-600 bg-gray-950 px-2 text-sm text-white"><option value="name">Name A–Z</option><option value="renewal">Renewal date</option><option value="panel">Panel ID</option></select></label></div>
         </div>
-        <p role="status" aria-live="polite" className="mt-3 text-sm text-cyan-200">{loading ? 'Loading customers…' : `${searchMatches.length} of ${customers.length} customers${search.trim() ? ' match your search' : ''}`}</p>
+        {loading ? <p className="py-12 text-center text-gray-400">Loading customer records…</p> : customerReadError ? <p role="alert" className="py-8 text-sm text-red-300">{customerReadError}</p> : filtered.length === 0 ? <div className="py-10 text-center"><p className="text-gray-300">No customers match this view.</p><button type="button" onClick={() => { setSearch(''); setFilter('all'); setPage(1); }} className="mt-4 min-h-12 rounded-xl border border-gray-600 px-4 font-semibold text-white">Show all customers</button></div> : <>
+          {mobile ? <CrmCustomerDirectory listState={listState} rows={paged.rows.map(c => { const badge = renewalBadge(c); return { id: c.id, name: c.customer_name || c.username, username: c.username, panelId: c.external_id, status: displayedAccountStatus(c), renewal: dateOnly(billingRenewalAt(c) || c.expiration_at), badge: badge.label, badgeClass: badge.cls }; })} /> : <div className="mt-5 grid gap-4 xl:grid-cols-2">{paged.rows.map(customerPanel)}</div>}
+          <CustomerPager page={paged.page} pages={paged.pages} start={paged.start} end={paged.end} total={filtered.length} onChange={setPage} />
+          <p className="mt-3 text-xs text-gray-500">Saved records · Open a customer for their full record and actions.</p>
+        </>}
       </section>
-
-      <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200" role="note">Payment and date actions update CRM records only. Account and connection badges reflect saved records. In Preview, use Check XUI status on a customer to read its current provider status.</p>
+        <section aria-label="Workspace summaries and tools" className="rounded-2xl border border-gray-700 bg-gray-900 p-3 sm:p-5">
+          <button type="button" aria-expanded={!mobile || toolsOpen} aria-controls="crm-workspace-tools" onClick={() => setToolsOpen(open => !open)} className="flex min-h-12 w-full items-center justify-between gap-3 text-left font-semibold text-gray-200 lg:hidden">Workspace summaries &amp; tools<ChevronDown className={`h-5 w-5 shrink-0 ${toolsOpen ? 'rotate-180' : ''}`} aria-hidden="true" /></button>
+          {(!mobile || toolsOpen) && <div id="crm-workspace-tools" className="space-y-5">      <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200" role="note">Payment and date actions update CRM records only. Account and connection badges reflect saved records. In Preview, use Check XUI status on a customer to read its current provider status.</p>
 
       <BulkCrmServiceSync customerIds={customers.map(customer=>customer.id)} visibleCustomerIds={searchMatches.map(customer=>customer.id)} searchActive={Boolean(search.trim())} loading={loading} onApplied={refresh} />
       <details className="rounded-2xl border border-gray-700 p-4"><summary className="cursor-pointer text-sm font-semibold text-gray-300">Read-only comparison without saving</summary><div className="mt-4"><BulkXuiCheck customers={customers} loading={loading} /></div></details>
       <PreviewPaidOrders />
       <RoombaCrmLink onLinked={refresh} onShowCustomer={(username) => {
-        setSearch(username); setFilter('all');
+        setSearch(username); setFilter('all'); setPage(1);
         document.getElementById('crm-customer-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }} />
 
-      {message && <div className="rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300">{message}</div>}
-      {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4 2xl:grid-cols-8">
         {metricCards.map(([name, value, Icon, color]) => (
           <button key={name} disabled={name === 'Online now'} title={name === 'Online now' ? 'Live activity unavailable' : undefined} onClick={() => {
+            setPage(1);
+            document.getElementById('crm-customer-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             if (name === 'Active service') setFilter('active');
             else if (name === 'Due 3 Days') setFilter('due3');
             else if (name === 'Due 7 Days') setFilter('due7');
@@ -531,30 +612,9 @@ const CRMOperationsCenter: React.FC = () => {
         </div>
       </section>
 
-      <section id="crm-customer-list" className="scroll-mt-20 rounded-2xl border border-gray-700 bg-gray-800/90 p-3 sm:p-5">
-        <div className="flex flex-col gap-3 lg:flex-row">
-          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" /><input type="search" aria-label="Search customer records" value={search} onChange={(e) => { setSearch(e.target.value); setFilter('all'); }} placeholder="Search name, username, email or Panel ID…" className="w-full rounded-xl border border-gray-700 bg-gray-950 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-red-500" /></div>
-          <div className="flex gap-2 overflow-x-auto pb-1">{(['all', 'active', 'due3', 'due7', 'due30', 'unpaid', 'overdue'] as Filter[]).map((f) => <button key={f} onClick={() => setFilter(f)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${filter === f ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300'}`}>{filterLabels[f]}</button>)}</div>
-        </div>
-
-        {loading ? <div className="py-14 text-center text-gray-400">Loading customer operations...</div> : filtered.length === 0 ? <div className="mt-5 py-14 text-center text-gray-400">No customers match this view.</div> : (
-          <div className="mt-5 grid gap-4 xl:grid-cols-2">
-            {filtered.map((c) => { const badge = renewalBadge(c); const retail = getCustomerRetailPrice(c); const receivedPayment = receivedPayments.get(c.id); return (
-              <article key={c.id} className="overflow-hidden rounded-2xl border border-gray-700 bg-gray-900/80">
-                <div className="flex items-start justify-between gap-3 border-b border-gray-800 bg-gray-800/70 p-4"><div className="min-w-0"><h2 className="truncate font-semibold text-white">{c.customer_name || c.username}</h2><p className="mt-1 text-xs text-gray-500">Panel ID {c.external_id} · {c.username}</p></div><div className="flex flex-col items-end gap-1.5"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${displayedAccountStatus(c) === 'active' ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'}`}>{displayedAccountStatus(c)}</span><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${badge.cls}`}>{badge.label}</span></div></div>
-                <div className="grid grid-cols-2 gap-3 p-4 text-sm sm:grid-cols-3"><div><p className="text-xs text-gray-500">Package</p><p className="mt-1 text-gray-200">{c.package_name || 'Not assigned'}</p></div><div><p className="text-xs text-gray-500">{isPersonalCustomer(c) ? 'Customer charge' : isLegacyPaidCustomer(c) ? 'Next renewal price' : retail ? 'Plan price' : 'Monthly Price'}</p><p className="mt-1 text-gray-200">{isPersonalCustomer(c) ? 'No customer charge' : isPreviewPaidCustomer(c) ? 'Excluded from revenue' : isTrialCustomer(c) ? 'No charge' : retail ? `${money(retail.totalCents / 100)} / ${retail.months} month${retail.months === 1 ? '' : 's'}` : Number(c.monthly_price) > 0 ? money(c.monthly_price) : 'Not set'}</p>{retail && retail.months > 1 && <p className="mt-1 text-xs text-gray-400">{money(retail.monthlyCents / 100)}/month equivalent</p>}</div><div><p className="text-xs text-gray-500">Customer payment</p><p className={`mt-1 font-semibold ${isPersonalCustomer(c) ? 'text-cyan-300' : ['paid', 'legacy_paid'].includes(c.payment_status || '') ? 'text-green-300' : 'text-yellow-300'}`}>{customerPaymentLabel(c)}</p></div><div><p className="text-xs text-gray-500">{isPreviewPaidCustomer(c) ? 'Provider expires' : isTrialCustomer(c) ? 'Trial expires' : 'Renewal'}</p><p className="mt-1 text-gray-200">{isBillingExcluded(c) ? dateTime(c.expiration_at) : dateOnly(billingRenewalAt(c))}</p></div><div><p className="text-xs text-gray-500">Connection limit</p><p className="mt-1 text-gray-200">{c.connections_allowed} allowed</p><p className="mt-1 text-xs text-gray-400">Current streams unavailable</p></div><div><p className="text-xs text-gray-500">Device</p><p className="mt-1 truncate text-gray-200">{c.device_name || c.device_type || 'Not recorded'}</p></div></div>
-                {receivedPayment && <div aria-label="Last recorded payment" className="border-t border-gray-800 bg-green-500/5 px-4 py-3"><p className="text-xs text-gray-400">Last recorded payment</p><p className="mt-1 text-sm font-semibold text-green-300">{money(Number(receivedPayment.amount))} · {paymentMethodLabel(receivedPayment.payment_method)}</p><p className="mt-1 text-xs text-gray-300">Received <time dateTime={receivedPayment.paid_at}>{receivedPaymentDate(receivedPayment.paid_at)}</time></p></div>}
-                {isLegacyPaidCustomer(c) && <p className="border-t border-gray-800 px-4 py-3 text-xs leading-5 text-cyan-200">Old-pricing payment status was confirmed by owner using XUI activation. See History for recorded payment details. New website pricing applies at the next renewal.</p>}
-                <div className="border-t border-gray-800 px-4 py-3"><p className="text-xs text-gray-500">IPTV password</p><div className="mt-1 flex items-center gap-2"><code className="min-w-0 flex-1 truncate rounded-lg bg-gray-950 px-2.5 py-1.5 text-xs text-gray-300">{visiblePasswords[c.id] ? c.iptv_password || 'Not set' : '••••••••••'}</code><button onClick={() => setVisiblePasswords((v) => ({ ...v, [c.id]: !v[c.id] }))} className="rounded-lg p-2 text-gray-400">{visiblePasswords[c.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
-                {pendingIds.has(c.id) && <div className="border-t border-gray-800 bg-yellow-500/5 px-4 py-2 text-xs font-medium text-yellow-300"><Bell className="mr-1.5 inline h-3.5 w-3.5" />Renewal follow-up queued</div>}
-                <div className="grid grid-cols-2 gap-2 border-t border-gray-800 p-3 sm:grid-cols-3"><button disabled={isPreviewPaidCustomer(c)} onClick={() => openEdit(c)} className="inline-flex items-center justify-center rounded-lg bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-200"><Edit3 className="mr-1.5 h-3.5 w-3.5" />Edit</button><button disabled={isBillingExcluded(c)} onClick={() => void recordPayment(c)} className="inline-flex items-center justify-center rounded-lg bg-green-500/10 px-3 py-2 text-xs font-semibold text-green-300 disabled:opacity-50"><CreditCard className="mr-1.5 h-3.5 w-3.5" />Record renewal payment</button><button disabled={isBillingExcluded(c)} title={isTrialCustomer(c) ? 'Trial expiration is recorded from Roomba.' : undefined} onClick={() => setExtendCustomer(c)} className="inline-flex items-center justify-center rounded-lg bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"><CalendarDays className="mr-1.5 h-3.5 w-3.5" />Update Dates (CRM)</button><button disabled={busy === `follow-${c.id}`} onClick={() => void queueFollowup(c)} className="inline-flex items-center justify-center rounded-lg bg-yellow-500/10 px-3 py-2 text-xs font-semibold text-yellow-300 disabled:opacity-50"><Bell className="mr-1.5 h-3.5 w-3.5" />Follow Up</button><button onClick={() => void openHistory(c)} className="inline-flex items-center justify-center rounded-lg bg-purple-500/10 px-3 py-2 text-xs font-semibold text-purple-300"><History className="mr-1.5 h-3.5 w-3.5" />History</button><button disabled={!c.xui_line_url} onClick={() => c.xui_line_url && window.open(c.xui_line_url, '_blank', 'noopener,noreferrer')} className="inline-flex items-center justify-center rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 disabled:opacity-40"><ExternalLink className="mr-1.5 h-3.5 w-3.5" />XUI</button></div>
-                {!isPreviewPaidCustomer(c) && c.source !== 'roomba_preview_trial' && <div className="border-t border-gray-800 px-4 py-3"><button type="button" onClick={() => setPortalCustomer(c)} className="min-h-11 rounded-xl border border-cyan-500/30 px-4 py-2 text-sm font-semibold text-cyan-200">Link website account</button></div>}
-                <RoombaCustomerStatus customerId={c.id} panelId={c.external_id} username={c.username} savedExpiresAt={c.expiration_at} />
-              </article>
-            ); })}
-          </div>
-        )}
-      </section>
+          </div>}
+        </section>
+      </>}
 
       {paymentCustomer && <RenewalPaymentForm customer={paymentCustomer} onClose={() => setPaymentCustomer(null)} onSaved={refresh} onReview={(receipt) => { if (receipt.customerId !== paymentCustomer.id) return; setPaymentReview({ customer: paymentCustomer, receipt }); setPaymentCustomer(null); }} />}
       {paymentReview && <PaidRenewalReview key={paymentReview.receipt.receiptId} customer={paymentReview.customer} receipt={paymentReview.receipt} onClose={() => setPaymentReview(null)} />}

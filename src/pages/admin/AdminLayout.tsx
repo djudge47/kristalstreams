@@ -101,6 +101,7 @@ const AdminLayout: React.FC = () => {
           {navItems.map(item => {
             const isActive = item.path === '/admin/modules'
               ? location.pathname === item.path || Boolean(unavailableAdminModule(location.pathname))
+              : item.path === '/admin/crm' ? location.pathname === item.path || location.pathname.startsWith('/admin/crm/customer/')
               : item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
 
             const Icon = item.icon!;
@@ -151,7 +152,7 @@ const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+      <main id="admin-main-content" className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
         <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-gray-800/90 bg-gray-900/95 px-3 py-3 backdrop-blur sm:px-5 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button

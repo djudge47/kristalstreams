@@ -67,7 +67,7 @@ try{
    builder.onResolve({filter:/\/lib\/supabase$/},()=>({path:'auth',namespace:'fixture'}));
    builder.onResolve({filter:/^\.\/(RoombaCrmLink|RoombaCustomerStatus|BulkXuiCheck|BulkCrmServiceSync|PreviewPaidOrders|RenewalPaymentForm|PaidRenewalReview|CustomerPortalLink)$/},()=>({path:'child',namespace:'fixture'}));
    builder.onLoad({filter:/.*/,namespace:'fixture'},args=>({contents:args.path==='hooks'
-    ? `import React from ${JSON.stringify(reactPath)};export default React;export const useState=initial=>{const n=globalThis.__legacyIndex++;return[n===0?[globalThis.__legacyCustomer]:n===1?[]:initial===true?false:typeof initial==='function'?initial():initial,()=>{}];};export const useEffect=()=>{};export const useMemo=f=>f();`
+    ? `import React from ${JSON.stringify(reactPath)};export default React;export const useState=initial=>{const n=globalThis.__legacyIndex++;return[n===0?[globalThis.__legacyCustomer]:n===1?[]:initial===true?false:typeof initial==='function'?initial():initial,()=>{}];};export const useRef=initial=>({current:initial});export const useEffect=()=>{};export const useMemo=f=>f();`
     :args.path==='auth'?`export const supabase=new Proxy({}, {get(){throw Error('Network forbidden');}});`:`export default ()=>null;`,loader:'js'}));
    builder.onResolve({filter:new RegExp('^'+reactPath.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$')},()=>({path:reactPath,external:true}));
   }}]});
