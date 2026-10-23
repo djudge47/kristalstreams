@@ -1,4 +1,5 @@
 import { paymentMethodLabel } from '../../../_shared/ks-crm-renewal-payment.js';
+import { isReceivedPayment, loadCrmPayments, receivedPaymentDateTime, type CrmPaymentSummary } from '../../../_shared/ks-crm-payment-summary.js';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, CalendarDays, CreditCard, DollarSign, ExternalLink, RefreshCw, Sparkles, TrendingUp, Users, Wifi } from 'lucide-react';
@@ -21,37 +22,43 @@ type Customer = {
   xui_line_url: string | null;
 };
 
-type Payment = {
-  id: string;
-  customer_id: string;
-  amount: number;
-  payment_method: string;
-  paid_at: string;
-};
-
 const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 const date = (value?: string | null) => value ? new Date(value).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set';
 
 const CRMPremiumOverview: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [payments, setPayments] = useState<CrmPaymentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     setError(null);
-    const [customerResult, paymentResult] = await Promise.all([
-      supabase.from('iptv_customers').select('id,customer_name,username,package_name,monthly_price,payment_status,renewal_at,expiration_at,source,account_status,online,trial,xui_line_url').order('renewal_at', { ascending: true, nullsFirst: false }),
-      supabase.from('iptv_payments').select('id,customer_id,amount,payment_method,paid_at').order('paid_at', { ascending: false }).limit(8),
-    ]);
-    if (customerResult.error) setError(customerResult.error.message);
-    else setCustomers((customerResult.data || []) as Customer[]);
-    if (!paymentResult.error) setPayments((paymentResult.data || []) as Payment[]);
-    setLoading(false);
+    setPaymentError(null);
+    try {
+      const [customerResult, paymentResult] = await Promise.all([
+        supabase.from('iptv_customers').select('id,customer_name,username,package_name,monthly_price,payment_status,renewal_at,expiration_at,source,account_status,online,trial,xui_line_url').order('renewal_at', { ascending: true, nullsFirst: false }),
+        loadCrmPayments(supabase),
+      ]);
+      if (customerResult.error) setError(customerResult.error.message);
+      else setCustomers((customerResult.data || []) as Customer[]);
+      setPayments(paymentResult.data || []);
+      if (paymentResult.error) setPaymentError(paymentResult.error.message);
+    } catch {
+      setError('Operations data could not be loaded. Refresh to try again.');
+      setPayments([]);
+      setPaymentError('Payment details could not be loaded. Refresh to try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
+
+  const receivedPayments = useMemo(() => payments.filter(isReceivedPayment)
+    .sort((a, b) => Date.parse(b.paid_at) - Date.parse(a.paid_at) || b.id.localeCompare(a.id))
+    .slice(0, 8), [payments]);
 
   const stats = useMemo(() => {
     const now = Date.now();
@@ -86,7 +93,7 @@ const CRMPremiumOverview: React.FC = () => {
             <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-300 sm:text-base">Review saved customer service, recorded revenue, renewals, payments, trials, and priority account actions.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <button onClick={load} className="inline-flex items-center justify-center rounded-xl border border-gray-700 bg-gray-900/80 px-4 py-2.5 text-sm font-semibold text-gray-200"><RefreshCw className="mr-2 h-4 w-4" />Refresh</button>
+            <button onClick={load} disabled={loading} className="inline-flex items-center justify-center rounded-xl border border-gray-700 bg-gray-900/80 px-4 py-2.5 text-sm font-semibold text-gray-200 disabled:cursor-not-allowed disabled:opacity-50"><RefreshCw className="mr-2 h-4 w-4" />Refresh</button>
             <Link to="/admin/crm" className="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-950/40">Manage customers<ArrowRight className="ml-2 h-4 w-4" /></Link>
           </div>
         </div>
@@ -115,7 +122,17 @@ const CRMPremiumOverview: React.FC = () => {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
-        <article className="rounded-3xl border border-gray-700 bg-gray-800/80 p-4 sm:p-6"><h2 className="text-xl font-semibold text-white">Recent payments</h2><p className="mt-1 text-sm text-gray-400">Recorded payment amounts. Old-pricing confirmations with unknown amounts are excluded.</p><div className="mt-5 space-y-3">{payments.length === 0 ? <p className="rounded-2xl border border-gray-700 bg-gray-900/60 p-8 text-center text-gray-400">Payment activity will appear here.</p> : payments.map((p) => <div key={p.id} className="flex items-center justify-between rounded-2xl border border-gray-700 bg-gray-900/70 p-4"><div><p className="font-semibold text-white">{money(Number(p.amount || 0))}</p><p className="mt-1 text-xs text-gray-500">{paymentMethodLabel(p.payment_method)} · {date(p.paid_at)}</p></div><span className="rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-semibold text-green-300">Paid</span></div>)}</div></article>
+        <article className="rounded-3xl border border-gray-700 bg-gray-800/80 p-4 sm:p-6">
+          <h2 className="text-xl font-semibold text-white">Recent payments</h2>
+          <p className="mt-1 text-sm text-gray-400">Recorded payment amounts. Old-pricing confirmations with unknown amounts are excluded.</p>
+          <div aria-label="Recent received payments" className="mt-5 space-y-3">
+            {loading ? <p className="py-8 text-center text-gray-400">Loading received payments...</p>
+              : paymentError ? <p role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{paymentError}</p>
+                : receivedPayments.length === 0 ? <p className="rounded-2xl border border-gray-700 bg-gray-900/60 p-8 text-center text-gray-400">No received payment amounts recorded yet.</p>
+                  : receivedPayments.map((p) => <div key={p.id} className="flex items-center justify-between rounded-2xl border border-gray-700 bg-gray-900/70 p-4"><div><p className="font-semibold text-white">{money(p.amount)}</p><p className="mt-1 text-xs text-gray-500">{paymentMethodLabel(p.payment_method)} · Received <time dateTime={p.paid_at}>{receivedPaymentDateTime(p.paid_at)}</time></p></div><span className="rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-semibold text-green-300">Paid</span></div>)}
+          </div>
+          <p className="mt-3 text-xs leading-5 text-gray-400">Only positive payments marked paid are shown. Older entries without a received amount remain in customer History.</p>
+        </article>
         <article className="rounded-3xl border border-gray-700 bg-gradient-to-br from-gray-800 to-gray-900 p-4 sm:p-6"><h2 className="text-xl font-semibold text-white">Smart operating brief</h2><div className="mt-5 space-y-3 text-sm leading-6 text-gray-300"><p><strong className="text-white">Revenue:</strong> {money(stats.mrr)} in active monthly recurring revenue.</p><p><strong className="text-white">Retention risk:</strong> {stats.overdue} overdue and {stats.unpaid} unpaid accounts need attention.</p><p><strong className="text-white">Near-term workload:</strong> {stats.due} renewals are scheduled in the next seven days.</p><p><strong className="text-white">Conversion opportunity:</strong> {stats.trials} trial accounts can be followed up for paid conversion.</p></div><Link to="/admin/crm" className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-3 text-sm font-bold text-gray-950">Open customer workspace<ArrowRight className="ml-2 h-4 w-4" /></Link></article>
       </section>
     </div>
