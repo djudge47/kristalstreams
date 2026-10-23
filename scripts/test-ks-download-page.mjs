@@ -23,13 +23,14 @@ replace('__downloadHooks', {
   useEffect(effect) { if (!hooks.mounted) { hooks.mounted = true; hooks.pending.push(() => { hooks.cleanup = effect(); }); } },
 });
 const hookSource = `import React from ${JSON.stringify(import.meta.resolve('react'))};export default React;export const {useState,useRef,useEffect}=globalThis.__downloadHooks;`;
-const output = await build({ entryPoints: ['src/pages/DownloadApp.tsx'], bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', packages: 'external', plugins: [{ name: 'download-offline', setup(b) {
+const offlinePlugin = { name: 'download-offline', setup(b) {
   b.onResolve({ filter: /(?:^|\/)lib\/(?:api|supabase)$|^\.\/supabase$/ }, () => { throw Error('Download page imported a connected client'); });
   b.onResolve({ filter: /^file:/ }, args => ({ path: args.path, external: true }));
   b.onResolve({ filter: /^react$/ }, () => ({ path: 'hooks', namespace: 'fixture' }));
   b.onResolve({ filter: /^react-router-dom$/ }, () => ({ path: 'router', namespace: 'fixture' }));
   b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'hooks' ? hookSource : `import React from ${JSON.stringify(import.meta.resolve('react'))};export const Link=({to,children,...props})=>React.createElement('a',{href:to,...props},children);` }));
-} }] });
+} };
+const output = await build({ entryPoints: ['src/pages/DownloadApp.tsx'], bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', packages: 'external', plugins: [offlinePlugin] });
 const file = join(directory, 'page.mjs'); await writeFile(file, output.outputFiles[0].text);
 const Component = (await import(pathToFileURL(file))).default;
 const nodes = element => !React.isValidElement(element) ? [] : [element, ...React.Children.toArray(element.props.children).flatMap(nodes)];
@@ -83,7 +84,23 @@ try {
   offer(() => new Promise(resolve => { confirm = resolve; })); tree = render(); const installing = button(tree).props.onClick(); window.dispatchEvent(new Event('appinstalled')); confirm(); await installing; tree = render();
   assert.match(text(tree), /Website shortcut available/); assert.doesNotMatch(text(tree), /installation requested/);
   console.log('PASS: dismissed/failed requests are truthful and sanitized, completion during a pending prompt wins, and unmount removes listeners and discards late UI updates');
-  console.log('4 device-setup/download-page regression groups passed. No real installer, browser prompt, connected account, provider, mail or payment was accessed.');
+  const promoOutput = await build({ entryPoints: ['src/components/InstallPrompt.tsx'], bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', packages: 'external', plugins: [offlinePlugin] });
+  const promoFile = join(directory, 'prompt.mjs'); await writeFile(promoFile, promoOutput.outputFiles[0].text);
+  const Prompt = (await import(pathToFileURL(promoFile))).default;
+  let timerCallback, cleared = 0;
+  window.setTimeout = callback => { timerCallback = callback; return 1; };
+  window.clearTimeout = () => { cleared++; };
+  replace('localStorage', { getItem() { throw Error('fictional blocked storage'); }, setItem() { throw Error('fictional blocked storage'); } });
+  const renderPrompt = () => { hooks.stateIndex = 0; hooks.refIndex = 0; const tree = Prompt(); for (const effect of hooks.pending.splice(0)) effect(); return tree; };
+  fresh(); assert.equal(renderPrompt(), null); timerCallback(); tree = renderPrompt();
+  assert.match(markup(tree), /Apps &amp; Device Setup/); assert.match(markup(tree), /href="\/download-app"/);
+  assert.match(text(tree), /Keep your current app and saved users/);
+  assert.doesNotMatch(markup(tree), /\.apk|Get APK|build 9506|Direct verified|unknown sources/);
+  nodes(tree).find(node => node.type === 'button').props.onClick(); assert.equal(renderPrompt(), null);
+  unmount(); assert.equal(cleared, 1);
+  fresh(true); assert.equal(renderPrompt(), null);
+  console.log('PASS: global setup reminder links only to reviewed help, preserves installed apps, dismisses with blocked storage and cleans its timer; standalone mode stays quiet');
+  console.log('5 device-setup/download regression groups passed. No real installer, browser prompt, connected account, provider, mail or payment was accessed.');
 } finally {
   unmount(); for (const [name, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; }
   await rm(directory, { recursive: true, force: true });

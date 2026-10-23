@@ -1,53 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { Download, X, Smartphone } from 'lucide-react';
+import { X, Smartphone } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-import type { BeforeInstallPromptEvent } from '../lib/install-prompt';
 
 const DISMISS_KEY = 'installPromptDismissed9506';
 const DISMISS_FOR_MS = 7 * 24 * 60 * 60 * 1000;
 
 const InstallPrompt: React.FC = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window && window.MSStream);
-    setIsIOS(isIOSDevice);
-
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const dismissedAt = Number(localStorage.getItem(DISMISS_KEY));
+    let dismissedAt = 0;
+    try { dismissedAt = Number(localStorage.getItem(DISMISS_KEY)); } catch { /* Setup help stays usable when storage is blocked. */ }
     const recentlyDismissed = Number.isFinite(dismissedAt) && dismissedAt > 0 && Date.now() - dismissedAt < DISMISS_FOR_MS;
-
     if (isStandalone || recentlyDismissed) return;
-
-    const handler = (event: Event) => {
-      event.preventDefault();
-      setDeferredPrompt(event as BeforeInstallPromptEvent);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
     const timer = window.setTimeout(() => setShowPrompt(true), 3000);
-
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('beforeinstallprompt', handler);
-    };
+    return () => window.clearTimeout(timer);
   }, []);
-
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
-
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === 'accepted') setShowPrompt(false);
-    setDeferredPrompt(null);
-  };
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem(DISMISS_KEY, Date.now().toString());
+    try { localStorage.setItem(DISMISS_KEY, Date.now().toString()); } catch { /* Dismissing must still work. */ }
   };
 
   if (!showPrompt) return null;
@@ -68,38 +42,16 @@ const InstallPrompt: React.FC = () => {
             <Smartphone className="text-primary" size={24} />
           </div>
           <div className="flex-1">
-            <h3 className="mb-1 text-lg font-semibold text-white">Install Kristal Streams</h3>
-            <p className="text-sm text-gray-400">Get the full app experience with faster access from your device.</p>
+            <h3 className="mb-1 text-lg font-semibold text-white">Apps &amp; Device Setup</h3>
+            <p className="text-sm text-gray-400">Keep your existing streaming app. Find device setup help or add a website shortcut.</p>
           </div>
         </div>
 
-        <div className="mb-4 space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-300"><div className="h-1.5 w-1.5 rounded-full bg-primary" /><span>Kristal Streams build 9506</span></div>
-          <div className="flex items-center gap-2 text-sm text-gray-300"><div className="h-1.5 w-1.5 rounded-full bg-primary" /><span>Android, Firestick, and Android TV</span></div>
-          <div className="flex items-center gap-2 text-sm text-gray-300"><div className="h-1.5 w-1.5 rounded-full bg-primary" /><span>Direct verified APK download</span></div>
+        <p className="mb-4 text-sm text-gray-300">Already installed? Keep your current app and saved users.</p>
+        <div className="flex gap-2">
+          <button onClick={handleDismiss} className="flex-1 rounded-lg bg-dark-200 px-4 py-2.5 font-medium text-white transition-colors hover:bg-dark-300">Not Now</button>
+          <Link to="/download-app" onClick={handleDismiss} className="flex flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 font-medium text-white transition-colors hover:bg-red-700">Setup Help</Link>
         </div>
-
-        {isIOS ? (
-          <div className="rounded-lg bg-dark-200 p-4 text-sm text-gray-300">
-            <p className="mb-2 font-semibold text-white">To install on iOS:</p>
-            <ol className="list-inside list-decimal space-y-1">
-              <li>Tap the Share button (square with arrow)</li>
-              <li>Scroll down and tap "Add to Home Screen"</li>
-              <li>Tap "Add" in the top right</li>
-            </ol>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <button onClick={handleDismiss} className="flex-1 rounded-lg bg-dark-200 px-4 py-2.5 font-medium text-white transition-colors hover:bg-dark-300">Not Now</button>
-              {deferredPrompt && (
-                <button onClick={() => void handleInstall()} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-dark-200 px-4 py-2.5 font-medium text-white transition-colors hover:bg-dark-300">Web App</button>
-              )}
-              <a href="/downloads/KristalStreams.apk" download onClick={handleDismiss} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-medium text-white transition-colors hover:bg-red-700"><Download size={18} />Get APK</a>
-            </div>
-            <p className="text-center text-xs text-gray-500">APK installs directly — allow "unknown sources" if prompted</p>
-          </div>
-        )}
       </div>
     </div>
   );
