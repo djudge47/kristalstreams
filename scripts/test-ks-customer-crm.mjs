@@ -70,7 +70,8 @@ await check('email/confirmation/provider changes and Preview exclusions immediat
   await db.query(`update ${table} set ${column}=$1 where id=$2`,[original,uid]);
  }
 });
-const env={VERCEL_ENV:'preview',VITE_SUPABASE_URL:'https://wftfxerblhlsxiijtfbo.supabase.co',VITE_SUPABASE_ANON_KEY:'fictional-anon',SUPABASE_SERVICE_ROLE_KEY:'fictional-service'};
+const deploymentEnv=process.env.KS_TEST_DEPLOYMENT_ENV??'preview';assert.ok(['preview','production'].includes(deploymentEnv));
+const env={VERCEL_ENV:deploymentEnv,VITE_SUPABASE_URL:'https://wftfxerblhlsxiijtfbo.supabase.co',VITE_SUPABASE_ANON_KEY:'fictional-anon',SUPABASE_SERVICE_ROLE_KEY:'fictional-service'};
 const calls=[];let identity={id:owner,email:review.email,email_confirmed_at:date,is_anonymous:false},rpcFailure=false,badPayload=false;
 const admin=realClient(env.VITE_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:async(input,options)=>{
  const url=new URL(input);const name=url.pathname.split('/').at(-1);const args=JSON.parse(options.body);calls.push({url,args,method:options.method});
@@ -95,7 +96,7 @@ await check('real SDK serializes only server-verified owner inputs and all 205 r
 await check('auth, method, project, confirmation and same-origin checks fail closed before service access',async()=>{
  const beforeCalls=calls.length;
  for(const p of [{method:'POST'},{headers:{}},{query:{view:'crm-service',email:'other@example.invalid'}}])assert.ok((await request(p)).code>=400);
- for(const p of [{VERCEL_ENV:'production'},{VITE_SUPABASE_URL:'https://wrong.supabase.co'},{SUPABASE_SERVICE_ROLE_KEY:''}])assert.ok((await request({},false,p)).code>=400);
+ for(const p of [{VERCEL_ENV:'development'},{VERCEL_ENV:undefined},{VITE_SUPABASE_URL:'https://wrong.supabase.co'},{SUPABASE_SERVICE_ROLE_KEY:''}])assert.ok((await request({},false,p)).code>=400);
  for(const patch of [{email_confirmed_at:null},{is_anonymous:true},{id:'invalid'}]){const old=identity;identity={...old,...patch};assert.ok((await request()).code>=400);identity=old;}
  assert.equal((await request({body:{action:'review',customerId:customer,email:review.email}},true)).code,403);
  assert.equal((await request({headers:{origin:'https://wrong.invalid',host:'fictional.vercel.app'},body:{}},true)).code,403);
@@ -115,4 +116,4 @@ await check('cross-customer storage corruption and failed reads never produce pa
  assert.match(savedServiceLabel({...snapshot.services[0],savedStatus:'active',expiresAt:'2020-01-01'}),/ended/);
  assert.equal(savedServiceLabel({...snapshot.services[0],savedStatus:'disabled'}),'Disabled');
 });
-await db.close();console.log(`${checks} verified customer portal checks passed; no connected credentials or provider requests.`);
+await db.close();console.log(`[${deploymentEnv}] ${checks} verified customer portal checks passed; no connected credentials or provider requests.`);

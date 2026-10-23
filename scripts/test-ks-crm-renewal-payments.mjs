@@ -18,9 +18,10 @@ await db.exec(await readFile(new URL('./ks-crm-renewal-payments-schema.sql',impo
 for(let n=1;n<=5;n++)await db.query("insert into public.iptv_customers(id,username,trial,payment_status,source,renewal_at,expiration_at,connections_allowed,package_name,account_status) values($1,$2,$3,$4,$5,'2026-09-01','2027-04-22',3,'6 Months + 3 Connections','active')",
  [id(n),`fictional_${n}`,n===3,n===2?'personal':n===3?'trial':n===4?'preview_test':'legacy_paid',n===4?'roomba_preview_paid':'panel_screenshot_import']);
 const customersBefore=(await db.query('select * from public.iptv_customers order by id')).rows;
-let actor=id(100),email='djudge47@gmail.com',calls=0,loseReply=false;
-const env={VERCEL_ENV:'preview',VITE_SUPABASE_URL:'https://wftfxerblhlsxiijtfbo.supabase.co',VITE_SUPABASE_ANON_KEY:'fictional-anon',SUPABASE_SERVICE_ROLE_KEY:'fictional-service'};
-const settings={env,createClient(url,key){assert.equal(url,env.VITE_SUPABASE_URL);return key==='fictional-anon'?{auth:{getUser:async()=>({data:{user:{id:actor,email,email_confirmed_at:'2026-01-01T00:00:00Z'}}})}}:{rpc:async(name,args)=>{
+let actor=id(100),email='djudge47@gmail.com',calls=0,loseReply=false,confirmedAt='2026-01-01T00:00:00Z',anonymous=false;
+const deploymentEnv=process.env.KS_TEST_DEPLOYMENT_ENV??'preview';assert.ok(['preview','production'].includes(deploymentEnv));
+const env={VERCEL_ENV:deploymentEnv,VITE_SUPABASE_URL:'https://wftfxerblhlsxiijtfbo.supabase.co',VITE_SUPABASE_ANON_KEY:'fictional-anon',SUPABASE_SERVICE_ROLE_KEY:'fictional-service'};
+const settings={env,createClient(url,key){assert.equal(url,env.VITE_SUPABASE_URL);return key==='fictional-anon'?{auth:{getUser:async()=>({data:{user:{id:actor,email,email_confirmed_at:confirmedAt,is_anonymous:anonymous}}})}}:{rpc:async(name,args)=>{
  calls++;assert.ok(['ks_crm_renewal_payment_status','ks_crm_renewal_payment_record'].includes(name));
  try{await db.exec('set role service_role');const {rows}=await db.query(`select public.${name}($1,$2${name.endsWith('_record')?',$3':''}) result`,[args.p_receipt,args.p_actor,...(name.endsWith('_record')?[args.p_input]:[])]);if(loseReply){loseReply=false;throw Error('fictional dropped response');}return{data:rows[0].result,error:null};}catch(error){return{error};}finally{await db.exec('reset role');}
  }};}};
@@ -31,11 +32,14 @@ await test('only exact positive cents and complete actual dates are accepted',as
  assert.equal(amountToCents('150.25'),15025);for(const v of ['0','-1','1.001','1e3','10000.01','NaN'])assert.equal(amountToCents(v),null);
  assert.equal(validPaymentInput(input),true);assert.equal(validPaymentInput({...input,paidAt:'2026-02-30T00:00:00.000Z'}),false);
 });
-await test('unconfirmed, cross-origin, unauthenticated and wrong project/Production writes never reach SQL',async()=>{
+await test('unconfirmed, anonymous, cross-origin, unauthenticated, wrong-project and unknown-environment writes never reach SQL',async()=>{
  const before=calls;assert.equal((await request({receiptId:id(200),input,confirmed:false})).code,400);
+ confirmedAt=null;assert.equal((await request({receiptId:id(200),input,confirmed:true})).code,403);confirmedAt='2026-01-01T00:00:00Z';
+ anonymous=true;assert.equal((await request({receiptId:id(200),input,confirmed:true})).code,403);anonymous=false;
+ assert.equal((await request({receiptId:id(200),input,confirmed:true},'POST',{headers:{origin:'https://fictional-preview.vercel.app',host:'fictional-preview.vercel.app','content-type':'application/json'}})).code,401);
  assert.equal((await request({receiptId:id(200),input,confirmed:true},'POST',{headers:{origin:'https://evil.invalid',host:'fictional-preview.vercel.app'}})).code,403);
  email='other@example.invalid';assert.equal((await request({receiptId:id(200),input,confirmed:true})).code,403);email='djudge47@gmail.com';
- const prior=env.VERCEL_ENV;env.VERCEL_ENV='production';assert.equal((await request({receiptId:id(200),input,confirmed:true})).code,404);env.VERCEL_ENV=prior;
+ const prior=env.VERCEL_ENV;env.VERCEL_ENV='development';assert.equal((await request({receiptId:id(200),input,confirmed:true})).code,404);env.VERCEL_ENV=prior;
  env.VITE_SUPABASE_URL='https://other.supabase.co';assert.equal((await request({receiptId:id(200),input,confirmed:true})).code,503);env.VITE_SUPABASE_URL='https://wftfxerblhlsxiijtfbo.supabase.co';assert.equal(calls,before);
 });
 await test('all 20 website prices record the full selected term while all customer and provider service fields stay unchanged',async()=>{
@@ -77,4 +81,4 @@ await test('a failed history insert rolls back payment and private receipt toget
  assert.equal((await db.query('select count(*)::int n from public.iptv_payments')).rows[0].n,23);
  assert.deepEqual((await db.query('select * from public.iptv_customers order by id')).rows,customersBefore);
 });
-await db.close();console.log(`${checks} receipt-only SQL/HTTP checks passed. Fictional data; no connected payments or XUI calls.`);
+await db.close();console.log(`[${deploymentEnv}] ${checks} receipt-only SQL/HTTP checks passed. Fictional data; no connected payments or XUI calls.`);

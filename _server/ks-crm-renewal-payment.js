@@ -6,7 +6,7 @@ const inputKeys=['customerId','months','connections','amountCents','paidAt','met
 export function createRenewalPaymentHandler({createClient,env=process.env}={}){
  return async(req,res)=>{
   res.setHeader('Cache-Control','private, no-store');const reply=(status,value)=>res.status(status).json(value);
-  if(env.VERCEL_ENV!=='preview')return reply(404,{error:'Renewal payment entry is available in Preview only.'});
+  if(!['preview','production'].includes(env.VERCEL_ENV))return reply(404,{error:'Renewal payment entry is not available.'});
   if(!['GET','POST'].includes(req.method)){res.setHeader('Allow','GET, POST');return reply(405,{error:'Method not allowed.'});}
   const status=req.method==='GET';let receiptId,input;
   if(status){if(!keys(req.query,['view','receiptId'])||!paymentUuid(req.query.receiptId))return reply(400,{error:'Choose a saved payment reference.'});receiptId=req.query.receiptId;}

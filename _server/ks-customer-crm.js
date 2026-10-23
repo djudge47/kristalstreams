@@ -8,7 +8,7 @@ export function createCustomerCrmHandler({createClient,env=process.env,adminLink
   return async(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');res.setHeader('Vary','Authorization');res.setHeader('Pragma','no-cache');
     const reply=(status,body)=>res.status(status).json(body);
-    if(env.VERCEL_ENV!=='preview')return reply(404,{error:'This account view is not available.'});
+    if(!['preview','production'].includes(env.VERCEL_ENV))return reply(404,{error:'This account view is not available.'});
     const method=adminLink?'POST':'GET';
     if(req.method!==method){res.setHeader('Allow',method);return reply(405,{error:'Method not allowed.'});}
     if(env.VITE_SUPABASE_URL!==project||!env.VITE_SUPABASE_ANON_KEY||!env.SUPABASE_SERVICE_ROLE_KEY)return reply(503,{error:'Your service details are temporarily unavailable.'});
