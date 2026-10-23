@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Plus, Pencil, Trash2, Search, X, Save } from 'lucide-react';
 
@@ -9,30 +9,33 @@ interface CRMPageProps {
   icon: React.ReactNode;
 }
 
+type FormValues = Record<string, string | number | null>;
+type CRMRecord = FormValues & { id: string };
+
 const CRMPage: React.FC<CRMPageProps> = ({ title, table, fields, icon }) => {
-  const [records, setRecords] = useState<any[]>([]);
+  const [records, setRecords] = useState<CRMRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState<any>({});
+  const [editing, setEditing] = useState<CRMRecord | null>(null);
+  const [form, setForm] = useState<FormValues>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => { fetchRecords(); }, []);
-
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       const { data } = await supabase.from(table).select('*').order('created_at', { ascending: false });
       setRecords(data || []);
     } catch { setRecords([]); }
     setLoading(false);
-  };
+  }, [table]);
+
+  useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
   const handleSubmit = async () => {
     setError(null);
     try {
-      const payload: any = {};
+      const payload: FormValues = {};
       fields.forEach(f => { if (form[f.key] !== undefined) payload[f.key] = form[f.key]; });
       if (editing?.id) {
         const { error: e } = await supabase.from(table).update(payload).eq('id', editing.id);
@@ -46,7 +49,7 @@ const CRMPage: React.FC<CRMPageProps> = ({ title, table, fields, icon }) => {
       setShowForm(false); setEditing(null); setForm({});
       fetchRecords();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not save the record.'); }
   };
 
   const handleDelete = async (id: string) => {

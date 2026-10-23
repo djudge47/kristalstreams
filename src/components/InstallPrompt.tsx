@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Download, X, Smartphone } from 'lucide-react';
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
+import type { BeforeInstallPromptEvent } from '../lib/install-prompt';
 
 const DISMISS_KEY = 'installPromptDismissed9506';
 const DISMISS_FOR_MS = 7 * 24 * 60 * 60 * 1000;
@@ -13,13 +10,10 @@ const InstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isAndroidDevice = /Android/.test(navigator.userAgent);
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window && window.MSStream);
     setIsIOS(isIOSDevice);
-    setIsAndroid(isAndroidDevice);
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const dismissedAt = Number(localStorage.getItem(DISMISS_KEY));

@@ -37,7 +37,7 @@ const RoombaCrmLink: React.FC<Props> = ({ onLinked, onShowCustomer }) => {
       const payload = await response.json().catch(() => null);
       if (pending.signal.aborted || controller.current !== pending) return;
       if (!response.ok) throw new Error(payload?.error || 'Saved setup could not be checked.');
-      if (!payload || !Object.hasOwn(payload, 'setup') || typeof payload.trialCreationEnabled !== 'boolean'
+      if (!payload || !Object.prototype.hasOwnProperty.call(payload, 'setup') || typeof payload.trialCreationEnabled !== 'boolean'
         || (payload.setup && !['linked', 'unlinked', 'conflict', 'needs_review'].includes(payload.setup.status))) throw new Error('The setup result could not be verified.');
       setSetup(payload.setup); setCreationEnabled(payload.trialCreationEnabled); setChecked(true);
       if (link) await onLinked();

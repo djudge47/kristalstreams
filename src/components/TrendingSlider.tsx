@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 
 interface TrendingContent {
   id: number;
@@ -100,8 +99,6 @@ const trendingContent: TrendingContent[] = [
 const TrendingSlider: React.FC = () => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [user, setUser] = useState(null);
-  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(4);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
@@ -115,30 +112,16 @@ const TrendingSlider: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
     setCurrentIndex(trendingContent.length);
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isPreviewPlaying) {
-        setCurrentIndex((prev) => prev + 1);
-      }
+      setCurrentIndex((prev) => prev + 1);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isPreviewPlaying]);
+  }, []);
 
   useEffect(() => {
     if (currentIndex >= trendingContent.length * 2) {

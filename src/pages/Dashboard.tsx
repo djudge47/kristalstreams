@@ -1,3 +1,4 @@
+import type { BeforeInstallPromptEvent } from '../lib/install-prompt';
 import React, { useEffect, useState } from 'react';
 import { isAuthSessionMissingError } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
@@ -407,20 +408,20 @@ const Dashboard: React.FC = () => {
 };
 
 const PwaInstallBanner: React.FC = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window && window.MSStream);
     setIsIOS(isIOSDevice);
     const standalone = window.matchMedia('(display-mode: standalone)').matches;
     setIsInstalled(standalone);
 
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);

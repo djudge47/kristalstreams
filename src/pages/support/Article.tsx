@@ -26,6 +26,7 @@ const Article: React.FC = () => {
       try {
         if (!slug) return;
         const data = await getSupportArticle(slug);
+        if (!data) throw new Error('Article unavailable');
         setArticle(data);
         await incrementArticleViews(data.id);
       } catch (err) {

@@ -327,6 +327,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <button
+                  aria-label={`Video quality: ${quality}`}
+                  aria-expanded={showQualityMenu}
                   onClick={() => setShowQualityMenu(!showQualityMenu)}
                   className="text-white hover:text-primary transition-colors"
                 >

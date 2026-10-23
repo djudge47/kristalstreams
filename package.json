@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.api.json --noEmit",
     "lint": "eslint .",
+    "check": "npm run typecheck && npm run lint -- --max-warnings 0 && node scripts/test-ks-app-quality.mjs && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {

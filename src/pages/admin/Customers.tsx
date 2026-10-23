@@ -2,8 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Search, Users, Mail, Calendar } from 'lucide-react';
 
+interface Customer {
+  id: string;
+  name: string | null;
+  customer_id: string | null;
+  email: string | null;
+  status: string | null;
+  created_at: string | null;
+}
+
 const Customers: React.FC = () => {
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 

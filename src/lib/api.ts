@@ -29,13 +29,43 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   incrementUnreadCount: () => set((state) => ({ unreadCount: state.unreadCount + 1 })),
 }));
 
+interface SupportCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+}
+interface SupportArticle {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  is_featured: boolean;
+  views: number;
+  helpful_count: number;
+  created_at: string;
+  support_categories: { name: string; slug: string };
+}
+interface SetupGuide {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  device_type: string;
+  difficulty: string;
+  estimated_time: number;
+  views: number;
+  helpful_count: number;
+}
+
 // Cache TTL in milliseconds (5 minutes)
 const CACHE_TTL = 5 * 60 * 1000;
 
 // Simple cache implementation
-const cache = new Map<string, { data: any; timestamp: number }>();
+const cache = new Map<string, { data: unknown; timestamp: number }>();
 
-const getCachedData = (key: string) => {
+const getCachedData = <T>(key: string): T | null => {
   const cached = cache.get(key);
   if (!cached) return null;
   
@@ -45,10 +75,10 @@ const getCachedData = (key: string) => {
     return null;
   }
   
-  return cached.data;
+  return cached.data as T;
 };
 
-const setCachedData = (key: string, data: any) => {
+const setCachedData = (key: string, data: unknown) => {
   cache.set(key, { data, timestamp: Date.now() });
 };
 
@@ -135,7 +165,7 @@ export const getStreamUrl = async (channelId: string) => {
 
 // Enhanced error handling for Supabase queries
 const handleSupabaseQuery = async <T>(
-  queryPromise: Promise<{ data: T; error: any }>,
+  queryPromise: PromiseLike<{ data: T | null; error: unknown }>,
   errorMessage: string
 ): Promise<T | null> => {
   try {
@@ -165,7 +195,7 @@ const handleSupabaseQuery = async <T>(
 
 export const getFooterLinks = async () => {
   const cacheKey = 'footer_links';
-  const cached = getCachedData(cacheKey);
+  const cached = getCachedData<{ id: string; title: string; url: string; order: number }[]>(cacheKey);
   if (cached) return cached;
 
   // Define fallback footer links
@@ -206,7 +236,7 @@ export const getFooterLinks = async () => {
       setCachedData(cacheKey, data);
       return data;
     }
-  } catch (error) {
+  } catch {
     // Silently handle connection errors and use fallback
     console.warn('Using fallback footer links due to connection issue');
   }
@@ -217,7 +247,7 @@ export const getFooterLinks = async () => {
 
 export const getFooterSocialLinks = async () => {
   const cacheKey = 'footer_social_links';
-  const cached = getCachedData(cacheKey);
+  const cached = getCachedData<{ id: string; platform: string; url: string; order: number }[]>(cacheKey);
   if (cached) return cached;
 
   // Define fallback social links
@@ -289,7 +319,7 @@ export const getFooterSocialLinks = async () => {
       setCachedData(cacheKey, data);
       return data;
     }
-  } catch (error) {
+  } catch {
     // Silently handle connection errors and use fallback
     console.warn('Using fallback social links due to connection issue');
   }
@@ -300,20 +330,20 @@ export const getFooterSocialLinks = async () => {
 
 export const getSupportCategories = async () => {
   const cacheKey = 'support_categories';
-  const cached = getCachedData(cacheKey);
+  const cached = getCachedData<SupportCategory[]>(cacheKey);
   if (cached) return cached;
 
   try {
     const { data, error } = await supabase
       .from('support_categories')
       .select('*')
-      .order('name', { ascending: true });
+      .order('name', { ascending: true }).returns<SupportCategory[]>();
 
     if (!error && data) {
       setCachedData(cacheKey, data);
       return data;
     }
-  } catch (error) {
+  } catch {
     // Silently handle network errors
   }
 
@@ -355,7 +385,7 @@ export const getSupportCategories = async () => {
 
 export const getSupportArticles = async (categorySlug?: string) => {
   const cacheKey = categorySlug ? `support_articles_${categorySlug}` : 'support_articles_all';
-  const cached = getCachedData(cacheKey);
+  const cached = getCachedData<SupportArticle[]>(cacheKey);
   if (cached) return cached;
 
   try {
@@ -374,13 +404,13 @@ export const getSupportArticles = async (categorySlug?: string) => {
       query = query.eq('support_categories.slug', categorySlug);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.returns<SupportArticle[]>();
 
     if (!error && data) {
       setCachedData(cacheKey, data);
       return data;
     }
-  } catch (error) {
+  } catch {
     // Silently handle network errors
   }
 
@@ -441,7 +471,7 @@ export const getSupportArticles = async (categorySlug?: string) => {
 
 export const getSupportArticle = async (slug: string) => {
   const cacheKey = `support_article_${slug}`;
-  const cached = getCachedData(cacheKey);
+  const cached = getCachedData<SupportArticle>(cacheKey);
   if (cached) return cached;
 
   const data = await handleSupabaseQuery(
@@ -455,7 +485,7 @@ export const getSupportArticle = async (slug: string) => {
         )
       `)
       .eq('slug', slug)
-      .single(),
+      .single<SupportArticle>(),
     'Failed to fetch support article'
   );
   
@@ -483,24 +513,24 @@ export const markArticleHelpful = async (articleId: string) => {
 
 export const getSetupGuides = async () => {
   const cacheKey = 'setup_guides';
-  const cached = getCachedData(cacheKey);
+  const cached = getCachedData<SetupGuide[]>(cacheKey);
   if (cached) return cached;
 
   const data = await handleSupabaseQuery(
     supabase
       .from('setup_guides')
       .select('*')
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false }).returns<SetupGuide[]>(),
     'Failed to fetch setup guides'
   );
   
   setCachedData(cacheKey, data);
-  return data;
+  return data ?? [];
 };
 
 export const getSetupGuide = async (slug: string) => {
   const cacheKey = `setup_guide_${slug}`;
-  const cached = getCachedData(cacheKey);
+  const cached = getCachedData<SetupGuide>(cacheKey);
   if (cached) return cached;
 
   const data = await handleSupabaseQuery(
@@ -508,7 +538,7 @@ export const getSetupGuide = async (slug: string) => {
       .from('setup_guides')
       .select('*')
       .eq('slug', slug)
-      .single(),
+      .single<SetupGuide>(),
     'Failed to fetch setup guide'
   );
   

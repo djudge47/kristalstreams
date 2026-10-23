@@ -1,6 +1,6 @@
 import React from 'react';
 import SupportPage from './SupportPage';
-const FAQ: React.FC = () => <SupportPage title="Frequently Asked Questions" description="Quick answers to the most common questions about Kristal Streams."
+const FrequentlyAskedQuestions: React.FC = () => <SupportPage title="Frequently Asked Questions" description="Quick answers to the most common questions about Kristal Streams."
   sections={[
     { heading: "What is Kristal Streams?", content: "Kristal Streams is a premium IPTV streaming service offering 18,000+ live TV channels, movies, and shows in HD and 4K quality." },
     { heading: "How much does it cost?", content: "We offer multiple plans starting from $20/month for a single connection. Visit our pricing page for full details on all plans." },
@@ -11,4 +11,4 @@ const FAQ: React.FC = () => <SupportPage title="Frequently Asked Questions" desc
   ]}
   relatedLinks={[{ title: "Pricing", url: "/pricing" }, { title: "Free Trial", url: "/free-trial" }, { title: "Speed Test", url: "/support/speed-test" }]}
 />;
-export default FAQ;
+export default FrequentlyAskedQuestions;

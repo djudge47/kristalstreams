@@ -1,6 +1,17 @@
 import { runtime, authenticate, fulfill, PaymentError, respondError } from '../_server/ks-payments.js';
 
-export default async function handler(req: any, res: any) {
+interface CheckoutRequest {
+  method?: string;
+  headers: Record<string, string | string[] | undefined>;
+  body?: { sessionId?: unknown };
+}
+interface CheckoutResponse {
+  setHeader(name: string, value: string): void;
+  status(code: number): CheckoutResponse;
+  json(body: unknown): unknown;
+}
+
+export default async function handler(req: CheckoutRequest, res: CheckoutResponse) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   try {

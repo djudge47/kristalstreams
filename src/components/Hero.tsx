@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Info, Star } from 'lucide-react';
 
@@ -131,31 +131,27 @@ const content: Content[] = [
 const Hero: React.FC = () => {
   const navigate = useNavigate();
   const [currentContent, setCurrentContent] = useState<Content>(content[0]);
-  const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [showFeatures, setShowFeatures] = useState(false);
 
-  useEffect(() => {
-    const interval = setInterval(handleNext, 8000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setDirection('next');
     setCurrentContent(prevContent => {
       const currentIndex = content.findIndex(item => item.id === prevContent.id);
       const nextIndex = (currentIndex + 1) % content.length;
       return content[nextIndex];
     });
     setTimeout(() => setIsTransitioning(false), 500);
-  };
+  }, [isTransitioning]);
+
+  useEffect(() => {
+    const interval = setInterval(handleNext, 8000);
+    return () => clearInterval(interval);
+  }, [handleNext]);
 
   const handleDotClick = (index: number) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setDirection(index > content.findIndex(item => item.id === currentContent.id) ? 'next' : 'prev');
     setCurrentContent(content[index]);
     setTimeout(() => setIsTransitioning(false), 500);
   };
@@ -167,7 +163,6 @@ const Hero: React.FC = () => {
   const handleLearnMore = () => {
     const featuresSection = document.getElementById('features');
     if (featuresSection) {
-      setShowFeatures(true);
       featuresSection.scrollIntoView({ behavior: 'smooth' });
     }
   };

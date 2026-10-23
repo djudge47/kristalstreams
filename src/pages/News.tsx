@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Newspaper, Calendar, Clock, TrendingUp, Tv, Wifi, Zap, Globe } from 'lucide-react';
+import { Newspaper, Calendar, Clock, TrendingUp, Tv, Zap, Globe } from 'lucide-react';
 
 interface NewsArticle {
   id: string;

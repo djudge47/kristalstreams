@@ -43,7 +43,7 @@ const services: ServiceStatus[] = [
 ];
 
 const SystemStatus: React.FC = () => {
-  const [statuses, setStatuses] = useState<ServiceStatus[]>(services);
+  const [statuses] = useState<ServiceStatus[]>(services);
   const [loading, setLoading] = useState(true);
   const [lastChecked, setLastChecked] = useState<Date>(new Date());
 

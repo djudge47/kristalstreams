@@ -188,11 +188,11 @@ Deno.serve(async (req) => {
       });
 
       return corsResponse({ sessionId: session.id, url: session.url });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Checkout process error:', error);
-      return corsResponse({ error: error.message }, 500);
+      return corsResponse({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Unhandled error:', error);
     return corsResponse({ error: 'An unexpected error occurred' }, 500);
   }
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
 type ExpectedType = 'string' | { values: string[] };
 type Expectations<T> = { [K in keyof T]: ExpectedType };
 
-function validateParameters<T extends Record<string, any>>(values: T, expected: Expectations<T>): string | undefined {
+function validateParameters<T extends Record<string, unknown>>(values: T, expected: Expectations<T>): string | undefined {
   for (const parameter in values) {
     const expectation = expected[parameter];
     const value = values[parameter];
@@ -214,7 +214,7 @@ function validateParameters<T extends Record<string, any>>(values: T, expected: 
         return `Expected parameter ${parameter} to be a string got ${JSON.stringify(value)}`;
       }
     } else {
-      if (!expectation.values.includes(value)) {
+      if (typeof value !== 'string' || !expectation.values.includes(value)) {
         return `Expected parameter ${parameter} to be one of ${expectation.values.join(', ')}`;
       }
     }

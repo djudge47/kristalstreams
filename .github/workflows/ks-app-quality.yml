@@ -1,0 +1,33 @@
+name: Application quality
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  app-quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run check
+      - name: Verify payment, support and portal regressions with offline fixtures
+        run: |
+          node scripts/test-ks-payments.mjs
+          node scripts/test-ks-support-client.mjs
+          node scripts/test-ks-support-ui.mjs
+          node scripts/test-ks-crm-payment-summary.mjs
+          node scripts/test-ks-customer-crm-ui.mjs
+          node scripts/test-ks-customer-setup.mjs
+          node scripts/test-ks-customer-status-view.mjs

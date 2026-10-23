@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Play, Plus, ThumbsUp, Share2, Star, Calendar, Clock, X } from 'lucide-react';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import VideoPlayer from '../components/VideoPlayer';
 
@@ -146,9 +147,9 @@ const contentDatabase: Record<number, ContentData> = {
 };
 
 const ContentDetail: React.FC = () => {
-  const { type, id } = useParams<{ type: string; id: string }>();
+  const { id } = useParams<{ type: string; id: string }>();
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [content, setContent] = useState<ContentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showPlayer, setShowPlayer] = useState(false);

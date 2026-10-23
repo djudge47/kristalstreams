@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, MapPin, Tv, Check, Star, Trophy, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import nflKickoffImage from '../assets/nflKickoffImage';
-import ufc329Image from '../assets/ufc329Image';
-import mlbAllStarImage from '../assets/mlbAllStarImage';
 
 interface PPVEvent {
   id: string;
@@ -45,7 +42,7 @@ const faqs = [
   ['Can I watch on multiple devices?', 'Yes! You can stream PPV events on all your devices including Smart TVs, smartphones, tablets, computers, and streaming devices. The number of simultaneous streams depends on your subscription plan.']
 ];
 
-const PPV: React.FC = () => {
+const PayPerView: React.FC = () => {
   const [selectedSport, setSelectedSport] = useState('all');
   const filteredEvents = selectedSport === 'all' ? ppvEvents : ppvEvents.filter(event => event.sport === selectedSport);
 
@@ -109,4 +106,4 @@ const PPV: React.FC = () => {
   );
 };
 
-export default PPV;
+export default PayPerView;

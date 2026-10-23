@@ -26,6 +26,7 @@ const Guide: React.FC = () => {
       try {
         if (!slug) return;
         const data = await getSetupGuide(slug);
+        if (!data) throw new Error('Guide unavailable');
         setGuide(data);
         await incrementGuideViews(data.id);
       } catch (err) {

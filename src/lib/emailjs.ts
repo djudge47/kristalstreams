@@ -46,7 +46,7 @@ export interface ResetPasswordEmailData {
 }
 
 // Generic email sending function
-export const sendEmail = async (templateId: string, templateParams: any): Promise<boolean> => {
+export const sendEmail = async (templateId: string, templateParams: Record<string, unknown>): Promise<boolean> => {
   try {
     const response = await emailjs.send(
       EMAILJS_CONFIG.serviceId,

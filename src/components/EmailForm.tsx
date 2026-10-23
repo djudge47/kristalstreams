@@ -21,7 +21,6 @@ interface EmailFormProps {
 const EmailForm: React.FC<EmailFormProps> = ({
   onSuccess,
   onError,
-  template = 'contact',
   title = 'Send us a message',
   description = 'We\'ll get back to you as soon as possible.',
   showNameField = true,

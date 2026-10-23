@@ -1,9 +1,9 @@
-import React, { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ComponentType } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import InstallPrompt from './components/InstallPrompt';
 import Layout from './components/Layout';
 
-function lazyRetry(importFn: () => Promise<any>) {
+function lazyRetry(importFn: () => Promise<{ default: ComponentType }>) {
   return lazy(async () => {
     try {
       const module = await importFn();

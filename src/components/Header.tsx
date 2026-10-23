@@ -1,12 +1,13 @@
 import React, { useState, useEffect, memo, useCallback } from 'react';
 import { Menu, X, User, Home, ChevronDown, Facebook, Twitter, Instagram, Youtube, Smartphone, Trophy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import type { User as AuthUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
 const Header: React.FC = memo(() => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const navigate = useNavigate();
 
