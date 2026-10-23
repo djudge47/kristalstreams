@@ -8,6 +8,7 @@ import InstallPrompt from '../components/InstallPrompt';
 import CustomerSetupStatus from '../components/CustomerSetupStatus';
 import CustomerCrmService from '../components/CustomerCrmService';
 import StreamingLoginHandoff from '../components/StreamingLoginHandoff';
+import AdminShortcuts from '../components/AdminShortcuts';
 import {
   User,
   CreditCard,
@@ -18,7 +19,6 @@ import {
   CheckCircle,
   Plus,
   Bell,
-  Shield,
   Download,
   Smartphone,
 } from 'lucide-react';
@@ -247,27 +247,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {isAdmin && (
-            <div className="flex flex-wrap items-center gap-2 bg-amber-600/10 border border-amber-600/30 rounded-xl px-4 py-3 mb-6">
-              <Shield className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="text-amber-400 text-sm font-medium mr-2">Admin</span>
-              {[
-                { label: 'Customers', path: '/admin/customers' },
-                { label: 'Tickets', path: '/admin/tickets' },
-                { label: 'Analytics', path: '/admin/analytics' },
-                { label: 'Slider', path: '/admin/slider' },
-                { label: 'Demo Reel', path: '/admin/demo-reel' },
-              ].map(({ label, path }) => (
-                <button
-                  key={path}
-                  onClick={() => navigate(path)}
-                  className="text-xs bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 hover:text-amber-100 border border-amber-600/30 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
+          {isAdmin && <AdminShortcuts />}
 
           <CustomerSetupStatus key={profile.id} accountId={profile.id} />
           <CustomerCrmService key={`crm-${profile.id}`} accountId={profile.id} />

@@ -66,7 +66,7 @@ try {
     ['/', 'P.Home'], ['/accessibility', 'P.Accessibility'], ['/privacy', 'P.Privacy'],
     ['/support/ai-chat', 'S.AIChat'], ['/client/support/new', 'C.NewTicket'],
     ['/client/subscription', 'C.Subscription'], ['/admin', 'A.Dashboard'], ['/admin/crm', 'A.CRM'],
-    ['/admin/crm/contacts', 'A.Contacts'], ['/content/movie/1', 'P.ContentDetail'],
+    ['/admin/crm/contacts', 'A.UnavailableModule'], ['/content/movie/1', 'P.ContentDetail'],
     ['/support/article/getting-started', 'S.Article'], ['/support/guide/android-tv', 'S.Guide'],
   ]) assert.equal(leaf(url)?.handle.tag, tag, url);
   for (const [url, to] of [['/account', '/client/account'], ['/support/technical', '/support/streaming'], ['/support/device-setup', '/support/devices']]) {

@@ -10,6 +10,10 @@ const directory=await mkdtemp(join(process.cwd(),'node_modules','.ks-customer-cr
 const originalFetch=globalThis.fetch,originalWindow=globalThis.window;
 const id=n=>`66666666-6666-4666-8666-${String(n).padStart(12,'0')}`;
 const owner=id(1),other=id(2),customer=id(10);
+// The website-plan fallback uses the browser's local zone/locale. Test its
+// ownership and visibility without assuming this machine displays a UTC date.
+const websiteExpiry='2026-11-12T22:45:08Z';
+const websiteExpiryLabel=new Date(websiteExpiry).toLocaleString([], {year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 const reactPath=import.meta.resolve('react');
 const hookSource=`import React from ${JSON.stringify(reactPath)};export default React;
  export const useState=initial=>{const h=globalThis.__portalHooks,i=h.index++;if(!(i in h.values))h.values[i]=typeof initial==='function'?initial():initial;return[h.values[i],v=>{h.values[i]=typeof v==='function'?v(h.values[i]):v;}];};
@@ -82,14 +86,14 @@ try{
  globalThis.__portalAuthChange('SIGNED_OUT',null);render(Customer,customerProps);assert.equal(states.at(-1).status,'signed_out');
  console.log('PASS: actual service component reports owner-bound linked/loading/error/sign-out states without treating a failed read as an unlinked account');
  const Subscription=await compile('src/pages/client/ClientSubscription.tsx','subscription');
- reset();globalThis.__portalAccount=owner;globalThis.__portalProfile={id:owner,email:'owner@example.invalid',subscription_tier:'bronze',subscription_status:'active',connections_allowed:1,active_connections:0,subscription_expires_at:'2026-11-12T22:45:08Z',updated_at:'2026-10-13T22:45:08Z'};
- render(Subscription,{});await drain();tree=render(Subscription,{});assert.ok(!html(tree).includes('Nov 12, 2026'));
+ reset();globalThis.__portalAccount=owner;globalThis.__portalProfile={id:owner,email:'owner@example.invalid',subscription_tier:'bronze',subscription_status:'active',connections_allowed:1,active_connections:0,subscription_expires_at:websiteExpiry,updated_at:'2026-10-13T22:45:08Z'};
+ render(Subscription,{});await drain();tree=render(Subscription,{});assert.ok(!html(tree).includes(websiteExpiryLabel));
  const serviceNode=()=>nodes(tree).find(n=>typeof n.type==='function'&&n.type.name==='FixtureService');assert.ok(serviceNode());
  serviceNode().props.onServiceStateChange({accountId:owner,status:'linked'});tree=render(Subscription,{});markup=html(tree);
- assert.ok(markup.includes('Apr 22, 2027'));assert.ok(markup.includes('6 Months + 3 Connections'));assert.ok(!markup.includes('Nov 12, 2026'));assert.ok(!markup.includes('Bronze'));assert.ok(!markup.includes('Website Plan Access Period'));
- for(const status of ['loading','unavailable','signed_out']){serviceNode().props.onServiceStateChange({accountId:owner,status});tree=render(Subscription,{});assert.ok(!html(tree).includes('Nov 12, 2026'));}
- serviceNode().props.onServiceStateChange({accountId:other,status:'unlinked'});tree=render(Subscription,{});assert.ok(!html(tree).includes('Nov 12, 2026'));
+ assert.ok(markup.includes('Apr 22, 2027'));assert.ok(markup.includes('6 Months + 3 Connections'));assert.ok(!markup.includes(websiteExpiryLabel));assert.ok(!markup.includes('Bronze'));assert.ok(!markup.includes('Website Plan Access Period'));
+ for(const status of ['loading','unavailable','signed_out']){serviceNode().props.onServiceStateChange({accountId:owner,status});tree=render(Subscription,{});assert.ok(!html(tree).includes(websiteExpiryLabel));}
+ serviceNode().props.onServiceStateChange({accountId:other,status:'unlinked'});tree=render(Subscription,{});assert.ok(!html(tree).includes(websiteExpiryLabel));
  serviceNode().props.onServiceStateChange({accountId:owner,status:'unlinked'});tree=render(Subscription,{});markup=html(tree);
- assert.ok(markup.includes('Website Plan Access Period'));assert.ok(markup.includes('Nov 12, 2026'));assert.ok(markup.includes('do not confirm streaming-service expiration'));
+ assert.ok(markup.includes('Website Plan Access Period'));assert.ok(markup.includes(websiteExpiryLabel));assert.ok(markup.includes('do not confirm streaming-service expiration'));
  console.log('PASS: actual Subscription page gives linked service precedence over a conflicting website plan; no old-date flash or error fallback, foreign state ignored, unlinked dates explicitly scoped to website access');
 }finally{globalThis.fetch=originalFetch;if(originalWindow===undefined)delete globalThis.window;else globalThis.window=originalWindow;delete globalThis.__portalHooks;delete globalThis.__portalAccount;delete globalThis.__portalAuthChange;delete globalThis.__portalProfile;await rm(directory,{recursive:true,force:true});}

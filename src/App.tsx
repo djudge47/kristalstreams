@@ -124,17 +124,10 @@ const adminPages = {
   Dashboard: lazyRetry(() => import('./pages/admin/AdminDashboard')),
   RoombaConnection: lazyRetry(() => import('./pages/admin/RoombaConnection')),
   PrepareSetup: lazyRetry(() => import('./pages/admin/PrepareSetup')),
-  Customers: lazyRetry(() => import('./pages/admin/Customers')),
   Tickets: lazyRetry(() => import('./pages/admin/SupportTickets')),
-  Analytics: lazyRetry(() => import('./pages/admin/Analytics')),
-  Slider: lazyRetry(() => import('./pages/admin/SliderManager')),
-  DemoReel: lazyRetry(() => import('./pages/admin/DemoReelManager')),
-  Programs: lazyRetry(() => import('./pages/admin/ProgramManager')),
+  Modules: lazyRetry(() => import('./pages/admin/AdminModules')),
+  UnavailableModule: lazyRetry(() => import('./pages/admin/AdminModuleUnavailable')),
   CRM: lazyRetry(() => import('./pages/admin/CRMDashboard')),
-  Contacts: lazyRetry(() => import('./pages/admin/Contacts')),
-  Companies: lazyRetry(() => import('./pages/admin/Companies')),
-  Deals: lazyRetry(() => import('./pages/admin/Deals')),
-  Activities: lazyRetry(() => import('./pages/admin/Activities')),
 };
 
 const LoadingFallback = () => <div className="flex min-h-screen items-center justify-center bg-gray-900 text-gray-300">Loading...</div>;
@@ -248,17 +241,18 @@ function App() {
             <Route index element={<A.Dashboard />} />
             <Route path="roomba" element={<A.RoombaConnection />} />
             <Route path="setup" element={<A.PrepareSetup />} />
-            <Route path="customers" element={<A.Customers />} />
+            <Route path="customers" element={<Navigate to="/admin/crm" replace />} />
             <Route path="tickets" element={<A.Tickets />} />
-            <Route path="analytics" element={<A.Analytics />} />
-            <Route path="slider" element={<A.Slider />} />
-            <Route path="demo-reel" element={<A.DemoReel />} />
-            <Route path="programs" element={<A.Programs />} />
+            <Route path="modules" element={<A.Modules />} />
+            <Route path="analytics" element={<A.UnavailableModule />} />
+            <Route path="slider" element={<A.UnavailableModule />} />
+            <Route path="demo-reel" element={<A.UnavailableModule />} />
+            <Route path="programs" element={<A.UnavailableModule />} />
             <Route path="crm" element={<A.CRM />} />
-            <Route path="crm/contacts" element={<A.Contacts />} />
-            <Route path="crm/companies" element={<A.Companies />} />
-            <Route path="crm/deals" element={<A.Deals />} />
-            <Route path="crm/activities" element={<A.Activities />} />
+            <Route path="crm/contacts" element={<A.UnavailableModule />} />
+            <Route path="crm/companies" element={<A.UnavailableModule />} />
+            <Route path="crm/deals" element={<A.UnavailableModule />} />
+            <Route path="crm/activities" element={<A.UnavailableModule />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
