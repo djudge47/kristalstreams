@@ -36,6 +36,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// A password check must never replace the website's persisted account session.
+export const createPasswordVerificationClient = () => {
+  if (!hasSupabaseConfig) throw new Error('Website account services are unavailable.');
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: 'ks-password-verification',
+    },
+  });
+};
+
 supabase.auth.onAuthStateChange((event) => {
   if (import.meta.env.DEV) {
     console.log('Auth state changed:', event);
