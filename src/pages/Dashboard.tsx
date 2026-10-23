@@ -1,7 +1,7 @@
 import type { BeforeInstallPromptEvent } from '../lib/install-prompt';
 import React, { useEffect, useState } from 'react';
 import { isAuthSessionMissingError } from '@supabase/supabase-js';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { subscribeToTickets, getUnreadTicketCount, useNotificationStore } from '../lib/api';
 import InstallPrompt from '../components/InstallPrompt';
@@ -21,6 +21,7 @@ import {
   Bell,
   Download,
   Smartphone,
+  ChevronRight,
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'djudge47@gmail.com';
@@ -428,16 +429,17 @@ const PwaInstallBanner: React.FC = () => {
           <p className="text-gray-400 text-sm mb-4">
             Add a shortcut to your website dashboard, plans and support. Your streaming player uses the separate download and setup instructions supplied for your device.
           </p>
-          <div className="flex flex-wrap gap-4 mb-4">
+          <div className="grid grid-cols-1 gap-3 mb-5">
             {[
-              { icon: Download, label: 'Home screen shortcut' },
-              { icon: User, label: 'Account dashboard' },
-              { icon: MessageSquare, label: 'Support access' },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2 text-sm text-gray-300">
-                <Icon className="w-4 h-4 text-primary flex-shrink-0" />
-                {label}
-              </div>
+              { icon: Download, label: 'Home screen shortcut', to: '/download-app#website-shortcut-title' },
+              { icon: User, label: 'My account', to: '/client/account' },
+              { icon: MessageSquare, label: 'Support access', to: '/client/support' },
+            ].map(({ icon: Icon, label, to }) => (
+              <Link key={label} to={to} className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-gray-700 bg-dark-200 px-4 py-3 text-sm font-medium text-gray-200 transition-colors hover:border-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-dark-100">
+                <Icon className="h-5 w-5 flex-shrink-0 text-primary" aria-hidden="true" />
+                <span className="min-w-0 flex-1">{label}</span>
+                <ChevronRight className="h-5 w-5 flex-shrink-0 text-gray-400" aria-hidden="true" />
+              </Link>
             ))}
           </div>
           {isIOS ? (
