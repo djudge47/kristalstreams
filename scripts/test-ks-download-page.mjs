@@ -1,0 +1,90 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { build } from 'esbuild';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+
+const directory = await mkdtemp(join(process.cwd(), 'node_modules', '.ks-download-'));
+const originals = new Map();
+function replace(name, value) { originals.set(name, Object.getOwnPropertyDescriptor(globalThis, name)); Object.defineProperty(globalThis, name, { value, writable: true, configurable: true }); }
+replace('fetch', () => { throw Error('Device setup must not invoke connected services'); });
+let hooks, standalone = false;
+const listeners = new Map();
+replace('window', { scrollTo() {}, matchMedia: () => ({ matches: standalone }),
+  addEventListener(name, callback) { if (!listeners.has(name)) listeners.set(name, new Set()); listeners.get(name).add(callback); },
+  removeEventListener(name, callback) { listeners.get(name)?.delete(callback); },
+  dispatchEvent(event) { for (const callback of [...(listeners.get(event.type) ?? [])]) callback(event); return !event.defaultPrevented; },
+});
+replace('__downloadHooks', {
+  useState(initial) { const i = hooks.stateIndex++; if (!(i in hooks.states)) hooks.states[i] = typeof initial === 'function' ? initial() : initial; return [hooks.states[i], value => { hooks.states[i] = typeof value === 'function' ? value(hooks.states[i]) : value; }]; },
+  useRef(initial) { const i = hooks.refIndex++; return hooks.refs[i] ?? (hooks.refs[i] = { current: initial }); },
+  useEffect(effect) { if (!hooks.mounted) { hooks.mounted = true; hooks.pending.push(() => { hooks.cleanup = effect(); }); } },
+});
+const hookSource = `import React from ${JSON.stringify(import.meta.resolve('react'))};export default React;export const {useState,useRef,useEffect}=globalThis.__downloadHooks;`;
+const output = await build({ entryPoints: ['src/pages/DownloadApp.tsx'], bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', packages: 'external', plugins: [{ name: 'download-offline', setup(b) {
+  b.onResolve({ filter: /(?:^|\/)lib\/(?:api|supabase)$|^\.\/supabase$/ }, () => { throw Error('Download page imported a connected client'); });
+  b.onResolve({ filter: /^file:/ }, args => ({ path: args.path, external: true }));
+  b.onResolve({ filter: /^react$/ }, () => ({ path: 'hooks', namespace: 'fixture' }));
+  b.onResolve({ filter: /^react-router-dom$/ }, () => ({ path: 'router', namespace: 'fixture' }));
+  b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'hooks' ? hookSource : `import React from ${JSON.stringify(import.meta.resolve('react'))};export const Link=({to,children,...props})=>React.createElement('a',{href:to,...props},children);` }));
+} }] });
+const file = join(directory, 'page.mjs'); await writeFile(file, output.outputFiles[0].text);
+const Component = (await import(pathToFileURL(file))).default;
+const nodes = element => !React.isValidElement(element) ? [] : [element, ...React.Children.toArray(element.props.children).flatMap(nodes)];
+const text = element => typeof element === 'string' ? element : React.isValidElement(element) ? React.Children.toArray(element.props.children).map(text).join('') : '';
+const markup = tree => renderToStaticMarkup(tree);
+const button = tree => nodes(tree).find(node => node.type === 'button');
+function unmount() { hooks?.cleanup?.(); }
+function fresh(value = false) { unmount(); standalone = value; hooks = { states: [], refs: [], pending: [], stateIndex: 0, refIndex: 0, mounted: false }; }
+function render() { hooks.stateIndex = 0; hooks.refIndex = 0; const tree = Component(); for (const effect of hooks.pending.splice(0)) effect(); return tree; }
+function offer(prompt = async () => {}, userChoice = Promise.resolve({ outcome: 'accepted' })) {
+  const event = Object.assign(new Event('beforeinstallprompt', { cancelable: true }), { prompt, userChoice }); window.dispatchEvent(event); return event;
+}
+try {
+  fresh(); render(); let tree = render();
+  assert.match(text(tree), /Installer update in review/); assert.match(text(tree), /download is temporarily unavailable/); assert.match(text(tree), /keep your current installation and saved users/);
+  assert.match(text(tree), /Signing out of the website does not sign out of the TV app/);
+  assert.match(text(tree), /does not install or update the Android streaming app/);
+  assert.equal(button(tree), undefined);
+  const html = markup(tree);
+  assert.doesNotMatch(html, /href="[^"]*\.apk|download=|Version 9506|Android 7\.0|Supported devices|<video|<iframe/);
+  const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]);
+  assert.ok(hrefs.includes('mailto:support@kristalstream.com'));
+  const app = await readFile('src/App.tsx', 'utf8');
+  const exactPaths = new Set([...app.matchAll(/<Route path="([^"]+)"/g)].map(match => '/' + match[1].split('/').filter(Boolean).join('/')));
+  for (const href of hrefs.filter(link => link.startsWith('/'))) assert.ok(exactPaths.has(href), `Device setup destination missing: ${href}`);
+  console.log('PASS: actual page clearly pauses the old native download, preserves working-install guidance and separates website shortcuts from TV/phone app behavior with real help links');
+
+  fresh(true); render(); tree = render(); assert.match(text(tree), /Website shortcut available/); assert.equal(button(tree), undefined);
+  const ignored = offer(() => { throw Error('An installed context must not prompt again'); }); assert.equal(ignored.defaultPrevented, false);
+  fresh(); render(); window.dispatchEvent(new Event('appinstalled')); tree = render(); assert.match(text(tree), /Website shortcut available/);
+  assert.doesNotMatch(text(tree), /Android app installed|streaming app installed/i);
+  console.log('PASS: standalone and actual appinstalled events confirm only website shortcut availability; they never certify native installation');
+
+  fresh(); render(); let calls = 0, release;
+  const offered = offer(() => { calls++; return new Promise(resolve => { release = resolve; }); }); assert.equal(offered.defaultPrevented, true);
+  tree = render(); const click = button(tree).props.onClick; const first = click(), duplicate = click(); tree = render();
+  assert.equal(calls, 1); assert.equal(button(tree).props.disabled, true);
+  release(); await Promise.all([first, duplicate]); tree = render();
+  assert.match(text(tree), /installation requested/); assert.doesNotMatch(text(tree), /Website shortcut available/); assert.equal(button(tree), undefined);
+  window.dispatchEvent(new Event('appinstalled')); tree = render(); assert.match(text(tree), /Website shortcut available/); assert.doesNotMatch(text(tree), /installation requested/);
+  console.log('PASS: duplicate install clicks prompt once, busy state disables the control, accepted choice is only a request and completion waits for browser evidence');
+
+  fresh(); render(); offer(async () => {}, Promise.resolve({ outcome: 'dismissed' })); tree = render(); await button(tree).props.onClick(); tree = render();
+  assert.match(text(tree), /was dismissed/); assert.doesNotMatch(text(tree), /Website shortcut available/);
+  fresh(); render(); offer(async () => { throw Error('Fictional raw service detail'); }); tree = render(); await button(tree).props.onClick(); tree = render();
+  assert.match(text(tree), /could not be installed/); assert.doesNotMatch(text(tree), /Fictional raw|Website shortcut available/);
+  fresh(); render(); let finish;
+  offer(() => new Promise(resolve => { finish = resolve; })); tree = render(); const waiting = button(tree).props.onClick(); const states = [...hooks.states]; unmount(); finish(); await waiting;
+  assert.deepEqual(hooks.states, states); assert.ok([...listeners.values()].every(set => set.size === 0));
+  fresh(); render(); let confirm;
+  offer(() => new Promise(resolve => { confirm = resolve; })); tree = render(); const installing = button(tree).props.onClick(); window.dispatchEvent(new Event('appinstalled')); confirm(); await installing; tree = render();
+  assert.match(text(tree), /Website shortcut available/); assert.doesNotMatch(text(tree), /installation requested/);
+  console.log('PASS: dismissed/failed requests are truthful and sanitized, completion during a pending prompt wins, and unmount removes listeners and discards late UI updates');
+  console.log('4 device-setup/download-page regression groups passed. No real installer, browser prompt, connected account, provider, mail or payment was accessed.');
+} finally {
+  unmount(); for (const [name, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; }
+  await rm(directory, { recursive: true, force: true });
+}

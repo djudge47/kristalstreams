@@ -24,6 +24,7 @@ jobs:
       - run: npm run check
       - name: Verify help, payment, support and portal regressions with offline fixtures
         run: |
+          node scripts/test-ks-download-page.mjs
           node scripts/test-ks-admin-modules.mjs
           node scripts/test-ks-navigation.mjs
           node scripts/test-ks-general-chat.mjs
