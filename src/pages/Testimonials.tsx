@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Star, Quote, ChevronLeft, ChevronRight, Users, Award, ThumbsUp } from 'lucide-react';
 
 interface Testimonial {
@@ -196,8 +196,8 @@ const Testimonials: React.FC = () => {
               <div className="text-gray-400">Average Rating</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary mb-2">99.9%</div>
-              <div className="text-gray-400">Uptime</div>
+              <Link to="/support/status" className="mb-2 block text-2xl font-bold text-primary hover:underline">View Status</Link>
+              <div className="text-gray-400">Service Information</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-primary mb-2">24/7</div>

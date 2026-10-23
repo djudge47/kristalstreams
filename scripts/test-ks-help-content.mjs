@@ -101,6 +101,29 @@ try {
   }
   console.log('PASS: seven established support pages use the same maintained guide content');
 
+  for (const [file, heading, availability] of [
+    ['SystemStatus', 'System Status', 'Live status unavailable'],
+    ['StatusHistory', 'Status History', 'Incident history unavailable'],
+    ['Maintenance', 'Maintenance Schedule', 'Schedule unavailable'],
+    ['Issues', 'Known Issues', 'Issue information unavailable'],
+  ]) {
+    const Component = (await compile(`src/pages/support/${file}.tsx`)).default;
+    const html = render(Component);
+    assert.ok(html.includes(`>${heading}</h1>`));
+    assert.ok(html.includes(availability));
+    assert.ok(hrefs(html).includes('/support'), 'Unavailable information must offer support navigation');
+    assert.doesNotMatch(html, /All Systems Operational|99\.9%|No major incidents|No Known Issues|Last checked:|Updated \d|Tuesday 3-5|No major maintenance|notify users via email/i);
+    if (file === 'SystemStatus') {
+      assert.equal([...html.matchAll(/>Not verified<\/span>/g)].length, 5);
+      assert.doesNotMatch(html, /text-green-|animate-pulse/);
+    }
+    checkedLinks.push(...hrefs(html));
+  }
+  for (const file of ['src/components/DemoReel.tsx', 'src/pages/Testimonials.tsx', 'src/pages/Reselling.tsx']) {
+    assert.doesNotMatch(await readFile(file, 'utf8'), /99\.9%/);
+  }
+  console.log('PASS: four status pages identify unavailable evidence, offer support and omit simulated uptime, incident and maintenance claims');
+
   // Extract actual JSX route paths rather than inventing a duplicate route fixture.
   const source = ts.createSourceFile('App.tsx', await readFile('src/App.tsx', 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const routePaths = [], redirects = new Map();
@@ -131,7 +154,7 @@ try {
   assert.equal(redirects.get('/support/technical'), '/support/streaming');
   assert.equal(redirects.get('/support/device-setup'), '/support/devices');
   console.log('PASS: every rendered help link has an actual App route; both historical topic URLs redirect to working pages');
-  console.log('4 public-help regression scenarios passed. No database, analytics or external service was called.');
+  console.log('5 public-help regression scenarios passed. No database, analytics or external service was called.');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.__ksHelpSlug;
