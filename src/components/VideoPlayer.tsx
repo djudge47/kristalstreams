@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState, memo } from 'react';
 import Hls from 'hls.js';
 import { Play, Pause, Volume2, VolumeX, Maximize, Settings } from 'lucide-react';
+import { usePlaybackPreferences } from '../lib/usePlaybackPreferences';
+import { preferredVideoLevel } from '../lib/playback-preferences';
 
 interface VideoPlayerProps {
   src: string;
@@ -17,6 +19,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
   autoplay = false,
   onEnded
 }) => {
+  const playback = usePlaybackPreferences();
+  const effectiveAutoplay = !playback.loading && !playback.error && (playback.preferences?.autoplay ?? autoplay);
+  const preferredQuality = playback.preferences?.quality ?? 'auto';
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -35,6 +40,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    if (playback.loading || !effectiveAutoplay) video.pause();
+    setIsLoading(true);
+    setError(null);
+    setQuality('auto');
+    if (playback.loading) return;
 
     const isHLS = src.includes('.m3u8');
 
@@ -51,13 +61,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (hlsRef.current !== hls) return;
           setIsLoading(false);
-          if (autoplay) {
+          const level = preferredVideoLevel(hls.levels.map(item => item.height), preferredQuality);
+          hls.currentLevel = level;
+          setQuality(level === -1 ? 'auto' : `${hls.levels[level].height}p`);
+          if (effectiveAutoplay) {
             video.play().catch(() => setIsPlaying(false));
           }
         });
 
         hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (hlsRef.current !== hls) return;
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
@@ -77,14 +92,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
         });
 
         return () => {
-          if (hlsRef.current) {
-            hlsRef.current.destroy();
-          }
+          hls.destroy();
+          if (hlsRef.current === hls) hlsRef.current = null;
         };
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = src;
         setIsLoading(false);
-        if (autoplay) {
+        if (effectiveAutoplay) {
           video.play().catch(() => setIsPlaying(false));
         }
       } else {
@@ -94,11 +108,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
     } else {
       video.src = src;
       setIsLoading(false);
-      if (autoplay) {
+      if (effectiveAutoplay) {
         video.play().catch(() => setIsPlaying(false));
       }
     }
-  }, [src, autoplay]);
+  }, [src, effectiveAutoplay, preferredQuality, playback.loading]);
 
   useEffect(() => {
     const video = videoRef.current;
