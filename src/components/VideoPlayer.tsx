@@ -9,6 +9,7 @@ interface VideoPlayerProps {
   poster?: string;
   title?: string;
   autoplay?: boolean;
+  immersive?: boolean;
   onEnded?: () => void;
 }
 
@@ -17,6 +18,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
   poster,
   title,
   autoplay = false,
+  immersive = true,
   onEnded
 }) => {
   const playback = usePlaybackPreferences();
@@ -152,6 +154,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
   }, []);
 
   useEffect(() => {
+    if (!immersive) return;
     const isMobile = window.matchMedia('(max-width: 639px)').matches;
     if (!isMobile) return;
 
@@ -164,7 +167,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
       document.body.style.overflow = previousOverflow;
       document.body.style.overscrollBehavior = previousOverscroll;
     };
-  }, []);
+  }, [immersive]);
 
   const togglePlay = () => {
     const video = videoRef.current;
@@ -246,7 +249,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = memo(({
   return (
     <div
       ref={containerRef}
-      className={`relative left-1/2 h-[100dvh] w-screen -translate-x-1/2 overflow-hidden bg-black group sm:left-auto sm:h-auto sm:w-full sm:translate-x-0 sm:aspect-video ${
+      className={`relative overflow-hidden bg-black group ${immersive ? 'left-1/2 h-[100dvh] w-screen -translate-x-1/2 sm:left-auto sm:h-auto sm:w-full sm:translate-x-0 sm:aspect-video' : 'aspect-video w-full'} ${
         isFullscreen ? 'rounded-none' : 'rounded-none sm:rounded-lg'
       }`}
       onMouseEnter={() => setShowControls(true)}

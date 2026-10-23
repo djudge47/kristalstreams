@@ -144,6 +144,14 @@ try {
   const oldPlays = plays; hls.events.manifest(); assert.equal(plays, oldPlays, 'A stale manifest cannot restart playback after an account change');
   globalThis.__playerPreferences = { loading: false, error: null, preferences: { quality: '4k', autoplay: false } };
   render(Player, { src: 'https://fixture.invalid/video.mp4', autoplay: true }); assert.equal(plays, oldPlays);
+  window.matchMedia = () => ({ matches: true });
+  document.body.style.overflow = 'scroll'; document.body.style.overscrollBehavior = 'contain';
+  reset([video, {}]);
+  tree = render(Player, { src: 'https://fixture.invalid/video.mp4', autoplay: true, immersive: false });
+  assert.equal(document.body.style.overflow, 'scroll');
+  assert.equal(document.body.style.overscrollBehavior, 'contain');
+  assert.ok(tree.props.className.includes('aspect-video w-full'));
+  assert.ok(!tree.props.className.includes('100dvh'));
   console.log('PASS: actual player consumes saved quality/autoplay, pauses while account preferences change and discards stale HLS callbacks');
   console.log('6 playback/settings regression groups passed. No connected database, profile update, permission prompt, push subscription, notification or media request occurred.');
 } finally {

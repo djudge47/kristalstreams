@@ -55,6 +55,7 @@ const pages = {
   CheckoutPage: lazyRetry(() => import('./pages/pricing/CheckoutPage')),
   PPV: lazyRetry(() => import('./pages/PPV')),
   ContentDetail: lazyRetry(() => import('./pages/ContentDetail')),
+  PlayerDemo: lazyRetry(() => import('./pages/PlayerDemo')),
   AboutUs: lazyRetry(() => import('./pages/AboutUs')),
   OurServices: lazyRetry(() => import('./pages/OurServices')),
   DownloadApp: lazyRetry(() => import('./pages/DownloadApp')),
@@ -177,6 +178,7 @@ function App() {
             <Route path="cookies" element={<P.CookiePolicy />} />
             <Route path="ppv" element={<P.PPV />} />
             <Route path="content/:type/:id" element={<P.ContentDetail />} />
+            <Route path="player-demo" element={<P.PlayerDemo />} />
             <Route path="about" element={<P.AboutUs />} />
             <Route path="services" element={<P.OurServices />} />
             <Route path="download-app" element={<P.DownloadApp />} />

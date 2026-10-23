@@ -90,49 +90,6 @@ export const getUnreadTicketCount = async (userId: string) => {
   return count;
 };
 
-export const getStreamUrl = async (channelId: string) => {
-  // Mock stream URL for development
-  const mockStreamUrl = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
-  
-  // In development, return mock stream URL
-  if (import.meta.env.DEV) {
-    return mockStreamUrl;
-  }
-
-  // In production, use actual API
-  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
-  const API_KEY = import.meta.env.VITE_API_KEY;
-
-  if (!API_ENDPOINT || !API_KEY) {
-    console.warn('Using mock stream URL due to missing API configuration');
-    return mockStreamUrl;
-  }
-
-  try {
-    const response = await fetch(`${API_ENDPOINT}/stream/${channelId}`, {
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      throw new Error(
-        errorData?.message || 
-        `API request failed with status ${response.status} (${response.statusText})`
-      );
-    }
-
-    const data = await response.json();
-    return data.streamUrl || mockStreamUrl;
-  } catch (error) {
-    console.error('Error fetching stream URL:', error);
-    return mockStreamUrl;
-  }
-};
-
 // Enhanced error handling for Supabase queries
 const handleSupabaseQuery = async <T>(
   queryPromise: PromiseLike<{ data: T | null; error: unknown }>,
