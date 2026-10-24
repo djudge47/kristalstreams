@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { build } from 'esbuild';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { StaticRouter } from 'react-router-dom/server.js';
+import { StaticRouter } from 'react-router-dom';
 
 // Test initial rendered controls with payment/network modules replaced by a
 // fixture. This is not evidence of browser interaction or deployed checkout.

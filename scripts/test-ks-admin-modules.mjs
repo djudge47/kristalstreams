@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { StaticRouter } from 'react-router-dom/server.js';
+import { StaticRouter } from 'react-router-dom';
 import { matchRoutes } from 'react-router-dom';
 import ts from 'typescript';
 

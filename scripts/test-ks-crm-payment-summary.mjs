@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 import React from 'react';
-import { StaticRouter } from 'react-router-dom/server.js';
+import { StaticRouter } from 'react-router-dom';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createClient } from '@supabase/supabase-js';
 import { isReceivedPayment, latestReceivedPayments, loadCrmPayments, receivedPaymentDate, receivedPaymentDateTime } from '../_shared/ks-crm-payment-summary.js';

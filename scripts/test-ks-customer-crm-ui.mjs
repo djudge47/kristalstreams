@@ -5,7 +5,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {StaticRouter} from 'react-router-dom/server.js';
+import {StaticRouter} from 'react-router-dom';
 const directory=await mkdtemp(join(process.cwd(),'node_modules','.ks-customer-crm-ui-'));
 const originalFetch=globalThis.fetch,originalWindow=globalThis.window;
 const id=n=>`66666666-6666-4666-8666-${String(n).padStart(12,'0')}`;

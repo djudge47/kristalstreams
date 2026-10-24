@@ -7,7 +7,7 @@ import ts from 'typescript';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { matchRoutes } from 'react-router-dom';
-import { StaticRouter } from 'react-router-dom/server.js';
+import { StaticRouter } from 'react-router-dom';
 
 const directory = await mkdtemp(join(process.cwd(), 'node_modules', '.ks-help-'));
 const originalFetch = globalThis.fetch;
