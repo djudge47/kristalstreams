@@ -1,5 +1,6 @@
 import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import './lib/password-recovery';
 import App from './App';
 import './index.css';
 

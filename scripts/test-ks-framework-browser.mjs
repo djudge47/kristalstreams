@@ -27,6 +27,8 @@ const rows = Array.from({ length: 12 }, (_, i) => ({
   expiration_at: '2030-10-28T12:00:00Z', package_name: '6 Months + 3 Connections',
 }));
 const methods = [], profileWrites = [], replyWrites = [], ticketWrites = [], pageErrors = [], blocked = [];
+const recoveryExchanges = [], recoveryWrites = [];
+let releasePasswordUpdate;
 let profile = { id: id(100), full_name: 'Fictional account name', updated_at: '2026-10-24T08:00:00.123456+00:00' };
 const websiteProfile = { id: id(100), subscription_tier: 'bronze', subscription_status: 'active', connections_allowed: 1, subscription_expires_at: '2026-11-12T22:45:08Z', updated_at: '2026-10-24T08:00:00Z' };
 const supportTickets = Array.from({ length: 12 }, (_, i) => ({ id: id(400 + i), user_id: id(100), subject: `Fictional support ${String(i + 1).padStart(2, '0')}`, description: 'Fictional support problem', category: 'Technical Issue', priority: 'normal', status: 'open', created_at: '2026-10-24T08:00:00Z' }));
@@ -62,22 +64,43 @@ try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
   browser = await chromium.launch({ executablePath, args: (bundled?.args ?? ['--no-sandbox', '--disable-dev-shm-usage']).filter(arg => !['--single-process', '--disable-web-security', '--allow-running-insecure-content'].includes(arg)), headless: true });
-  async function contextFor(email) {
+  async function contextFor(email, recovery = false) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     const user = { id: id(100), email, email_confirmed_at: '2026-01-01T00:00:00Z', is_anonymous: false, app_metadata: {}, user_metadata: {}, aud: 'authenticated', role: 'authenticated', created_at: '2026-01-01T00:00:00Z' };
-    await context.addInitScript(({ user }) => {
+    await context.addInitScript(({ user, recovery }) => {
       if (location.protocol !== 'http:') return;
       localStorage.setItem('installPromptDismissed9506', String(Date.now()));
+      if (recovery) {
+        localStorage.setItem('supabase.auth.token-code-verifier', JSON.stringify('fictional-verifier-for-offline-recovery/recovery'));
+        return;
+      }
       const token = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })) + '.' + btoa(JSON.stringify({ sub: user.id, exp: Math.floor(Date.now() / 1000) + 3600 })) + '.fictional-signature';
       localStorage.setItem('supabase.auth.token', JSON.stringify({ access_token: token, refresh_token: 'fictional-refresh', expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: 'bearer', user }));
-    }, { user });
+    }, { user, recovery });
     await context.route('**/*', async route => {
       const request = route.request(), url = new URL(request.url());
       if (url.origin === origin) return route.continue();
       if (url.origin !== 'https://fictional.supabase.co') { blocked.push(url.origin); return route.abort(); }
-      const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-supabase-api-version', 'access-control-allow-methods': 'GET, HEAD, PATCH, POST, OPTIONS', 'content-type': 'application/json' };
+      const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-supabase-api-version', 'access-control-allow-methods': 'GET, HEAD, PATCH, POST, PUT, OPTIONS', 'content-type': 'application/json' };
       if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
       methods.push(request.method());
+      if (url.pathname === '/auth/v1/token') {
+        assert.equal(recovery, true); assert.equal(request.method(), 'POST');
+        assert.equal(url.search, '?grant_type=pkce');
+        assert.deepEqual(request.postDataJSON(), { auth_code: 'fictional-recovery-code', code_verifier: 'fictional-verifier-for-offline-recovery' });
+        recoveryExchanges.push(true); assert.equal(recoveryExchanges.length, 1);
+        const token = Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url') + '.' + Buffer.from(JSON.stringify({ sub: user.id, exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url') + '.fictional-signature';
+        return route.fulfill({ status: 200, headers, body: JSON.stringify({ access_token: token, refresh_token: 'fictional-recovery-refresh', token_type: 'bearer', expires_in: 3600, user }) });
+      }
+      if (url.pathname === '/auth/v1/user' && request.method() === 'PUT') {
+        assert.equal(recovery, true); assert.equal(url.search, '');
+        assert.deepEqual(request.postDataJSON(), { password: 'fictional recovery password', code_challenge: null, code_challenge_method: null });
+        const jwt = request.headers().authorization.split(' ')[1];
+        assert.equal(JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url')).sub, user.id);
+        recoveryWrites.push(true); assert.equal(recoveryWrites.length, 1);
+        await new Promise(resolve => { releasePasswordUpdate = resolve; });
+        return route.fulfill({ status: 200, headers, body: JSON.stringify(user) });
+      }
       if (url.pathname === '/rest/v1/profiles') {
         assert.equal(url.searchParams.get('id'), 'eq.' + user.id);
         if (url.searchParams.get('select') === 'id,subscription_tier,subscription_status,connections_allowed,subscription_expires_at,updated_at') {
@@ -127,7 +150,7 @@ try {
         const body = request.headers().accept?.includes('object') ? data[0] ?? null : data;
         return route.fulfill({ status: 200, headers, body: JSON.stringify(body) });
       }
-      assert.equal(request.method(), 'GET', 'Only the separately validated fictional profile-name PATCH and customer-reply POST are allowed');
+      assert.equal(request.method(), 'GET', 'Only separately validated fictional writes are allowed');
       if (url.pathname === '/auth/v1/user') return route.fulfill({ status: 200, headers, body: JSON.stringify(user) });
       const table = url.pathname.split('/').at(-1);
       assert.ok(['iptv_customers', 'iptv_payments', 'iptv_customer_activity', 'iptv_reminder_queue'].includes(table), `Unexpected fixture read: ${table}`);
@@ -314,7 +337,32 @@ try {
   const denied = await ordinary.newPage(); denied.on('pageerror', error => pageErrors.push(error.message));
   await denied.goto(origin + '/admin/crm'); await denied.waitForURL('**/login');
   assert.equal(await denied.getByRole('list', { name: 'Customer directory' }).count(), 0);
+  await denied.goto(origin + '/reset-password?type=recovery');
+  await denied.getByRole('link', { name: 'Open website Security', exact: true }).waitFor();
+  assert.equal(await denied.getByLabel('New website password', { exact: true }).count(), 0, 'An ordinary session and URL flag are not a recovery event');
   await ordinary.close();
+  const recoveryContext = await contextFor('recovery@example.invalid', true);
+  const recoveryPage = await recoveryContext.newPage(); recoveryPage.on('pageerror', error => pageErrors.push(error.message));
+  await recoveryPage.setViewportSize({ width: 320, height: 760 });
+  await recoveryPage.goto(origin + '/reset-password?code=fictional-recovery-code');
+  await recoveryPage.getByLabel('New website password', { exact: true }).waitFor();
+  assert.equal(recoveryExchanges.length, 1, 'Actual SDK must exchange the fictional PKCE recovery code before enabling the lazy route');
+  await recoveryPage.getByLabel('New website password', { exact: true }).fill('fictional recovery password');
+  await recoveryPage.getByLabel('Confirm website password', { exact: true }).fill('fictional recovery password');
+  await recoveryPage.getByRole('button', { name: 'Update website password', exact: true }).click();
+  await recoveryPage.getByRole('button', { name: 'Updating website password...', exact: true }).waitFor();
+  await recoveryPage.waitForFunction(() => document.querySelector('fieldset')?.disabled === true);
+  assert.equal(await recoveryPage.getByLabel('New website password', { exact: true }).inputValue(), '');
+  for (let i = 0; i < 1000 && !releasePasswordUpdate; i++) await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(typeof releasePasswordUpdate, 'function', 'The bounded fixture must receive exactly one password update');
+  releasePasswordUpdate();
+  await recoveryPage.getByText('Website password updated. Use your new password the next time you sign in.', { exact: true }).waitFor();
+  assert.equal(await recoveryPage.getByLabel('New website password', { exact: true }).count(), 0);
+  assert.equal(await recoveryPage.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await recoveryPage.reload();
+  await recoveryPage.getByRole('link', { name: 'Open website Security', exact: true }).waitFor();
+  assert.equal(await recoveryPage.getByLabel('New website password', { exact: true }).count(), 0, 'Reload cannot manufacture a new recovery grant from the persisted normal session');
+  await recoveryContext.close();
   const beforeSignedOut = methods.length;
   const signedOut = await browser.newContext({ viewport: { width: 320, height: 760 } });
   await signedOut.addInitScript(() => { if (location.protocol === 'http:') localStorage.setItem('installPromptDismissed9506', String(Date.now())); });
@@ -344,8 +392,12 @@ try {
   await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
   assert.equal(await noSession.getByLabel('Subject', { exact: true }).count(), 0);
   assert.equal(methods.length, beforeSignedOut, 'Signed-out new-ticket route must not read or write private records');
+  await noSession.goto(origin + '/reset-password');
+  await noSession.getByRole('link', { name: 'Request another password reset', exact: true }).waitFor();
+  assert.equal(await noSession.getByLabel('New website password', { exact: true }).count(), 0);
+  assert.equal(methods.length, beforeSignedOut, 'A signed-out recovery visit cannot send email or change a password');
   await signedOut.close();
-  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => !['GET', 'HEAD'].includes(method)).length === 3 && profileWrites.length === 1 && replyWrites.length === 1 && ticketWrites.length === 1 && methods.includes('PATCH') && methods.includes('POST'));
+  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => !['GET', 'HEAD'].includes(method)).length === 5 && profileWrites.length === 1 && replyWrites.length === 1 && ticketWrites.length === 1 && recoveryExchanges.length === 1 && recoveryWrites.length === 1 && methods.includes('PATCH') && methods.includes('POST') && methods.includes('PUT'));
   console.log('PASS: real Chromium/production-code fixture preserves phone paging, selected/Edit identity, browser Back, Back link search state, 320px touch layout, six-panel desktop view and ordinary-user denial.');
   console.log('PASS: customer Devices shows verified allowance without session controls/receipts, separates missing links and failed reads, recovers on refresh, and History discloses unavailable activity at 320px.');
   console.log('PASS: customer Account at 320px supports Cancel, an owner/revision-bound name save, confirmed returned details and reload; signed-out users make no private profile request.');
@@ -353,7 +405,8 @@ try {
   console.log('PASS: 320px verified new-ticket creation validates the exact fictional insert and return-to-list result; signed-out creation offers sign-in without a form or private requests.');
   console.log('PASS: Dashboard at 320px and desktop bounds recent tickets to five, counts all active tickets independently, isolates profile/count failures, refreshes safely and opens the exact owned thread; signed-out Dashboard makes no private request.');
   console.log('PASS: 320px Subscription retains linked service without a profile, labels unlinked website data separately, distinguishes missing/error, suppresses website fallback during service failure and recovers hidden checks by refreshing.');
-  console.log('Offline fictional Auth/data only; external network blocked; one strictly allowlisted fictional name PATCH, customer-reply POST and new-ticket POST, no real record/Auth write, provider, payment or email operation.');
+  console.log('PASS: 320px recovery uses an actual SDK PKCE exchange before the lazy form mounts, clears/disables password inputs during one pinned update, verifies completion and denies normal/signed-out sessions and reload-based recovery without overflow.');
+  console.log('Offline fictional Auth/data only; external network blocked; exactly five separately validated fictional writes (profile, reply, ticket, PKCE exchange and password update), no real record/Auth write, provider, payment or email operation.');
 } finally {
   await browser?.close(); if (server) await new Promise(resolve => server.close(resolve));
   await rm(directory, { recursive: true, force: true });
