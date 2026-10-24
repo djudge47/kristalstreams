@@ -1,154 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
-import { Monitor, Smartphone, Laptop, Tv, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Monitor } from 'lucide-react';
+import CustomerCrmService from '../../components/CustomerCrmService';
+import { useVerifiedWebsiteAccount } from '../../lib/useVerifiedWebsiteAccount';
 
-interface StreamingSession {
-  id: string;
-  user_id: string;
-  device_info: {
-    type: string;
-    name: string;
-    os?: string;
-    browser?: string;
-  };
-  started_at: string;
-  ended_at: string | null;
+export default function ClientDevices() {
+  const account = useVerifiedWebsiteAccount();
+  return <div className="min-w-0 space-y-5">
+    <header className="flex items-center gap-3"><Monitor className="h-8 w-8 shrink-0 text-primary" aria-hidden="true" /><h1 className="text-2xl font-bold text-white sm:text-3xl">Devices &amp; connections</h1></header>
+    <section aria-labelledby="device-activity-heading" className="rounded-2xl border border-gray-700 bg-dark-100 p-5 sm:p-7">
+      <h2 id="device-activity-heading" className="text-xl font-semibold text-white">Live device activity is unavailable</h2>
+      <p className="mt-3 text-sm leading-6 text-gray-300">Live activity for your ONN, phone and other streaming players is not available on this website.</p>
+      <p className="mt-3 text-sm leading-6 text-gray-400">This page cannot show who is watching or disconnect a streaming player. Use your player to stop playback, or contact support if you suspect someone else is using your service.</p>
+    </section>
+    {account.status === 'loading' && <p role="status" className="text-sm text-gray-400">Checking your website account…</p>}
+    {account.status === 'unavailable' && <div role="alert" className="rounded-xl border border-amber-500/30 p-4 text-sm text-amber-200"><p>Your account could not be checked. Your connection allowance is unavailable.</p><button type="button" onClick={() => void account.retry()} className="mt-3 min-h-12 rounded-xl border border-gray-600 px-4 font-semibold text-white">Try account check again</button></div>}
+    {account.status === 'unconfirmed' && <p className="text-sm text-gray-300">Confirm your website email before viewing your saved connection allowance.</p>}
+    {account.status === 'signed_out' && <p className="text-sm text-gray-300"><Link to="/login" state={{ from: '/client/devices' }} className="text-primary underline">Sign in to your website account</Link> to check your saved connection allowance.</p>}
+    {account.status === 'ready' && account.accountId && <CustomerCrmService key={account.accountId} accountId={account.accountId} view="connections" />}
+    <nav aria-label="Device help" className="flex flex-wrap gap-3">
+      <Link to="/client/support/new" className="inline-flex min-h-12 items-center rounded-xl bg-primary px-5 py-2 font-semibold text-white">Get device help</Link>
+      <Link to="/support/devices" className="inline-flex min-h-12 items-center rounded-xl border border-gray-600 px-5 py-2 font-semibold text-white">Device setup guides</Link>
+    </nav>
+  </div>;
 }
-
-const ClientDevices: React.FC = () => {
-  const [sessions, setSessions] = useState<StreamingSession[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const getSessions = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) throw new Error('No user found');
-
-        const { data, error } = await supabase
-          .from('streaming_sessions')
-          .select('*')
-          .eq('user_id', user.id)
-          .is('ended_at', null)
-          .order('started_at', { ascending: false });
-
-        if (error) throw error;
-
-        setSessions(data);
-      } catch (err) {
-        console.error('Error loading sessions:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load sessions');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getSessions();
-  }, []);
-
-  const getDeviceIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'mobile':
-        return <Smartphone className="w-6 h-6" />;
-      case 'desktop':
-        return <Laptop className="w-6 h-6" />;
-      case 'tv':
-        return <Tv className="w-6 h-6" />;
-      default:
-        return <Monitor className="w-6 h-6" />;
-    }
-  };
-
-  const handleEndSession = async (sessionId: string) => {
-    try {
-      const { error } = await supabase
-        .from('streaming_sessions')
-        .update({ ended_at: new Date().toISOString() })
-        .eq('id', sessionId);
-
-      if (error) throw error;
-
-      setSessions(prev => prev.filter(session => session.id !== sessionId));
-    } catch (err) {
-      console.error('Error ending session:', err);
-      setError(err instanceof Error ? err.message : 'Failed to end session');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="animate-pulse">
-        <div className="h-8 bg-dark-200 rounded w-1/4 mb-8"></div>
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-dark-200 rounded"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="flex items-center mb-8">
-        <Monitor className="text-primary w-8 h-8 mr-4" />
-        <h1 className="text-3xl font-bold text-white">Active Devices</h1>
-      </div>
-
-      {error ? (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-500">
-          {error}
-        </div>
-      ) : sessions.length > 0 ? (
-        <div className="space-y-4">
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className="bg-dark-100 rounded-xl p-6 border border-gray-800"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="bg-dark-200 p-3 rounded-lg mr-4">
-                    {getDeviceIcon(session.device_info.type)}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-medium text-white mb-1">
-                      {session.device_info.name}
-                    </h3>
-                    <div className="text-sm text-gray-400">
-                      {session.device_info.os && (
-                        <span>{session.device_info.os}</span>
-                      )}
-                      {session.device_info.browser && (
-                        <span> • {session.device_info.browser}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleEndSession(session.id)}
-                  className="text-gray-400 hover:text-white transition-colors duration-200"
-                  title="End session"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-dark-100 rounded-xl p-8 border border-gray-800 text-center">
-          <Monitor className="w-12 h-12 text-primary mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-white mb-2">No Active Devices</h2>
-          <p className="text-gray-400">
-            You don't have any active streaming sessions at the moment.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default ClientDevices;

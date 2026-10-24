@@ -16,6 +16,7 @@ const executablePath = process.env.KS_BROWSER_EXECUTABLE ?? await bundled?.execu
 assert.ok(executablePath, 'Supply an isolated Chromium executable');
 const directory = await mkdtemp(resolve(tmpdir(), 'ks-framework-browser-app-'));
 let server, browser;
+let serviceMode = 'linked';
 const id = n => `55555555-5555-4555-8555-${String(n).padStart(12, '0')}`;
 const rows = Array.from({ length: 12 }, (_, i) => ({
   id: id(i + 1), external_id: i + 1, username: `user_${i + 1}`,
@@ -34,6 +35,16 @@ try {
   }, build: { outDir: directory, emptyOutDir: true } });
   server = createServer(async (req, res) => {
     if (req.method !== 'GET') { methods.push(req.method); res.writeHead(405); res.end(); return; }
+    if (req.url === '/api/ks-customer-setup?view=crm-service') {
+      methods.push(req.method);
+      assert.ok(req.headers.authorization?.startsWith('Bearer '));
+      res.writeHead(serviceMode === 'failure' ? 503 : 200, { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' });
+      res.end(JSON.stringify(serviceMode === 'failure' ? { error: 'PRIVATE-FIXTURE-ERROR' } : {
+        accountId: id(100), checkedAt: '2026-10-22T12:00:00Z', payments: serviceMode === 'unlinked' ? [] : [{ id: id(300), customerId: id(1), amountCents: 9500, method: 'manual_paypal', paidAt: '2026-08-03T20:17:00Z', months: 6, connections: 3 }], nextCursor: null,
+        services: serviceMode === 'unlinked' ? [] : [{ customerId: id(1), username: 'user_1', name: 'Fictional Customer 01', packageName: '6 Months + 3 Connections', connections: 3, expiresAt: '2030-10-28T12:00:00Z', savedStatus: 'active', legacyPaid: false, updatedAt: '2026-10-22T12:00:00Z' }],
+      }));
+      return;
+    }
     if (req.url.startsWith('/api/')) { res.writeHead(503, { 'Content-Type': 'application/json' }); res.end('{"error":"Offline fixture: provider operations unavailable"}'); return; }
     let file = resolve(directory, '.' + new URL(req.url, 'http://fixture.invalid').pathname);
     if (!file.startsWith(directory + sep)) file = resolve(directory, 'index.html');
@@ -111,14 +122,49 @@ try {
   await page.waitForFunction(() => { const box = document.querySelector('aside').getBoundingClientRect(); return Math.abs(box.width - 256) < 1 && Math.abs(box.x) < 1; });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
   if (process.env.KS_BROWSER_SCREENSHOT_DIR) await page.screenshot({ path: resolve(process.env.KS_BROWSER_SCREENSHOT_DIR, 'ks-framework-desktop.png') });
+  await page.setViewportSize({ width: 320, height: 760 });
+  await page.goto(origin + '/client/devices');
+  await page.getByRole('heading', { name: 'Your connection allowance', exact: true }).waitFor();
+  await page.getByText('6 Months + 3 Connections', { exact: true }).waitFor();
+  assert.equal(await page.getByText('Connections allowed', { exact: true }).count(), 1);
+  assert.equal(await page.getByText('$95.00', { exact: false }).count(), 0);
+  assert.equal(await page.getByRole('button', { name: 'End session', exact: true }).count(), 0);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  serviceMode = 'unlinked';
+  await page.getByRole('button', { name: 'Refresh service details', exact: true }).click();
+  await page.getByText('Your streaming account has not been linked', { exact: false }).waitFor();
+  assert.equal(await page.getByText('Connections allowed', { exact: true }).count(), 0);
+  serviceMode = 'failure';
+  await page.getByRole('button', { name: 'Refresh service details', exact: true }).click();
+  await page.getByRole('alert').waitFor();
+  assert.equal(await page.getByText('PRIVATE-FIXTURE-ERROR', { exact: false }).count(), 0);
+  serviceMode = 'linked';
+  await page.getByRole('button', { name: 'Refresh service details', exact: true }).click();
+  await page.getByText('6 Months + 3 Connections', { exact: true }).waitFor();
+  await page.goto(origin + '/client/history');
+  await page.getByRole('heading', { name: 'Viewing history is unavailable here', exact: true }).waitFor();
+  assert.equal(await page.getByRole('link', { name: 'View service & payment records', exact: true }).getAttribute('href'), '/client/subscription');
+  assert.equal(await page.getByText("You haven't watched any content yet.", { exact: false }).count(), 0);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
   await context.close();
   const ordinary = await contextFor('ordinary@example.invalid');
   const denied = await ordinary.newPage(); denied.on('pageerror', error => pageErrors.push(error.message));
   await denied.goto(origin + '/admin/crm'); await denied.waitForURL('**/login');
   assert.equal(await denied.getByRole('list', { name: 'Customer directory' }).count(), 0);
   await ordinary.close();
+  const beforeSignedOut = methods.length;
+  const signedOut = await browser.newContext({ viewport: { width: 320, height: 760 } });
+  await signedOut.addInitScript(() => { if (location.protocol === 'http:') localStorage.setItem('installPromptDismissed9506', String(Date.now())); });
+  await signedOut.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  const noSession = await signedOut.newPage(); noSession.on('pageerror', error => pageErrors.push(error.message));
+  await noSession.goto(origin + '/client/devices');
+  await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
+  assert.equal(await noSession.getByRole('heading', { name: 'Your connection allowance', exact: true }).count(), 0);
+  assert.equal(methods.length, beforeSignedOut, 'Signed-out Devices must not request private service data');
+  await signedOut.close();
   assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.every(method => method === 'GET'));
   console.log('PASS: real Chromium/production-code fixture preserves phone paging, selected/Edit identity, browser Back, Back link search state, 320px touch layout, six-panel desktop view and ordinary-user denial.');
+  console.log('PASS: customer Devices shows verified allowance without session controls/receipts, separates missing links and failed reads, recovers on refresh, and History discloses unavailable activity at 320px.');
   console.log('Offline fictional Auth/data only; external network blocked; no database/Auth write, provider, payment or email operation.');
 } finally {
   await browser?.close(); if (server) await new Promise(resolve => server.close(resolve));
