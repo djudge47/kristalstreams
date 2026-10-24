@@ -64,3 +64,4 @@ jobs:
           node scripts/test-ks-customer-status-view.mjs
           node scripts/test-ks-customer-activity.mjs
           node scripts/test-ks-account-profile.mjs
+          node scripts/test-ks-customer-tickets.mjs

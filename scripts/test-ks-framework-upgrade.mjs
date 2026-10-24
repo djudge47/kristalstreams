@@ -32,12 +32,13 @@ assert.equal(child.status, 0, child.stderr);
 assert.deepEqual(JSON.parse(child.stdout), { bytes: 400000, nodes: 200000 });
 console.log('PASS: actual parser completes the 400 KB flat-selector security regression within 15 seconds and preserves escaped/nested selectors.');
 
-// Baseline: approved live fc861489dbf90c306567a52ac743889be477cae8.
+// Baseline: reviewed Support ticket mobile repair, October 24, 2026.
+// One focus utility added, three unused old-ticket utilities removed; shared rules unchanged.
 // An intentional future styling change must replace this baseline after review.
-const expected = '7f73d8d2515f0de155e1b9bcb98a04e9b8a58eec5dd226acec08ac9e80ac63c8';
+const expected = '3647de7a03bfbd0816c3aee353f9b9c638199b83dabd6eff1bbb3d888c96f3a2';
 const files = (await readdir('dist/assets')).filter(name => name.endsWith('.css'));
 assert.equal(files.length, 1, 'Review changes to CSS splitting before accepting a new baseline');
 const css = await readFile(`dist/assets/${files[0]}`);
 assert.equal(createHash('sha256').update(css).digest('hex'), expected,
   'Generated stylesheet differs from the approved mobile/desktop baseline');
-console.log('PASS: the complete generated stylesheet is byte-for-byte identical to the approved live version.');
+console.log('PASS: the complete generated stylesheet matches the fixed reviewed baseline.');

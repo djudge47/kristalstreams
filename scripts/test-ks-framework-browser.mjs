@@ -26,8 +26,10 @@ const rows = Array.from({ length: 12 }, (_, i) => ({
   payment_status: 'paid', monthly_price: 10, trial: false, connections_allowed: 3,
   expiration_at: '2030-10-28T12:00:00Z', package_name: '6 Months + 3 Connections',
 }));
-const methods = [], profileWrites = [], pageErrors = [], blocked = [];
+const methods = [], profileWrites = [], replyWrites = [], pageErrors = [], blocked = [];
 let profile = { id: id(100), full_name: 'Fictional account name', updated_at: '2026-10-24T08:00:00.123456+00:00' };
+const supportTickets = Array.from({ length: 12 }, (_, i) => ({ id: id(400 + i), user_id: id(100), subject: `Fictional support ${String(i + 1).padStart(2, '0')}`, description: 'Fictional support problem', category: 'Technical Issue', priority: 'normal', status: 'open', created_at: '2026-10-24T08:00:00Z' }));
+const supportReplies = Array.from({ length: 45 }, (_, i) => ({ id: id(645 - i), ticket_id: id(400), user_id: i % 2 ? id(200) : id(100), message: `Fictional conversation reply ${45 - i}`, is_staff: Boolean(i % 2), delivery_status: i % 2 ? 'sent' : 'not_requested', created_at: '2026-10-24T09:00:00Z' }));
 try {
   // This build uses only fictional service configuration and copies no APK/assets.
   await build({ publicDir: false, logLevel: 'silent', define: {
@@ -72,7 +74,7 @@ try {
       const request = route.request(), url = new URL(request.url());
       if (url.origin === origin) return route.continue();
       if (url.origin !== 'https://fictional.supabase.co') { blocked.push(url.origin); return route.abort(); }
-      const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-supabase-api-version', 'access-control-allow-methods': 'GET, PATCH, OPTIONS', 'content-type': 'application/json' };
+      const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-supabase-api-version', 'access-control-allow-methods': 'GET, PATCH, POST, OPTIONS', 'content-type': 'application/json' };
       if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
       methods.push(request.method());
       if (url.pathname === '/rest/v1/profiles') {
@@ -88,7 +90,24 @@ try {
         } else { assert.equal(request.method(), 'GET'); assert.deepEqual([...url.searchParams.keys()].sort(), ['id', 'select']); }
         return route.fulfill({ status: 200, headers, body: JSON.stringify([profile]) });
       }
-      assert.equal(request.method(), 'GET', 'Only the separately validated fictional profile-name PATCH is allowed');
+      if (['/rest/v1/support_tickets', '/rest/v1/ticket_replies'].includes(url.pathname)) {
+        const tickets = url.pathname.endsWith('/support_tickets'), q = url.searchParams;
+        assert.equal(q.get('select'), tickets ? 'id,user_id,subject,description,status,priority,category,created_at' : 'id,ticket_id,user_id,message,is_staff,delivery_status,created_at');
+        let data;
+        if (request.method() === 'POST') {
+          assert.equal(tickets, false); const body = request.postDataJSON();
+          assert.deepEqual(body, { ticket_id: id(400), user_id: user.id, message: 'Fictional customer reply', is_staff: false });
+          replyWrites.push(body); const saved = { ...supportReplies[0], ...body, id: id(999), delivery_status: 'not_requested', created_at: '2026-10-24T09:01:00Z' }; supportReplies.unshift(saved); data = [saved];
+        } else {
+          assert.equal(request.method(), 'GET');
+          if (tickets) { assert.equal(q.get('user_id'), 'eq.' + user.id); data = q.has('id') ? supportTickets.filter(t => q.get('id') === 'eq.' + t.id) : supportTickets; }
+          else { assert.equal(q.get('ticket_id'), 'eq.' + id(400)); data = supportReplies; }
+          if (!q.has('id')) { assert.equal(q.get('order'), 'created_at.desc,id.desc'); const limit = tickets ? 6 : 21; assert.equal(Number(q.get('limit')), limit); const offset = Number(q.get('offset') ?? 0); data = data.slice(offset, offset + limit); }
+        }
+        const body = request.headers().accept?.includes('object') ? data[0] ?? null : data;
+        return route.fulfill({ status: 200, headers, body: JSON.stringify(body) });
+      }
+      assert.equal(request.method(), 'GET', 'Only the separately validated fictional profile-name PATCH and customer-reply POST are allowed');
       if (url.pathname === '/auth/v1/user') return route.fulfill({ status: 200, headers, body: JSON.stringify(user) });
       const table = url.pathname.split('/').at(-1);
       assert.ok(['iptv_customers', 'iptv_payments', 'iptv_customer_activity', 'iptv_reminder_queue'].includes(table), `Unexpected fixture read: ${table}`);
@@ -178,6 +197,35 @@ try {
   assert.equal(profileWrites.length, 1);
   await page.getByRole('button', { name: 'Reload profile', exact: true }).click();
   await page.getByText('Fictional revised name', { exact: true }).waitFor();
+  await page.goto(origin + '/client/support');
+  const ticketDirectory = page.getByRole('list', { name: 'Ticket directory', exact: true });
+  await ticketDirectory.waitFor(); assert.equal(await ticketDirectory.getByRole('listitem').count(), 5);
+  await page.getByRole('navigation', { name: 'Ticket pages', exact: true }).getByRole('button', { name: 'Next', exact: true }).click();
+  await page.getByText('Fictional support 06', { exact: true }).waitFor();
+  await page.getByRole('navigation', { name: 'Ticket pages', exact: true }).getByRole('button', { name: 'Previous', exact: true }).click();
+  await ticketDirectory.getByRole('button').first().click();
+  await page.getByRole('heading', { name: 'Fictional support 01', exact: true }).waitFor();
+  const conversation = page.getByRole('list', { name: 'Ticket replies', exact: true });
+  assert.equal(await conversation.getByRole('listitem').count(), 20);
+  assert.ok((await conversation.boundingBox()).height <= 320);
+  assert.equal(await conversation.getAttribute('tabindex'), '0');
+  assert.equal(await conversation.evaluate(element => element.scrollHeight > element.clientHeight), true);
+  await page.getByRole('button', { name: 'Earlier replies', exact: true }).click();
+  await page.getByText('Fictional conversation reply 6', { exact: true }).waitFor();
+  assert.equal(await conversation.getByRole('listitem').count(), 20);
+  assert.equal(await page.getByText('Fictional conversation reply 45', { exact: true }).count(), 0);
+  await page.getByRole('button', { name: 'Newer replies', exact: true }).click();
+  await page.getByText('Fictional conversation reply 45', { exact: true }).waitFor();
+  await page.getByLabel('Your reply', { exact: true }).fill('Fictional customer reply');
+  const replyButton = page.getByRole('button', { name: 'Save reply', exact: true });
+  assert.ok((await replyButton.boundingBox()).height >= 48);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  if (process.env.KS_BROWSER_SCREENSHOT_DIR) await page.screenshot({ path: resolve(process.env.KS_BROWSER_SCREENSHOT_DIR, 'ks-support-phone.png'), fullPage: true });
+  await replyButton.click();
+  await page.getByText('Reply saved in your ticket. This does not confirm email delivery.', { exact: true }).waitFor();
+  await page.getByText('Fictional customer reply', { exact: true }).waitFor(); assert.equal(replyWrites.length, 1);
+  await page.getByRole('button', { name: 'Back to tickets', exact: true }).click(); await ticketDirectory.waitFor();
+  assert.equal(await ticketDirectory.getByRole('listitem').count(), 5);
   await context.close();
   const ordinary = await contextFor('ordinary@example.invalid');
   const denied = await ordinary.newPage(); denied.on('pageerror', error => pageErrors.push(error.message));
@@ -197,12 +245,17 @@ try {
   await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
   assert.equal(await noSession.getByRole('region', { name: 'Your website account', exact: true }).count(), 0);
   assert.equal(methods.length, beforeSignedOut, 'Signed-out Account must not request or write a profile');
+  await noSession.goto(origin + '/client/support');
+  await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
+  assert.equal(await noSession.getByRole('list', { name: 'Ticket directory', exact: true }).count(), 0);
+  assert.equal(methods.length, beforeSignedOut, 'Signed-out Support must not request or write tickets/replies');
   await signedOut.close();
-  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => method !== 'GET').length === 1 && profileWrites.length === 1 && methods.includes('PATCH'));
+  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => method !== 'GET').length === 2 && profileWrites.length === 1 && replyWrites.length === 1 && methods.includes('PATCH') && methods.includes('POST'));
   console.log('PASS: real Chromium/production-code fixture preserves phone paging, selected/Edit identity, browser Back, Back link search state, 320px touch layout, six-panel desktop view and ordinary-user denial.');
   console.log('PASS: customer Devices shows verified allowance without session controls/receipts, separates missing links and failed reads, recovers on refresh, and History discloses unavailable activity at 320px.');
   console.log('PASS: customer Account at 320px supports Cancel, an owner/revision-bound name save, confirmed returned details and reload; signed-out users make no private profile request.');
-  console.log('Offline fictional Auth/data only; external network blocked; one strictly allowlisted fictional name PATCH, no real record/Auth write, provider, payment or email operation.');
+  console.log('PASS: 320px Support uses five-ticket pages and one selected thread, pages twenty replies without mixing them, confirms one fictional reply and returns to the directory; signed-out Support makes no private request.');
+  console.log('Offline fictional Auth/data only; external network blocked; one strictly allowlisted fictional name PATCH and customer-reply POST, no real record/Auth write, provider, payment or email operation.');
 } finally {
   await browser?.close(); if (server) await new Promise(resolve => server.close(resolve));
   await rm(directory, { recursive: true, force: true });
