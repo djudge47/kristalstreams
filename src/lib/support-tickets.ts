@@ -92,3 +92,20 @@ export async function createSupportTicket(client: SupabaseClient, accountId: str
   if (saved.subject !== subject || saved.description !== description || saved.category !== input.category || saved.priority !== input.priority || saved.status !== 'open') throw new SupportFailure('uncertain');
   return saved;
 }
+
+export const DASHBOARD_TICKET_COLUMNS = 'id,user_id,subject,status,priority,created_at';
+export async function readDashboardTickets(client: SupabaseClient, accountId: string, scope: SupportScope) {
+  await owner(client, accountId, scope);
+  const [recent, active] = await Promise.all([
+    client.from('support_tickets').select(DASHBOARD_TICKET_COLUMNS).eq('user_id', accountId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(5).abortSignal(scope.signal),
+    client.from('support_tickets').select('id', { count: 'exact', head: true }).eq('user_id', accountId).not('status', 'ilike', 'closed').not('status', 'ilike', 'resolved').abortSignal(scope.signal),
+  ]);
+  current(scope);
+  if (recent.error || active.error || !Array.isArray(recent.data) || recent.data.length > 5 || !Number.isSafeInteger(active.count) || active.count! < 0) throw new SupportFailure('unavailable');
+  const tickets = recent.data.map(value => {
+    const row = record(value); if (!portalUuid(row.id) || row.user_id !== accountId) throw new SupportFailure('unavailable');
+    return { id: row.id as string, subject: text(row.subject, 2000), status: text(row.status, 100), priority: text(row.priority, 100), createdAt: date(row.created_at) };
+  });
+  if (new Set(tickets.map(row => row.id)).size !== tickets.length) throw new SupportFailure('unavailable');
+  return { tickets, activeCount: active.count as number };
+}

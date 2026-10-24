@@ -16,7 +16,7 @@ const executablePath = process.env.KS_BROWSER_EXECUTABLE ?? await bundled?.execu
 assert.ok(executablePath, 'Supply an isolated Chromium executable');
 const directory = await mkdtemp(resolve(tmpdir(), 'ks-framework-browser-app-'));
 let server, browser;
-let serviceMode = 'linked';
+let serviceMode = 'linked', profileMode = 'normal', dashboardTicketMode = 'normal';
 const id = n => `55555555-5555-4555-8555-${String(n).padStart(12, '0')}`;
 const rows = Array.from({ length: 12 }, (_, i) => ({
   id: id(i + 1), external_id: i + 1, username: `user_${i + 1}`,
@@ -74,7 +74,7 @@ try {
       const request = route.request(), url = new URL(request.url());
       if (url.origin === origin) return route.continue();
       if (url.origin !== 'https://fictional.supabase.co') { blocked.push(url.origin); return route.abort(); }
-      const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-supabase-api-version', 'access-control-allow-methods': 'GET, PATCH, POST, OPTIONS', 'content-type': 'application/json' };
+      const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-supabase-api-version', 'access-control-allow-methods': 'GET, HEAD, PATCH, POST, OPTIONS', 'content-type': 'application/json' };
       if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
       methods.push(request.method());
       if (url.pathname === '/rest/v1/profiles') {
@@ -88,10 +88,20 @@ try {
           assert.equal(request.headers().prefer, 'return=representation');
           profileWrites.push(body); profile = { ...profile, ...body, updated_at: '2026-10-24T08:01:00.123456+00:00' };
         } else { assert.equal(request.method(), 'GET'); assert.deepEqual([...url.searchParams.keys()].sort(), ['id', 'select']); }
+        if (request.method() === 'GET' && profileMode === 'missing') return route.fulfill({ status: 200, headers, body: '[]' });
         return route.fulfill({ status: 200, headers, body: JSON.stringify([profile]) });
       }
       if (['/rest/v1/support_tickets', '/rest/v1/ticket_replies'].includes(url.pathname)) {
         const tickets = url.pathname.endsWith('/support_tickets'), q = url.searchParams;
+        if (tickets && request.method() === 'HEAD') {
+          assert.equal(q.get('select'), 'id'); assert.equal(q.get('user_id'), 'eq.' + user.id); assert.deepEqual(q.getAll('status'), ['not.ilike.closed', 'not.ilike.resolved']);
+          assert.equal(request.headers().prefer, 'count=exact');
+          return route.fulfill({ status: dashboardTicketMode === 'failure' ? 403 : 200, headers: { ...headers, 'content-range': `*/${supportTickets.filter(t => !['closed', 'resolved'].includes(t.status.toLowerCase())).length}`, 'access-control-expose-headers': 'content-range' }, body: '' });
+        }
+        if (tickets && q.get('select') === 'id,user_id,subject,status,priority,created_at') {
+          assert.equal(request.method(), 'GET'); assert.equal(q.get('user_id'), 'eq.' + user.id); assert.equal(q.get('order'), 'created_at.desc,id.desc'); assert.equal(q.get('limit'), '5');
+          return route.fulfill({ status: 200, headers, body: JSON.stringify(supportTickets.slice(0, 5).map(({ id, user_id, subject, status, priority, created_at }) => ({ id, user_id, subject, status, priority, created_at }))) });
+        }
         assert.equal(q.get('select'), tickets ? 'id,user_id,subject,description,status,priority,category,created_at' : 'id,ticket_id,user_id,message,is_staff,delivery_status,created_at');
         let data;
         if (request.method() === 'POST') {
@@ -202,6 +212,36 @@ try {
   assert.equal(profileWrites.length, 1);
   await page.getByRole('button', { name: 'Reload profile', exact: true }).click();
   await page.getByText('Fictional revised name', { exact: true }).waitFor();
+  await page.goto(origin + '/dashboard');
+  await page.getByRole('heading', { name: 'Dashboard', exact: true }).waitFor();
+  const recentTickets = page.getByRole('list', { name: 'Recent support tickets', exact: true });
+  await recentTickets.waitFor(); assert.equal(await recentTickets.getByRole('listitem').count(), 5);
+  await page.getByText('Active support tickets: 12', { exact: true }).waitFor();
+  await page.getByText('6 Months + 3 Connections', { exact: true }).waitFor();
+  assert.equal(await page.getByText('Website plan:', { exact: false }).count(), 0);
+  assert.equal(await page.locator('table').count(), 0);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  if (process.env.KS_BROWSER_SCREENSHOT_DIR) await page.screenshot({ path: resolve(process.env.KS_BROWSER_SCREENSHOT_DIR, 'ks-dashboard-phone.png'), fullPage: true });
+  profileMode = 'missing'; await page.getByRole('button', { name: 'Refresh account', exact: true }).click();
+  await page.getByText('Your website profile was not found. Contact support for help.', { exact: true }).waitFor();
+  assert.equal(await recentTickets.getByRole('listitem').count(), 5);
+  assert.equal(await page.getByText('6 Months + 3 Connections', { exact: true }).count(), 1);
+  profileMode = 'normal'; await page.getByRole('button', { name: 'Refresh account', exact: true }).click();
+  await page.getByText('Fictional revised name', { exact: true }).waitFor();
+  dashboardTicketMode = 'failure'; await page.getByRole('button', { name: 'Refresh tickets', exact: true }).click();
+  await page.getByText('Your support summary could not be loaded.', { exact: false }).waitFor();
+  assert.equal(await page.getByText('No support tickets yet.', { exact: true }).count(), 0);
+  assert.equal(await page.getByText('6 Months + 3 Connections', { exact: true }).count(), 1);
+  dashboardTicketMode = 'normal'; await page.getByRole('button', { name: 'Refresh tickets', exact: true }).click(); await recentTickets.waitFor();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  assert.equal(await recentTickets.getByRole('listitem').count(), 5);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  if (process.env.KS_BROWSER_SCREENSHOT_DIR) await page.screenshot({ path: resolve(process.env.KS_BROWSER_SCREENSHOT_DIR, 'ks-dashboard-desktop.png'), fullPage: true });
+  await page.setViewportSize({ width: 320, height: 760 });
+  await recentTickets.getByRole('link').first().click();
+  await page.getByRole('heading', { name: 'Fictional support 01', exact: true }).waitFor();
+  await page.waitForFunction(() => window.scrollY <= 1);
+  await page.getByRole('button', { name: 'Back to tickets', exact: true }).click();
   await page.goto(origin + '/client/support');
   const ticketDirectory = page.getByRole('list', { name: 'Ticket directory', exact: true });
   await ticketDirectory.waitFor(); assert.equal(await ticketDirectory.getByRole('listitem').count(), 5);
@@ -264,17 +304,22 @@ try {
   await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
   assert.equal(await noSession.getByRole('list', { name: 'Ticket directory', exact: true }).count(), 0);
   assert.equal(methods.length, beforeSignedOut, 'Signed-out Support must not request or write tickets/replies');
+  await noSession.goto(origin + '/dashboard');
+  await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
+  assert.equal(await noSession.getByRole('list', { name: 'Recent support tickets', exact: true }).count(), 0);
+  assert.equal(methods.length, beforeSignedOut, 'Signed-out Dashboard must not request private data');
   await noSession.goto(origin + '/client/support/new');
   await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
   assert.equal(await noSession.getByLabel('Subject', { exact: true }).count(), 0);
   assert.equal(methods.length, beforeSignedOut, 'Signed-out new-ticket route must not read or write private records');
   await signedOut.close();
-  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => method !== 'GET').length === 3 && profileWrites.length === 1 && replyWrites.length === 1 && ticketWrites.length === 1 && methods.includes('PATCH') && methods.includes('POST'));
+  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => !['GET', 'HEAD'].includes(method)).length === 3 && profileWrites.length === 1 && replyWrites.length === 1 && ticketWrites.length === 1 && methods.includes('PATCH') && methods.includes('POST'));
   console.log('PASS: real Chromium/production-code fixture preserves phone paging, selected/Edit identity, browser Back, Back link search state, 320px touch layout, six-panel desktop view and ordinary-user denial.');
   console.log('PASS: customer Devices shows verified allowance without session controls/receipts, separates missing links and failed reads, recovers on refresh, and History discloses unavailable activity at 320px.');
   console.log('PASS: customer Account at 320px supports Cancel, an owner/revision-bound name save, confirmed returned details and reload; signed-out users make no private profile request.');
   console.log('PASS: 320px Support uses five-ticket pages and one selected thread, pages twenty replies without mixing them, confirms one fictional reply and returns to the directory; signed-out Support makes no private request.');
   console.log('PASS: 320px verified new-ticket creation validates the exact fictional insert and return-to-list result; signed-out creation offers sign-in without a form or private requests.');
+  console.log('PASS: Dashboard at 320px and desktop bounds recent tickets to five, counts all active tickets independently, isolates profile/count failures, refreshes safely and opens the exact owned thread; signed-out Dashboard makes no private request.');
   console.log('Offline fictional Auth/data only; external network blocked; one strictly allowlisted fictional name PATCH, customer-reply POST and new-ticket POST, no real record/Auth write, provider, payment or email operation.');
 } finally {
   await browser?.close(); if (server) await new Promise(resolve => server.close(resolve));

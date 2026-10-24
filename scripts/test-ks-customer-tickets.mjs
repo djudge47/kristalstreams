@@ -68,7 +68,7 @@ globalThis.__ticketClient = { from: sdk.from.bind(sdk), auth: { getUser: () => a
 const hookSource = `import React from ${JSON.stringify(import.meta.resolve('react'))};export default React;export const {useState,useRef,useCallback,useEffect}=globalThis.__ticketHooks;`;
 async function compile(entry, page = false) {
   const output = await build({ entryPoints: [entry], bundle: true, write: false, platform: 'node', format: 'esm', jsx: 'automatic', packages: 'external', plugins: [{ name: 'ticket-fixtures', setup(b) {
-    if (entry.endsWith('/NewTicket.tsx')) b.onResolve({ filter: /^react-router-dom$/ }, () => ({ path: 'router', namespace: 'fixture' }));
+    if ((entry.endsWith('/NewTicket.tsx') || entry.endsWith('/ClientSupport.tsx'))) b.onResolve({ filter: /^react-router-dom$/ }, () => ({ path: 'router', namespace: 'fixture' }));
     b.onResolve({ filter: /^file:/ }, a => ({ path: a.path, external: true })); b.onResolve({ filter: /^react$/ }, () => ({ path: 'hooks', namespace: 'fixture' }));
     b.onResolve({ filter: /(?:^|\/)lib\/supabase$/ }, () => ({ path: 'client', namespace: 'fixture' }));
     if (page) { b.onResolve({ filter: /\/useVerifiedWebsiteAccount$/ }, () => ({ path: 'account', namespace: 'fixture' })); b.onResolve({ filter: /\/SupportTicketWorkspace$/ }, () => ({ path: 'workspace', namespace: 'fixture' })); }

@@ -134,8 +134,8 @@ try {
   assert.deepEqual(hrefs(shortcuts), adminShortcuts.map(item => item.path));
   assert.ok(hrefs(shortcuts).includes('/admin/modules')); assert.ok(!hrefs(shortcuts).some(path => unavailableAdminModule(path)));
   for (const path of hrefs(shortcuts)) assert.ok(leaf(path));
-  const dashboard = await readFile('src/pages/Dashboard.tsx', 'utf8'); assert.match(dashboard, /isAdmin && <AdminShortcuts \/>/);
-  assert.match(dashboard, /import AdminShortcuts from ['"]\.\.\/components\/AdminShortcuts['"]/);
+  const dashboard = await readFile('src/components/DashboardWorkspace.tsx', 'utf8'); assert.match(dashboard, /isAdmin && <AdminShortcuts \/>/);
+  assert.match(dashboard, /import AdminShortcuts from ['"]\.\/AdminShortcuts['"]/);
   assert.doesNotMatch(shortcuts, /<button|onclick=/i); assert.match(shortcuts, /aria-label="Admin shortcuts"/);
   console.log('PASS: actual dashboard shortcuts expose the maintained workspace and clearly labeled availability destination through real links, preserving their admin-only rendering condition');
   window.addEventListener = () => {}; window.removeEventListener = () => {}; window.scrollY = 0;

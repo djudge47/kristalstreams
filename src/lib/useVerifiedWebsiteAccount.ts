@@ -9,9 +9,13 @@ export function useVerifiedWebsiteAccount() {
   const [state, setState] = useState<AccountState>(initial);
   const active = useRef(false);
   const generation = useRef(0);
+  const timer = useRef<number | undefined>();
   const check = useCallback(async () => {
+    if (!active.current) return;
+    window.clearTimeout(timer.current);
     const version = ++generation.current;
     setState(initial);
+    const deadline = window.setTimeout(() => { if (active.current && version === generation.current) { generation.current += 1; setState({ status: 'unavailable', accountId: null }); } }, 20000); timer.current = deadline;
     try {
       const result = await supabase.auth.getUser();
       if (!active.current || version !== generation.current) return;
@@ -27,19 +31,20 @@ export function useVerifiedWebsiteAccount() {
       setState({ status: 'ready', accountId: user.id });
     } catch {
       if (active.current && version === generation.current) setState({ status: 'unavailable', accountId: null });
-    }
+    } finally { window.clearTimeout(deadline); }
   }, []);
 
   useEffect(() => {
     active.current = true;
     void check();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      generation.current += 1;
+      if (!active.current) return;
+      generation.current += 1; window.clearTimeout(timer.current);
       // Clear the previous identity before checking any replacement account.
       setState(initial);
       queueMicrotask(() => { if (active.current) void check(); });
     });
-    return () => { active.current = false; subscription.unsubscribe(); };
+    return () => { active.current = false; window.clearTimeout(timer.current); subscription.unsubscribe(); };
   }, [check]);
 
   return { ...state, retry: check };

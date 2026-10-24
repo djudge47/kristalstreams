@@ -32,10 +32,10 @@ assert.equal(child.status, 0, child.stderr);
 assert.deepEqual(JSON.parse(child.stdout), { bytes: 400000, nodes: 200000 });
 console.log('PASS: actual parser completes the 400 KB flat-selector security regression within 15 seconds and preserves escaped/nested selectors.');
 
-// Baseline: reviewed Support ticket mobile repair, October 24, 2026.
-// One focus utility added, three unused old-ticket utilities removed; shared rules unchanged.
+// Baseline: reviewed customer Dashboard repair, October 24, 2026.
+// Nine unused old-dashboard utilities removed; every shared rule unchanged.
 // An intentional future styling change must replace this baseline after review.
-const expected = '3647de7a03bfbd0816c3aee353f9b9c638199b83dabd6eff1bbb3d888c96f3a2';
+const expected = '2c050520172ab0d7052bd4dd3cf2b1d9e38874bb57fe8a5565c3e4b8b7013443';
 const files = (await readdir('dist/assets')).filter(name => name.endsWith('.css'));
 assert.equal(files.length, 1, 'Review changes to CSS splitting before accepting a new baseline');
 const css = await readFile(`dist/assets/${files[0]}`);
