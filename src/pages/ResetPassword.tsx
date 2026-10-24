@@ -48,7 +48,7 @@ const ResetPassword: React.FC = () => {
           {state.status === 'ready' || state.status === 'submitting' ? <RecoveryForm key={state.revision} state={state} /> : (
             <div className="space-y-4 text-gray-300">
               <p role="status">{state.status === 'checking' ? 'Checking your website password-reset link...' : state.status === 'complete' ? 'Website password updated. Use your new password the next time you sign in.' : state.message}</p>
-              {state.status !== 'checking' && <Link to="/login" className="text-primary hover:underline">{state.status === 'complete' || state.status === 'uncertain' ? 'Go to website sign in' : 'Request another password reset'}</Link>}
+              {state.status !== 'checking' && <Link to={state.status === 'complete' || state.status === 'uncertain' ? '/login' : '/forgot-password'} className="text-primary hover:underline">{state.status === 'complete' || state.status === 'uncertain' ? 'Go to website sign in' : 'Request another password reset'}</Link>}
               {state.status === 'unavailable' && <p><Link to="/client/security" className="text-primary hover:underline">Open website Security</Link></p>}
             </div>
           )}

@@ -47,11 +47,13 @@ jobs:
           node scripts/test-ks-admin-modules.mjs
           node scripts/test-ks-navigation.mjs
           node scripts/test-ks-login-destination.mjs
+          node scripts/test-ks-login-flow.mjs
           node scripts/test-ks-general-chat.mjs
           node scripts/test-ks-website-playback.mjs
           node scripts/test-ks-playback-preferences.mjs
           node scripts/test-ks-website-password.mjs
           node scripts/test-ks-password-recovery.mjs
+          node scripts/test-ks-password-reset-request.mjs
           node scripts/test-ks-help-content.mjs
           node scripts/test-ks-payments.mjs
           node scripts/test-ks-support-client.mjs

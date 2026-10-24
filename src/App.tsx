@@ -43,6 +43,7 @@ const pages = {
   Login: lazyRetry(() => import('./pages/Login')),
   Register: lazyRetry(() => import('./pages/Register')),
   ResetPassword: lazyRetry(() => import('./pages/ResetPassword')),
+  ForgotPassword: lazyRetry(() => import('./pages/ForgotPassword')),
   Dashboard: lazyRetry(() => import('./pages/Dashboard')),
   PaymentSuccess: lazyRetry(() => import('./pages/PaymentSuccess')),
   LandingPage: lazyRetry(() => import('./pages/LandingPage')),
@@ -163,6 +164,7 @@ function App() {
             <Route path="login" element={<P.Login />} />
             <Route path="register" element={<P.Register />} />
             <Route path="reset-password" element={<P.ResetPassword />} />
+            <Route path="forgot-password" element={<P.ForgotPassword />} />
             <Route path="dashboard" element={<P.Dashboard />} />
             <Route path="landing" element={<P.LandingPage />} />
             <Route path="standalone-landing" element={<P.StandaloneLanding />} />

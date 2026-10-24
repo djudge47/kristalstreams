@@ -28,7 +28,9 @@ const rows = Array.from({ length: 12 }, (_, i) => ({
 }));
 const methods = [], profileWrites = [], replyWrites = [], ticketWrites = [], pageErrors = [], blocked = [];
 const recoveryExchanges = [], recoveryWrites = [];
+const resetRequests = [];
 let releasePasswordUpdate;
+let releaseResetRequest;
 let profile = { id: id(100), full_name: 'Fictional account name', updated_at: '2026-10-24T08:00:00.123456+00:00' };
 const websiteProfile = { id: id(100), subscription_tier: 'bronze', subscription_status: 'active', connections_allowed: 1, subscription_expires_at: '2026-11-12T22:45:08Z', updated_at: '2026-10-24T08:00:00Z' };
 const supportTickets = Array.from({ length: 12 }, (_, i) => ({ id: id(400 + i), user_id: id(100), subject: `Fictional support ${String(i + 1).padStart(2, '0')}`, description: 'Fictional support problem', category: 'Technical Issue', priority: 'normal', status: 'open', created_at: '2026-10-24T08:00:00Z' }));
@@ -64,7 +66,7 @@ try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
   browser = await chromium.launch({ executablePath, args: (bundled?.args ?? ['--no-sandbox', '--disable-dev-shm-usage']).filter(arg => !['--single-process', '--disable-web-security', '--allow-running-insecure-content'].includes(arg)), headless: true });
-  async function contextFor(email, recovery = false) {
+  async function contextFor(email, recovery = false, resetRequest = false) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     const user = { id: id(100), email, email_confirmed_at: '2026-01-01T00:00:00Z', is_anonymous: false, app_metadata: {}, user_metadata: {}, aud: 'authenticated', role: 'authenticated', created_at: '2026-01-01T00:00:00Z' };
     await context.addInitScript(({ user, recovery }) => {
@@ -84,6 +86,17 @@ try {
       const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-supabase-api-version', 'access-control-allow-methods': 'GET, HEAD, PATCH, POST, PUT, OPTIONS', 'content-type': 'application/json' };
       if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
       methods.push(request.method());
+      if (url.pathname === '/auth/v1/recover') {
+        assert.equal(resetRequest, true); assert.equal(request.method(), 'POST');
+        assert.deepEqual([...url.searchParams.keys()], ['redirect_to']);
+        assert.equal(url.searchParams.get('redirect_to'), origin + '/reset-password');
+        const body = request.postDataJSON();
+        assert.deepEqual(Object.keys(body).sort(), ['code_challenge', 'code_challenge_method', 'email', 'gotrue_meta_security']);
+        assert.equal(body.email, 'reset-request@example.invalid'); assert.match(body.code_challenge, /^[A-Za-z0-9_-]{43}$/); assert.equal(body.code_challenge_method, 's256'); assert.deepEqual(body.gotrue_meta_security, {});
+        resetRequests.push(true); assert.equal(resetRequests.length, 1);
+        await new Promise(resolve => { releaseResetRequest = resolve; });
+        return route.fulfill({ status: 200, headers, body: '{}' });
+      }
       if (url.pathname === '/auth/v1/token') {
         assert.equal(recovery, true); assert.equal(request.method(), 'POST');
         assert.equal(url.search, '?grant_type=pkce');
@@ -363,6 +376,39 @@ try {
   await recoveryPage.getByRole('link', { name: 'Open website Security', exact: true }).waitFor();
   assert.equal(await recoveryPage.getByLabel('New website password', { exact: true }).count(), 0, 'Reload cannot manufacture a new recovery grant from the persisted normal session');
   await recoveryContext.close();
+  const requestContext = await contextFor('ordinary@example.invalid', false, true);
+  const requestPage = await requestContext.newPage(); requestPage.on('pageerror', error => pageErrors.push(error.message));
+  await requestPage.setViewportSize({ width: 320, height: 760 });
+  await requestPage.clock.install();
+  await requestPage.goto(origin + '/login');
+  const forgot = requestPage.getByRole('link', { name: 'Forgot your password?', exact: true }); await forgot.waitFor();
+  assert.ok((await forgot.boundingBox()).height >= 48);
+  await forgot.click();
+  await requestPage.getByRole('heading', { name: 'Reset your website password', exact: true }).waitFor();
+  assert.equal(await requestPage.getByLabel('Website account email', { exact: true }).evaluate(element => element === document.activeElement), true);
+  assert.equal(await requestPage.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  if (process.env.KS_BROWSER_SCREENSHOT_DIR) await requestPage.screenshot({ path: resolve(process.env.KS_BROWSER_SCREENSHOT_DIR, 'forgot-password-320.png'), fullPage: true });
+  await requestPage.getByLabel('Website account email', { exact: true }).fill('reset-request@example.invalid');
+  await requestPage.getByRole('button', { name: 'Request reset link', exact: true }).click();
+  await requestPage.getByRole('button', { name: 'Requesting reset link...', exact: true }).waitFor();
+  assert.equal(await requestPage.locator('fieldset').evaluate(element => element.disabled), true);
+  assert.equal(await requestPage.getByLabel('Website account email', { exact: true }).inputValue(), '');
+  await requestPage.getByRole('link', { name: 'Back to website sign in', exact: true }).click();
+  await requestPage.getByRole('link', { name: 'Forgot your password?', exact: true }).click();
+  await requestPage.getByRole('button', { name: 'Requesting reset link...', exact: true }).waitFor();
+  for (let i = 0; i < 1000 && !releaseResetRequest; i++) await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(typeof releaseResetRequest, 'function'); assert.equal(resetRequests.length, 1);
+  releaseResetRequest();
+  await requestPage.getByText('If this address is eligible for website password recovery, check its inbox and spam folder for a reset link. This response does not confirm email delivery.', { exact: true }).waitFor();
+  assert.equal(await requestPage.getByLabel('Website account email', { exact: true }).count(), 0);
+  assert.equal(await requestPage.getByRole('button', { name: 'Start another reset request', exact: true }).isDisabled(), true);
+  await requestPage.clock.fastForward(60_001);
+  await requestPage.getByRole('button', { name: 'Start another reset request', exact: true }).click();
+  assert.equal(await requestPage.getByLabel('Website account email', { exact: true }).inputValue(), '');
+  assert.equal(await requestPage.getByLabel('Website account email', { exact: true }).evaluate(element => element === document.activeElement), true);
+  assert.equal(resetRequests.length, 1, 'A new draft/cooldown never sends another email automatically');
+  assert.equal(await requestPage.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await requestContext.close();
   const beforeSignedOut = methods.length;
   const signedOut = await browser.newContext({ viewport: { width: 320, height: 760 } });
   await signedOut.addInitScript(() => { if (location.protocol === 'http:') localStorage.setItem('installPromptDismissed9506', String(Date.now())); });
@@ -396,8 +442,12 @@ try {
   await noSession.getByRole('link', { name: 'Request another password reset', exact: true }).waitFor();
   assert.equal(await noSession.getByLabel('New website password', { exact: true }).count(), 0);
   assert.equal(methods.length, beforeSignedOut, 'A signed-out recovery visit cannot send email or change a password');
+  await noSession.getByRole('link', { name: 'Request another password reset', exact: true }).click();
+  await noSession.getByRole('heading', { name: 'Reset your website password', exact: true }).waitFor();
+  assert.equal(await noSession.getByLabel('Website account email', { exact: true }).inputValue(), '');
+  assert.equal(methods.length, beforeSignedOut, 'Opening the public reset-request page makes no private/account/email request');
   await signedOut.close();
-  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => !['GET', 'HEAD'].includes(method)).length === 5 && profileWrites.length === 1 && replyWrites.length === 1 && ticketWrites.length === 1 && recoveryExchanges.length === 1 && recoveryWrites.length === 1 && methods.includes('PATCH') && methods.includes('POST') && methods.includes('PUT'));
+  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => !['GET', 'HEAD'].includes(method)).length === 6 && profileWrites.length === 1 && replyWrites.length === 1 && ticketWrites.length === 1 && recoveryExchanges.length === 1 && recoveryWrites.length === 1 && resetRequests.length === 1 && methods.includes('PATCH') && methods.includes('POST') && methods.includes('PUT'));
   console.log('PASS: real Chromium/production-code fixture preserves phone paging, selected/Edit identity, browser Back, Back link search state, 320px touch layout, six-panel desktop view and ordinary-user denial.');
   console.log('PASS: customer Devices shows verified allowance without session controls/receipts, separates missing links and failed reads, recovers on refresh, and History discloses unavailable activity at 320px.');
   console.log('PASS: customer Account at 320px supports Cancel, an owner/revision-bound name save, confirmed returned details and reload; signed-out users make no private profile request.');
@@ -406,7 +456,8 @@ try {
   console.log('PASS: Dashboard at 320px and desktop bounds recent tickets to five, counts all active tickets independently, isolates profile/count failures, refreshes safely and opens the exact owned thread; signed-out Dashboard makes no private request.');
   console.log('PASS: 320px Subscription retains linked service without a profile, labels unlinked website data separately, distinguishes missing/error, suppresses website fallback during service failure and recovers hidden checks by refreshing.');
   console.log('PASS: 320px recovery uses an actual SDK PKCE exchange before the lazy form mounts, clears/disables password inputs during one pinned update, verifies completion and denies normal/signed-out sessions and reload-based recovery without overflow.');
-  console.log('Offline fictional Auth/data only; external network blocked; exactly five separately validated fictional writes (profile, reply, ticket, PKCE exchange and password update), no real record/Auth write, provider, payment or email operation.');
+  console.log('PASS: 320px Login/reset-link recovery opens the dedicated request page, focuses 48px controls, retains a pending request across SPA navigation, clears the address, reports eligibility without delivery claims, and opens a blank draft only after settlement/cooldown without an automatic resend.');
+  console.log('Offline fictional Auth/data only; external network blocked; exactly six separately validated fictional writes (profile, reply, ticket, PKCE exchange, password update and recovery request), no real record/Auth write, provider, payment or email operation.');
 } finally {
   await browser?.close(); if (server) await new Promise(resolve => server.close(resolve));
   await rm(directory, { recursive: true, force: true });
