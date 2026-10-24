@@ -28,6 +28,7 @@ const rows = Array.from({ length: 12 }, (_, i) => ({
 }));
 const methods = [], profileWrites = [], replyWrites = [], ticketWrites = [], pageErrors = [], blocked = [];
 let profile = { id: id(100), full_name: 'Fictional account name', updated_at: '2026-10-24T08:00:00.123456+00:00' };
+const websiteProfile = { id: id(100), subscription_tier: 'bronze', subscription_status: 'active', connections_allowed: 1, subscription_expires_at: '2026-11-12T22:45:08Z', updated_at: '2026-10-24T08:00:00Z' };
 const supportTickets = Array.from({ length: 12 }, (_, i) => ({ id: id(400 + i), user_id: id(100), subject: `Fictional support ${String(i + 1).padStart(2, '0')}`, description: 'Fictional support problem', category: 'Technical Issue', priority: 'normal', status: 'open', created_at: '2026-10-24T08:00:00Z' }));
 const supportReplies = Array.from({ length: 45 }, (_, i) => ({ id: id(645 - i), ticket_id: id(400), user_id: i % 2 ? id(200) : id(100), message: `Fictional conversation reply ${45 - i}`, is_staff: Boolean(i % 2), delivery_status: i % 2 ? 'sent' : 'not_requested', created_at: '2026-10-24T09:00:00Z' }));
 try {
@@ -41,7 +42,7 @@ try {
     if (req.url === '/api/ks-customer-setup?view=crm-service') {
       methods.push(req.method);
       assert.ok(req.headers.authorization?.startsWith('Bearer '));
-      res.writeHead(serviceMode === 'failure' ? 503 : 200, { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' });
+      res.writeHead(serviceMode === 'hidden' ? 404 : serviceMode === 'failure' ? 503 : 200, { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' });
       res.end(JSON.stringify(serviceMode === 'failure' ? { error: 'PRIVATE-FIXTURE-ERROR' } : {
         accountId: id(100), checkedAt: '2026-10-22T12:00:00Z', payments: serviceMode === 'unlinked' ? [] : [{ id: id(300), customerId: id(1), amountCents: 9500, method: 'manual_paypal', paidAt: '2026-08-03T20:17:00Z', months: 6, connections: 3 }], nextCursor: null,
         services: serviceMode === 'unlinked' ? [] : [{ customerId: id(1), username: 'user_1', name: 'Fictional Customer 01', packageName: '6 Months + 3 Connections', connections: 3, expiresAt: '2030-10-28T12:00:00Z', savedStatus: 'active', legacyPaid: false, updatedAt: '2026-10-22T12:00:00Z' }],
@@ -79,6 +80,10 @@ try {
       methods.push(request.method());
       if (url.pathname === '/rest/v1/profiles') {
         assert.equal(url.searchParams.get('id'), 'eq.' + user.id);
+        if (url.searchParams.get('select') === 'id,subscription_tier,subscription_status,connections_allowed,subscription_expires_at,updated_at') {
+          assert.equal(request.method(), 'GET'); assert.deepEqual([...url.searchParams.keys()].sort(), ['id', 'select']);
+          return route.fulfill({ status: profileMode === 'failure' ? 403 : 200, headers, body: JSON.stringify(profileMode === 'failure' ? { message: 'PRIVATE-PLAN-ERROR' } : profileMode === 'missing' ? [] : [websiteProfile]) });
+        }
         assert.equal(url.searchParams.get('select'), 'id,full_name,updated_at');
         if (request.method() === 'PATCH') {
           assert.deepEqual([...url.searchParams.keys()].sort(), ['id', 'select', 'updated_at']);
@@ -242,6 +247,29 @@ try {
   await page.getByRole('heading', { name: 'Fictional support 01', exact: true }).waitFor();
   await page.waitForFunction(() => window.scrollY <= 1);
   await page.getByRole('button', { name: 'Back to tickets', exact: true }).click();
+  await page.goto(origin + '/client/subscription');
+  await page.getByRole('heading', { name: 'Subscription Details', exact: true }).waitFor();
+  await page.getByText('6 Months + 3 Connections', { exact: true }).waitFor();
+  assert.equal(await page.getByRole('region', { name: 'Saved website plan', exact: true }).count(), 0);
+  profileMode = 'missing'; await page.getByRole('button', { name: 'Refresh subscription', exact: true }).click();
+  await page.getByText('6 Months + 3 Connections', { exact: true }).waitFor();
+  assert.equal(await page.getByText('No Active Website Plan', { exact: true }).count(), 0);
+  serviceMode = 'unlinked'; await page.getByRole('button', { name: 'Refresh subscription', exact: true }).click();
+  await page.getByText('Your website plan record was not found.', { exact: false }).waitFor();
+  profileMode = 'normal'; await page.getByRole('button', { name: 'Refresh subscription', exact: true }).click();
+  await page.getByRole('heading', { name: 'Website Plan Access Period', exact: true }).waitFor();
+  assert.equal(await page.getByText('Website record updated', { exact: true }).count(), 1);
+  assert.equal(await page.locator('table').count(), 0);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  if (process.env.KS_BROWSER_SCREENSHOT_DIR) await page.screenshot({ path: resolve(process.env.KS_BROWSER_SCREENSHOT_DIR, 'ks-subscription-phone.png'), fullPage: true });
+  serviceMode = 'failure'; await page.getByRole('button', { name: 'Refresh subscription', exact: true }).click();
+  await page.getByText('Your saved service and payment details could not be checked.', { exact: false }).waitFor();
+  assert.equal(await page.getByRole('region', { name: 'Saved website plan', exact: true }).count(), 0);
+  serviceMode = 'hidden'; await page.getByRole('button', { name: 'Refresh subscription', exact: true }).click();
+  await page.getByRole('heading', { name: 'Website Plan Access Period', exact: true }).waitFor();
+  serviceMode = 'linked'; await page.getByRole('button', { name: 'Refresh subscription', exact: true }).click();
+  await page.getByText('6 Months + 3 Connections', { exact: true }).waitFor();
+  assert.equal(await page.getByRole('region', { name: 'Saved website plan', exact: true }).count(), 0);
   await page.goto(origin + '/client/support');
   const ticketDirectory = page.getByRole('list', { name: 'Ticket directory', exact: true });
   await ticketDirectory.waitFor(); assert.equal(await ticketDirectory.getByRole('listitem').count(), 5);
@@ -308,6 +336,10 @@ try {
   await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
   assert.equal(await noSession.getByRole('list', { name: 'Recent support tickets', exact: true }).count(), 0);
   assert.equal(methods.length, beforeSignedOut, 'Signed-out Dashboard must not request private data');
+  await noSession.goto(origin + '/client/subscription');
+  await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
+  assert.equal(await noSession.getByRole('heading', { name: 'Your streaming service', exact: true }).count(), 0);
+  assert.equal(methods.length, beforeSignedOut, 'Signed-out Subscription makes no private request');
   await noSession.goto(origin + '/client/support/new');
   await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
   assert.equal(await noSession.getByLabel('Subject', { exact: true }).count(), 0);
@@ -320,6 +352,7 @@ try {
   console.log('PASS: 320px Support uses five-ticket pages and one selected thread, pages twenty replies without mixing them, confirms one fictional reply and returns to the directory; signed-out Support makes no private request.');
   console.log('PASS: 320px verified new-ticket creation validates the exact fictional insert and return-to-list result; signed-out creation offers sign-in without a form or private requests.');
   console.log('PASS: Dashboard at 320px and desktop bounds recent tickets to five, counts all active tickets independently, isolates profile/count failures, refreshes safely and opens the exact owned thread; signed-out Dashboard makes no private request.');
+  console.log('PASS: 320px Subscription retains linked service without a profile, labels unlinked website data separately, distinguishes missing/error, suppresses website fallback during service failure and recovers hidden checks by refreshing.');
   console.log('Offline fictional Auth/data only; external network blocked; one strictly allowlisted fictional name PATCH, customer-reply POST and new-ticket POST, no real record/Auth write, provider, payment or email operation.');
 } finally {
   await browser?.close(); if (server) await new Promise(resolve => server.close(resolve));

@@ -22,17 +22,17 @@ const hookSource=`import React from ${JSON.stringify(reactPath)};export default 
  const same=(a,b)=>a&&a.length===b.length&&a.every((x,i)=>x===b[i]);
  export const useCallback=(f,deps)=>{const h=globalThis.__portalHooks,i=h.memoIndex++;if(!same(h.memos[i]?.deps,deps))h.memos[i]={f,deps};return h.memos[i].f;};
  export const useEffect=(f,deps)=>{const h=globalThis.__portalHooks,i=h.effectIndex++;if(!same(h.effects[i]?.deps,deps)){const old=h.effects[i];h.effects[i]={deps};h.pending.push(()=>{old?.cleanup?.();h.effects[i].cleanup=f();});}};`;
-const authSource=`export const supabase={auth:{getSession:async()=>({data:{session:{access_token:'fictional-token',user:{id:globalThis.__portalAccount}}}}),onAuthStateChange:callback=>{globalThis.__portalAuthChange=callback;return{data:{subscription:{unsubscribe(){}}}};}},from:table=>{if(table!=='profiles')throw Error('Unexpected fixture read');const q={select:()=>q,eq:()=>q,maybeSingle:async()=>({data:globalThis.__portalProfile,error:null})};return q;}};`;
+const authSource=`export const supabase={auth:{getUser:async()=>({data:{user:{id:globalThis.__portalAccount,is_anonymous:false,email_confirmed_at:'2026-01-01T00:00:00Z'}},error:null}),getSession:async()=>({data:{session:{access_token:'fictional-token',user:{id:globalThis.__portalAccount}}}}),onAuthStateChange:callback=>{globalThis.__portalAuthChange=callback;return{data:{subscription:{unsubscribe(){}}}};}},from:table=>{if(table!=='profiles')throw Error('Unexpected fixture read');const q={select:()=>q,eq:()=>q,abortSignal:()=>q,maybeSingle:async()=>({data:globalThis.__portalProfile,error:null})};return q;}};`;
 async function compile(entry,name){const built=await build({entryPoints:[entry],bundle:true,write:false,format:'esm',platform:'node',jsx:'automatic',external:['react/jsx-runtime','react-router-dom','lucide-react'],plugins:[{name:'portal-fixture',setup(b){
  b.onResolve({filter:/^file:/},a=>({path:a.path,external:true}));b.onResolve({filter:/^react$/},()=>({path:'hooks',namespace:'fixture'}));b.onResolve({filter:/\/lib\/supabase$/},()=>({path:'auth',namespace:'fixture'}));
  if(name==='subscription'){
-  b.onResolve({filter:/\/components\/CustomerCrmService$/},()=>({path:'service',namespace:'fixture'}));
+  b.onResolve({filter:/\/CustomerCrmService$/},()=>({path:'service',namespace:'fixture'}));
   b.onResolve({filter:/^react-router-dom$/},()=>({path:'router',namespace:'fixture'}));
   b.onResolve({filter:/\/lib\/stripe$/},()=>({path:'checkout',namespace:'fixture'}));
  }
  b.onLoad({filter:/.*/,namespace:'fixture'},a=>({loader:'js',contents:a.path==='auth'?authSource:a.path==='service'
   ?`import React from ${JSON.stringify(reactPath)};export default function FixtureService(){return React.createElement('section',{},'Your streaming service: 6 Months + 3 Connections. Saved service expiration Apr 22, 2027.');}`
-  :a.path==='router'?'const navigate=()=>{};export const useNavigate=()=>navigate;':a.path==='checkout'?'export const restoreSessionAfterStripe=async()=>false;':hookSource}));
+  :a.path==='router'?`import React from ${JSON.stringify(reactPath)};export const Link=({to,state,...props})=>React.createElement('a',{...props,href:to});const navigate=()=>{};export const useNavigate=()=>navigate;`:a.path==='checkout'?'export const restoreSessionAfterStripe=async()=>false;':hookSource}));
  }}]});const file=join(directory,name+'.mjs');await writeFile(file,built.outputFiles[0].text);return(await import(pathToFileURL(file))).default;}
 const reset=()=>{globalThis.__portalHooks={values:[],refs:[],memos:[],effects:[],pending:[],index:0,refIndex:0,memoIndex:0,effectIndex:0};};
 const render=(Component,props)=>{const h=globalThis.__portalHooks;h.index=0;h.refIndex=0;h.memoIndex=0;h.effectIndex=0;const tree=Component(props);for(const f of h.pending.splice(0))f();return tree;};
@@ -85,15 +85,15 @@ try{
  assert.equal(states.at(-1).status,'unavailable');assert.ok(!states.some(s=>s.status==='unlinked'));
  globalThis.__portalAuthChange('SIGNED_OUT',null);render(Customer,customerProps);assert.equal(states.at(-1).status,'signed_out');
  console.log('PASS: actual service component reports owner-bound linked/loading/error/sign-out states without treating a failed read as an unlinked account');
- const Subscription=await compile('src/pages/client/ClientSubscription.tsx','subscription');
+ const Subscription=await compile('src/components/SubscriptionWorkspace.tsx','subscription');
  reset();globalThis.__portalAccount=owner;globalThis.__portalProfile={id:owner,email:'owner@example.invalid',subscription_tier:'bronze',subscription_status:'active',connections_allowed:1,active_connections:0,subscription_expires_at:websiteExpiry,updated_at:'2026-10-13T22:45:08Z'};
- render(Subscription,{});await drain();tree=render(Subscription,{});assert.ok(!html(tree).includes(websiteExpiryLabel));
+ render(Subscription,{accountId:owner});await drain();tree=render(Subscription,{accountId:owner});assert.ok(!html(tree).includes(websiteExpiryLabel));
  const serviceNode=()=>nodes(tree).find(n=>typeof n.type==='function'&&n.type.name==='FixtureService');assert.ok(serviceNode());
- serviceNode().props.onServiceStateChange({accountId:owner,status:'linked'});tree=render(Subscription,{});markup=html(tree);
+ serviceNode().props.onServiceStateChange({accountId:owner,status:'linked'});tree=render(Subscription,{accountId:owner});markup=html(tree);
  assert.ok(markup.includes('Apr 22, 2027'));assert.ok(markup.includes('6 Months + 3 Connections'));assert.ok(!markup.includes(websiteExpiryLabel));assert.ok(!markup.includes('Bronze'));assert.ok(!markup.includes('Website Plan Access Period'));
- for(const status of ['loading','unavailable','signed_out']){serviceNode().props.onServiceStateChange({accountId:owner,status});tree=render(Subscription,{});assert.ok(!html(tree).includes(websiteExpiryLabel));}
- serviceNode().props.onServiceStateChange({accountId:other,status:'unlinked'});tree=render(Subscription,{});assert.ok(!html(tree).includes(websiteExpiryLabel));
- serviceNode().props.onServiceStateChange({accountId:owner,status:'unlinked'});tree=render(Subscription,{});markup=html(tree);
+ for(const status of ['loading','unavailable','signed_out']){serviceNode().props.onServiceStateChange({accountId:owner,status});tree=render(Subscription,{accountId:owner});assert.ok(!html(tree).includes(websiteExpiryLabel));}
+ serviceNode().props.onServiceStateChange({accountId:other,status:'unlinked'});tree=render(Subscription,{accountId:owner});assert.ok(!html(tree).includes(websiteExpiryLabel));
+ serviceNode().props.onServiceStateChange({accountId:owner,status:'unlinked'});tree=render(Subscription,{accountId:owner});markup=html(tree);
  assert.ok(markup.includes('Website Plan Access Period'));assert.ok(markup.includes(websiteExpiryLabel));assert.ok(markup.includes('do not confirm streaming-service expiration'));
  console.log('PASS: actual Subscription page gives linked service precedence over a conflicting website plan; no old-date flash or error fallback, foreign state ignored, unlinked dates explicitly scoped to website access');
 }finally{globalThis.fetch=originalFetch;if(originalWindow===undefined)delete globalThis.window;else globalThis.window=originalWindow;delete globalThis.__portalHooks;delete globalThis.__portalAccount;delete globalThis.__portalAuthChange;delete globalThis.__portalProfile;await rm(directory,{recursive:true,force:true});}
