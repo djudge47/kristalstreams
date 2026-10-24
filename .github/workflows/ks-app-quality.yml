@@ -21,6 +21,8 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check locked npm dependencies for high and critical advisories
+        run: npm audit --audit-level=high --ignore-scripts --package-lock-only --fetch-retries=1 --fetch-timeout=15000
       - run: npm run check
       - name: Verify Production and Preview portal and manual receipts with disposable SQL
         run: |
@@ -35,6 +37,7 @@ jobs:
           node scripts/test-ks-download-page.mjs
           node scripts/test-ks-admin-modules.mjs
           node scripts/test-ks-navigation.mjs
+          node scripts/test-ks-login-destination.mjs
           node scripts/test-ks-general-chat.mjs
           node scripts/test-ks-website-playback.mjs
           node scripts/test-ks-playback-preferences.mjs
