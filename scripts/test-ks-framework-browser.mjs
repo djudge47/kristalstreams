@@ -26,7 +26,8 @@ const rows = Array.from({ length: 12 }, (_, i) => ({
   payment_status: 'paid', monthly_price: 10, trial: false, connections_allowed: 3,
   expiration_at: '2030-10-28T12:00:00Z', package_name: '6 Months + 3 Connections',
 }));
-const methods = [], pageErrors = [], blocked = [];
+const methods = [], profileWrites = [], pageErrors = [], blocked = [];
+let profile = { id: id(100), full_name: 'Fictional account name', updated_at: '2026-10-24T08:00:00.123456+00:00' };
 try {
   // This build uses only fictional service configuration and copies no APK/assets.
   await build({ publicDir: false, logLevel: 'silent', define: {
@@ -71,10 +72,23 @@ try {
       const request = route.request(), url = new URL(request.url());
       if (url.origin === origin) return route.continue();
       if (url.origin !== 'https://fictional.supabase.co') { blocked.push(url.origin); return route.abort(); }
-      const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-supabase-api-version', 'access-control-allow-methods': 'GET, OPTIONS', 'content-type': 'application/json' };
+      const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-supabase-api-version', 'access-control-allow-methods': 'GET, PATCH, OPTIONS', 'content-type': 'application/json' };
       if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
       methods.push(request.method());
-      assert.equal(request.method(), 'GET', 'Fixture forbids all database/Auth writes');
+      if (url.pathname === '/rest/v1/profiles') {
+        assert.equal(url.searchParams.get('id'), 'eq.' + user.id);
+        assert.equal(url.searchParams.get('select'), 'id,full_name,updated_at');
+        if (request.method() === 'PATCH') {
+          assert.deepEqual([...url.searchParams.keys()].sort(), ['id', 'select', 'updated_at']);
+          const body = request.postDataJSON(); assert.deepEqual(Object.keys(body), ['full_name']);
+          assert.equal(body.full_name, 'Fictional revised name');
+          assert.equal(url.searchParams.get('updated_at'), 'eq.' + profile.updated_at);
+          assert.equal(request.headers().prefer, 'return=representation');
+          profileWrites.push(body); profile = { ...profile, ...body, updated_at: '2026-10-24T08:01:00.123456+00:00' };
+        } else { assert.equal(request.method(), 'GET'); assert.deepEqual([...url.searchParams.keys()].sort(), ['id', 'select']); }
+        return route.fulfill({ status: 200, headers, body: JSON.stringify([profile]) });
+      }
+      assert.equal(request.method(), 'GET', 'Only the separately validated fictional profile-name PATCH is allowed');
       if (url.pathname === '/auth/v1/user') return route.fulfill({ status: 200, headers, body: JSON.stringify(user) });
       const table = url.pathname.split('/').at(-1);
       assert.ok(['iptv_customers', 'iptv_payments', 'iptv_customer_activity', 'iptv_reminder_queue'].includes(table), `Unexpected fixture read: ${table}`);
@@ -146,6 +160,24 @@ try {
   assert.equal(await page.getByRole('link', { name: 'View service & payment records', exact: true }).getAttribute('href'), '/client/subscription');
   assert.equal(await page.getByText("You haven't watched any content yet.", { exact: false }).count(), 0);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  await page.goto(origin + '/client/account');
+  await page.getByRole('region', { name: 'Your website account', exact: true }).waitFor();
+  await page.getByText('Fictional account name', { exact: true }).waitFor();
+  assert.equal(await page.getByText('djudge47@gmail.com', { exact: true }).count(), 1);
+  await page.getByRole('button', { name: 'Edit full name', exact: true }).click();
+  await page.getByLabel('Full name', { exact: true }).fill('Discard fictional draft');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByText('Fictional account name', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Edit full name', exact: true }).click();
+  await page.getByLabel('Full name', { exact: true }).fill('Fictional revised name');
+  for (const label of ['Save name', 'Cancel']) { const box = await page.getByRole('button', { name: label, exact: true }).boundingBox(); assert.ok(box.height >= 48); }
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  await page.getByRole('button', { name: 'Save name', exact: true }).click();
+  await page.getByText('Your name has been saved.', { exact: true }).waitFor();
+  await page.getByText('Fictional revised name', { exact: true }).waitFor();
+  assert.equal(profileWrites.length, 1);
+  await page.getByRole('button', { name: 'Reload profile', exact: true }).click();
+  await page.getByText('Fictional revised name', { exact: true }).waitFor();
   await context.close();
   const ordinary = await contextFor('ordinary@example.invalid');
   const denied = await ordinary.newPage(); denied.on('pageerror', error => pageErrors.push(error.message));
@@ -161,11 +193,16 @@ try {
   await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
   assert.equal(await noSession.getByRole('heading', { name: 'Your connection allowance', exact: true }).count(), 0);
   assert.equal(methods.length, beforeSignedOut, 'Signed-out Devices must not request private service data');
+  await noSession.goto(origin + '/client/account');
+  await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
+  assert.equal(await noSession.getByRole('region', { name: 'Your website account', exact: true }).count(), 0);
+  assert.equal(methods.length, beforeSignedOut, 'Signed-out Account must not request or write a profile');
   await signedOut.close();
-  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.every(method => method === 'GET'));
+  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => method !== 'GET').length === 1 && profileWrites.length === 1 && methods.includes('PATCH'));
   console.log('PASS: real Chromium/production-code fixture preserves phone paging, selected/Edit identity, browser Back, Back link search state, 320px touch layout, six-panel desktop view and ordinary-user denial.');
   console.log('PASS: customer Devices shows verified allowance without session controls/receipts, separates missing links and failed reads, recovers on refresh, and History discloses unavailable activity at 320px.');
-  console.log('Offline fictional Auth/data only; external network blocked; no database/Auth write, provider, payment or email operation.');
+  console.log('PASS: customer Account at 320px supports Cancel, an owner/revision-bound name save, confirmed returned details and reload; signed-out users make no private profile request.');
+  console.log('Offline fictional Auth/data only; external network blocked; one strictly allowlisted fictional name PATCH, no real record/Auth write, provider, payment or email operation.');
 } finally {
   await browser?.close(); if (server) await new Promise(resolve => server.close(resolve));
   await rm(directory, { recursive: true, force: true });
