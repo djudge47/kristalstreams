@@ -12,6 +12,7 @@ type AccountResult = {
 
 const RoombaConnection: React.FC = () => {
   const [result, setResult] = useState<AccountResult | null>(null);
+  const [activity, setActivity] = useState<{ message: string; checkedAt: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -29,19 +30,21 @@ const RoombaConnection: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [cooldown]);
 
-  const checkConnection = async () => {
+  const checkConnection = async (activityCheck = false) => {
     if (busy.current || cooldown) return;
     busy.current = true;
     const request = new AbortController();
     controller.current = request;
-    const timeout = window.setTimeout(() => request.abort(), 25000);
+    const timeout = window.setTimeout(() => request.abort(), activityCheck ? 45000 : 25000);
     setLoading(true);
     setError(null);
     setResult(null);
+    setActivity(null);
     try {
       const { data, error: sessionError } = await supabase.auth.getSession();
+      if (request.signal.aborted || controller.current !== request) return;
       if (sessionError || !data.session?.access_token) throw new Error('Please sign in again to your admin account.');
-      const response = await fetch('/api/ks-roomba-account', {
+      const response = await fetch(activityCheck ? '/api/ks-roomba-account?view=activity-support' : '/api/ks-roomba-account', {
         method: 'GET', cache: 'no-store', signal: request.signal,
         headers: { Accept: 'application/json', Authorization: `Bearer ${data.session.access_token}` },
       });
@@ -50,6 +53,15 @@ const RoombaConnection: React.FC = () => {
       if (!response.ok) {
         setCooldown(Math.min(60, Math.max(0, Number(payload?.retryAfterSeconds) || 0)));
         throw new Error(payload?.error || 'The connection could not be checked. Please try again.');
+      }
+      if (activityCheck) {
+        if (!['activity_response_received', 'activity_unverified'].includes(payload?.status) || !Number.isFinite(Date.parse(payload.checkedAt)))
+          throw new Error('The activity check response could not be verified.');
+        setActivity({ message: payload.status === 'activity_response_received'
+          ? 'Roomba returned an activity list. Customer matching and live counts still need verification.'
+          : 'Activity support is still unverified. This does not mean your customers are offline.', checkedAt: payload.checkedAt });
+        setCooldown(60);
+        return;
       }
       if (payload?.status !== 'connected' || !payload.account || !Number.isFinite(Date.parse(payload.checkedAt))) {
         throw new Error('The connection response could not be verified. Please try again.');
@@ -98,12 +110,22 @@ const RoombaConnection: React.FC = () => {
         </div>
         <div className="mt-7 flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-xl text-sm leading-6 text-gray-400">Check when you need an update. Results can be reused for up to one minute.</p>
-          <button type="button" onClick={checkConnection} disabled={loading || cooldown > 0}
+          <button type="button" onClick={() => checkConnection()} disabled={loading || cooldown > 0}
             className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-red-950/40 transition hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-400 disabled:cursor-not-allowed disabled:opacity-60">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
             {loading ? 'Checking connection...' : cooldown ? `Check again in ${cooldown}s` : result ? 'Refresh connection' : 'Check connection'}
           </button>
         </div>
+      </section>
+
+      <section aria-label="Activity connection check" className="rounded-2xl border border-gray-700 bg-gray-800/30 p-5">
+        <h2 className="text-lg font-semibold text-white">Online activity connection</h2>
+        <p className="mt-2 text-sm leading-6 text-gray-400">Check whether Roomba returns activity data. This diagnostic does not yet populate Online now.</p>
+        <button type="button" onClick={() => checkConnection(true)} disabled={loading || cooldown > 0}
+          className="mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-60">
+          {loading ? 'Checking...' : cooldown ? `Available in ${cooldown}s` : 'Check activity connection'}
+        </button>
+        {activity && <p role="status" className="mt-4 text-sm leading-6 text-gray-300">{activity.message} Checked {new Date(activity.checkedAt).toLocaleString()}.</p>}
       </section>
 
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
