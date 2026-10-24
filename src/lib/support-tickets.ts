@@ -75,3 +75,20 @@ export async function saveSupportReply(client: SupabaseClient, accountId: string
   if (saved.staff || saved.owner !== accountId || saved.message !== normalized) throw new SupportFailure('uncertain');
   return saved;
 }
+
+export const SUPPORT_CATEGORIES = ['Technical Issue', 'Billing', 'Account', 'Streaming', 'Content', 'Other'] as const;
+export type NewSupportTicket = { subject: string; description: string; category: string; priority: string };
+export async function createSupportTicket(client: SupabaseClient, accountId: string, input: NewSupportTicket, scope: SupportScope) {
+  const subject = input.subject.trim(), description = input.description.trim();
+  if (!subject || subject.length > 200 || !description || description.length > 12000 || !SUPPORT_CATEGORIES.some(value => value === input.category) || !['low', 'normal', 'high'].includes(input.priority)) throw new SupportFailure('invalid');
+  await owner(client, accountId, scope); current(scope);
+  let result;
+  try {
+    result = await client.from('support_tickets').insert({ user_id: accountId, subject, description, category: input.category, priority: input.priority, status: 'open' }).select(TICKET_COLUMNS).abortSignal(scope.signal).retry(false).maybeSingle();
+  } catch { throw new SupportFailure('uncertain'); }
+  current(scope);
+  if (result.error || !result.data) throw new SupportFailure('uncertain');
+  let saved; try { saved = ticket(result.data, accountId); } catch { throw new SupportFailure('uncertain'); }
+  if (saved.subject !== subject || saved.description !== description || saved.category !== input.category || saved.priority !== input.priority || saved.status !== 'open') throw new SupportFailure('uncertain');
+  return saved;
+}

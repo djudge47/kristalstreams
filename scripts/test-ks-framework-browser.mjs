@@ -26,7 +26,7 @@ const rows = Array.from({ length: 12 }, (_, i) => ({
   payment_status: 'paid', monthly_price: 10, trial: false, connections_allowed: 3,
   expiration_at: '2030-10-28T12:00:00Z', package_name: '6 Months + 3 Connections',
 }));
-const methods = [], profileWrites = [], replyWrites = [], pageErrors = [], blocked = [];
+const methods = [], profileWrites = [], replyWrites = [], ticketWrites = [], pageErrors = [], blocked = [];
 let profile = { id: id(100), full_name: 'Fictional account name', updated_at: '2026-10-24T08:00:00.123456+00:00' };
 const supportTickets = Array.from({ length: 12 }, (_, i) => ({ id: id(400 + i), user_id: id(100), subject: `Fictional support ${String(i + 1).padStart(2, '0')}`, description: 'Fictional support problem', category: 'Technical Issue', priority: 'normal', status: 'open', created_at: '2026-10-24T08:00:00Z' }));
 const supportReplies = Array.from({ length: 45 }, (_, i) => ({ id: id(645 - i), ticket_id: id(400), user_id: i % 2 ? id(200) : id(100), message: `Fictional conversation reply ${45 - i}`, is_staff: Boolean(i % 2), delivery_status: i % 2 ? 'sent' : 'not_requested', created_at: '2026-10-24T09:00:00Z' }));
@@ -95,7 +95,12 @@ try {
         assert.equal(q.get('select'), tickets ? 'id,user_id,subject,description,status,priority,category,created_at' : 'id,ticket_id,user_id,message,is_staff,delivery_status,created_at');
         let data;
         if (request.method() === 'POST') {
-          assert.equal(tickets, false); const body = request.postDataJSON();
+          const body = request.postDataJSON();
+          if (tickets) {
+            assert.deepEqual(body, { user_id: user.id, subject: 'Fictional new support request', description: 'Fictional new support description', category: 'Billing', priority: 'normal', status: 'open' });
+            ticketWrites.push(body); const saved = { id: id(1000), ...body, created_at: '2026-10-24T10:00:00Z' }; supportTickets.unshift(saved);
+            return route.fulfill({ status: 200, headers, body: JSON.stringify(request.headers().accept?.includes('object') ? saved : [saved]) });
+          }
           assert.deepEqual(body, { ticket_id: id(400), user_id: user.id, message: 'Fictional customer reply', is_staff: false });
           replyWrites.push(body); const saved = { ...supportReplies[0], ...body, id: id(999), delivery_status: 'not_requested', created_at: '2026-10-24T09:01:00Z' }; supportReplies.unshift(saved); data = [saved];
         } else {
@@ -226,6 +231,16 @@ try {
   await page.getByText('Fictional customer reply', { exact: true }).waitFor(); assert.equal(replyWrites.length, 1);
   await page.getByRole('button', { name: 'Back to tickets', exact: true }).click(); await ticketDirectory.waitFor();
   assert.equal(await ticketDirectory.getByRole('listitem').count(), 5);
+  await page.getByRole('link', { name: 'New ticket', exact: true }).click();
+  await page.getByRole('heading', { name: 'New Support Ticket', exact: true }).waitFor();
+  await page.getByLabel('Subject', { exact: true }).fill('Fictional new support request');
+  await page.getByLabel('Description', { exact: true }).fill('Fictional new support description');
+  await page.getByLabel('Category', { exact: true }).selectOption('Billing');
+  const createButton = page.getByRole('button', { name: 'Create Ticket', exact: true });
+  assert.ok((await createButton.boundingBox()).height >= 48);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  await createButton.click(); await page.waitForURL('**/client/support');
+  await page.getByText('Fictional new support request', { exact: true }).waitFor(); assert.equal(ticketWrites.length, 1);
   await context.close();
   const ordinary = await contextFor('ordinary@example.invalid');
   const denied = await ordinary.newPage(); denied.on('pageerror', error => pageErrors.push(error.message));
@@ -249,13 +264,18 @@ try {
   await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
   assert.equal(await noSession.getByRole('list', { name: 'Ticket directory', exact: true }).count(), 0);
   assert.equal(methods.length, beforeSignedOut, 'Signed-out Support must not request or write tickets/replies');
+  await noSession.goto(origin + '/client/support/new');
+  await noSession.getByRole('link', { name: 'Sign in to your website account', exact: true }).waitFor();
+  assert.equal(await noSession.getByLabel('Subject', { exact: true }).count(), 0);
+  assert.equal(methods.length, beforeSignedOut, 'Signed-out new-ticket route must not read or write private records');
   await signedOut.close();
-  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => method !== 'GET').length === 2 && profileWrites.length === 1 && replyWrites.length === 1 && methods.includes('PATCH') && methods.includes('POST'));
+  assert.deepEqual(pageErrors, []); assert.ok(methods.length > 0 && methods.filter(method => method !== 'GET').length === 3 && profileWrites.length === 1 && replyWrites.length === 1 && ticketWrites.length === 1 && methods.includes('PATCH') && methods.includes('POST'));
   console.log('PASS: real Chromium/production-code fixture preserves phone paging, selected/Edit identity, browser Back, Back link search state, 320px touch layout, six-panel desktop view and ordinary-user denial.');
   console.log('PASS: customer Devices shows verified allowance without session controls/receipts, separates missing links and failed reads, recovers on refresh, and History discloses unavailable activity at 320px.');
   console.log('PASS: customer Account at 320px supports Cancel, an owner/revision-bound name save, confirmed returned details and reload; signed-out users make no private profile request.');
   console.log('PASS: 320px Support uses five-ticket pages and one selected thread, pages twenty replies without mixing them, confirms one fictional reply and returns to the directory; signed-out Support makes no private request.');
-  console.log('Offline fictional Auth/data only; external network blocked; one strictly allowlisted fictional name PATCH and customer-reply POST, no real record/Auth write, provider, payment or email operation.');
+  console.log('PASS: 320px verified new-ticket creation validates the exact fictional insert and return-to-list result; signed-out creation offers sign-in without a form or private requests.');
+  console.log('Offline fictional Auth/data only; external network blocked; one strictly allowlisted fictional name PATCH, customer-reply POST and new-ticket POST, no real record/Auth write, provider, payment or email operation.');
 } finally {
   await browser?.close(); if (server) await new Promise(resolve => server.close(resolve));
   await rm(directory, { recursive: true, force: true });
