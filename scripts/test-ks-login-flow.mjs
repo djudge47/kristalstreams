@@ -82,14 +82,11 @@ try {
     const f = await fixture({ configured: false, signIn: async () => { calls++; throw new Error('must not call'); } });
     await submit(f); assert.equal(calls, 0); assert.match(text(f), /sign-in is unavailable on this preview/); retryEnabled(f);
   });
-  await check('a rejected password-reset request restores its submit control', async () => {
-    const f = await fixture({ reset: async () => { throw new Error('fixture connection failure'); } });
-    nodes(f.render()).find(node => node.type === 'button' && node.props.children.includes('Forgot your password?')).props.onClick();
-    const forms = nodes(f.render()).filter(node => node.type === 'form');
-    await forms[1].props.onSubmit({ preventDefault() {} });
-    assert.match(text(f), /Could not connect to account recovery/);
-    const resetButton = nodes(f.render()).filter(node => node.type === 'button' && node.props.type === 'submit')[1];
-    assert.equal(resetButton.props.disabled, false); assert.equal(f.navigations.length, 0);
+  await check('password recovery links to its dedicated public page without invoking Auth', async () => {
+    let calls = 0;
+    const f = await fixture({ reset: async () => { calls++; throw new Error('must not call from Login'); } });
+    const link = nodes(f.render()).find(node => node.type === 'link' && node.props.to === '/forgot-password');
+    assert.ok(link); assert.equal(calls, 0); assert.equal(nodes(f.render()).filter(node => node.type === 'form').length, 1);
   });
   console.log(`${count} isolated login-handler checks passed. No browser or live Auth request.`);
 } finally { delete globalThis.ksLoginFixture; await rm(directory, { recursive: true, force: true }); }

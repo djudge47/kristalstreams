@@ -42,14 +42,14 @@ const NewsletterSignup: React.FC<NewsletterSignupProps> = memo(({
       }
 
       // Send confirmation email
-      const success = await sendNewsletterConfirmation({ email, name: name || 'Subscriber' });
+      const result = await sendNewsletterConfirmation({ email: email.trim().toLowerCase(), name: name || 'Subscriber' });
 
-      if (success) {
+      if (result.success) {
         setStatus('success');
         setEmail('');
         setName('');
       } else {
-        throw new Error('Failed to subscribe. Please try again later.');
+        throw new Error(result.error || 'Your request could not be confirmed. Please try again later.');
       }
 
     } catch (error) {
@@ -87,7 +87,7 @@ const NewsletterSignup: React.FC<NewsletterSignupProps> = memo(({
         </form>
         
         {status === 'success' && (
-          <p className="text-green-500 text-sm mt-2">Successfully subscribed!</p>
+          <p className="text-green-500 text-sm mt-2">Newsletter request recorded.</p>
         )}
         
         {status === 'error' && (
@@ -133,8 +133,8 @@ const NewsletterSignup: React.FC<NewsletterSignupProps> = memo(({
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-start">
             <CheckCircle className="text-green-500 w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-green-500 font-medium">Successfully subscribed!</p>
-              <p className="text-green-400 text-sm mt-1">Check your email for confirmation.</p>
+              <p className="text-green-500 font-medium">Newsletter request recorded.</p>
+              <p className="text-green-400 text-sm mt-1">Your confirmation email was accepted for sending.</p>
             </div>
           </div>
         )}
@@ -169,7 +169,7 @@ const NewsletterSignup: React.FC<NewsletterSignupProps> = memo(({
       </form>
 
       <p className="text-gray-500 text-xs mt-4 text-center">
-        We respect your privacy. Unsubscribe at any time.
+        Sign in with your confirmed website email to request updates.
       </p>
     </div>
   );

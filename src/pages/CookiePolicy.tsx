@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect } from 'react';
-import { Cookie, Shield, Settings, Info, CheckCircle, AlertCircle } from 'lucide-react';
+import { Cookie, Settings, Info, CheckCircle, AlertCircle } from 'lucide-react';
 
 const CookiePolicy: React.FC = () => {
   useEffect(() => {

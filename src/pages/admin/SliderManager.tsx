@@ -2,12 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Plus, Pencil, Trash2, Image, X, Save } from 'lucide-react';
 
+interface SlideForm {
+  title: string;
+  subtitle: string;
+  image_url: string;
+  link: string;
+  order_num: number;
+  is_active: boolean;
+}
+interface Slide extends SlideForm { id: string }
+
 const SliderManager: React.FC = () => {
-  const [slides, setSlides] = useState<any[]>([]);
+  const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ title: '', subtitle: '', image_url: '', link: '', order_num: 0, is_active: true });
+  const [editing, setEditing] = useState<Slide | null>(null);
+  const [form, setForm] = useState<SlideForm>({ title: '', subtitle: '', image_url: '', link: '', order_num: 0, is_active: true });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { fetchSlides(); }, []);
@@ -24,7 +34,7 @@ const SliderManager: React.FC = () => {
       else { await supabase.from('slides').insert(form); }
       setShowForm(false); setEditing(null); setForm({ title: '', subtitle: '', image_url: '', link: '', order_num: 0, is_active: true });
       fetchSlides();
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not save the slide.'); }
   };
 
   const handleDelete = async (id: string) => {

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { build } from 'esbuild';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { StaticRouter } from 'react-router-dom/server.js';
+import { StaticRouter } from 'react-router-dom';
 
 // Render the actual component with a supplied server result. Effects are inert;
 // this proves displayed copy, not a deployed browser or authenticated API flow.

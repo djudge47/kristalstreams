@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
 interface Props { customerId: string; panelId: number; username: string; hasSourceReview?: boolean }
@@ -99,7 +99,7 @@ export default function LiveRenewalControls({ customerId, panelId, username, has
         sessionStorage.setItem(key, JSON.stringify(review)); setPending(true);
         const result = await send('renewal-live-execute', { customerId, token: review.token,
           preserveCurrentSelectionConfirmed: true, creditSpendConfirmed: true });
-        if (!Object.hasOwn(messages, result.state) || (result.operationId !== undefined && result.operationId !== review.operationId)) throw Error('The saved renewal result could not be verified.');
+        if (!Object.prototype.hasOwnProperty.call(messages, result.state) || (result.operationId !== undefined && result.operationId !== review.operationId)) throw Error('The saved renewal result could not be verified.');
         setState(result.state);
         if (result.state === 'complete') { sessionStorage.removeItem(key); setPending(false); setReview(null); setReady(false); }
       } else {

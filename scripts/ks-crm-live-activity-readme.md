@@ -1,0 +1,11 @@
+# Live XUI activity — provider documentation needed
+
+The current verified reseller connector reads only `user_info`, `packages` and `get_line`. The retained XUI ONE 1.5.5 guide (including the October 22 copy) documents line identity, reseller identity, package, expiry, allowed connections, trial and enabled flags. It does not document online viewers, currently active streams, last connection timestamps or channel titles. The provider's official documentation download could not be retrieved publicly, and no provider-confirmed activity action was recovered. Do not substitute third-party compatible-panel documentation or invent actions/field aliases.
+
+The CRM therefore cannot currently claim live values for those metrics. Both CRM screens show Online now as unavailable. Customer cards show only the verified connection allowance, not a stale saved-stream-count/allowance ratio. They distinguish Active service (account service status) from XUI's Active column (current streams). The saved online/stream flags remain unchanged in the database and are explicitly labelled non-live in the editor. Existing Check XUI status still shows its own verified service check time; it is not presented as an activity check.
+
+## Information needed from Roomba
+
+Request the documented **read-only reseller API** action(s), request parameters, required permissions and rate limits for the authenticated reseller's own lines: online/offline state, current active connection count, last-connection timestamp with timezone, and channel title. A sanitized response sample must omit passwords, tokens, API keys, IP addresses and session identifiers. Confirm how offline clients, never-connected accounts, missing fields and pagination are represented.
+
+Until that source is available, no provider requests for unverified actions, screenshot-derived live values, credentials, writes, database migrations, flags or browser-session scraping are introduced. Current allowed packages, service expirations, billing and payment receipts remain unaffected. A future implementation must include observed/last-success timestamps, stale/unknown distinctions, identity/ownership checks, bounded requests/paging, a verified source for each field and safe failure handling.

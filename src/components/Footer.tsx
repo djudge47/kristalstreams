@@ -5,7 +5,7 @@ import NewsletterSignup from './NewsletterSignup';
 
 const Footer: React.FC = memo(() => {
   const currentYear = new Date().getFullYear();
-  const supportEmail = 'info@kristalstream.com';
+  const supportEmail = 'support@kristalstream.com';
 
   const socialLinks = [
     { platform: 'facebook', url: 'https://www.facebook.com/kristalstreams' },
@@ -173,7 +173,7 @@ const Footer: React.FC = memo(() => {
             <p className="text-gray-500 text-sm mb-4 md:mb-0">
               &copy; {currentYear} Kristal Streams. All rights reserved.
             </p>
-            <div className="flex space-x-6">
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
               <Link to="/privacy" className="text-gray-500 hover:text-primary text-sm transition-colors duration-200">
                 Privacy Policy
               </Link>
@@ -183,9 +183,9 @@ const Footer: React.FC = memo(() => {
               <Link to="/cookies" className="text-gray-500 hover:text-primary text-sm transition-colors duration-200">
                 Cookie Policy
               </Link>
-              <a href="/accessibility" className="text-gray-500 hover:text-primary text-sm transition-colors duration-200">
+              <Link to="/accessibility" className="text-gray-500 hover:text-primary text-sm transition-colors duration-200">
                 Accessibility
-              </a>
+              </Link>
             </div>
           </div>
         </div>

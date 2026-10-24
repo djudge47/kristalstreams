@@ -57,12 +57,13 @@ export const sendNotification = async (title: string, options?: NotificationOpti
       try {
         const registration = await navigator.serviceWorker.ready;
 
-        await registration.showNotification(title, {
+        const notificationOptions: NotificationOptions & { vibrate: number[] } = {
           icon: '/android/icon-192.png',
           badge: '/android/icon-96.png',
           vibrate: [200, 100, 200],
           ...options
-        });
+        };
+        await registration.showNotification(title, notificationOptions);
         return;
       } catch (error) {
         console.warn('Service worker notification failed; falling back to browser notification:', error);
@@ -100,7 +101,7 @@ export const checkNotificationSupport = (): boolean => {
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
+    .replace(/-/g, '+')
     .replace(/_/g, '/');
 
   const rawData = window.atob(base64);

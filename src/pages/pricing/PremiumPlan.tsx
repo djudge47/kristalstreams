@@ -1,3 +1,4 @@
+import { getRetailPrice } from '../../../_shared/ks-retail-pricing.js';
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Crown, Check, ArrowLeft } from 'lucide-react';
@@ -21,8 +22,8 @@ const PremiumPlan: React.FC = () => {
     return null;
   }
 
-  const planPriceMap: Record<number, number> = { 1: 60, 2: 105, 3: 150, 4: 195, 5: 240 };
-  const finalPriceTotal = planPriceMap[selectedConnections] ?? 0;
+  const retailPrice = getRetailPrice(6, selectedConnections);
+  const finalPriceTotal = retailPrice ? retailPrice.totalCents / 100 : 0;
 
   const features = [
     '3 Connections',

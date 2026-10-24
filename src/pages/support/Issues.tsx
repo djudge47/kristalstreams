@@ -1,10 +1,11 @@
-import React from 'react';
 import SupportPage from './SupportPage';
-const Issues: React.FC = () => <SupportPage title="Known Issues" description="Current known issues and their workarounds."
-  sections={[
-    { heading: "No Known Issues", content: "There are currently no known widespread issues with Kristal Streams services. If you are experiencing a problem, it may be specific to your device or connection." },
-    { heading: "Report an Issue", content: "If you are experiencing an issue not listed here, please contact our support team so we can investigate and resolve it." },
-  ]}
-  relatedLinks={[{ title: "Service Status", url: "/support/status" }, { title: "Maintenance Schedule", url: "/support/maintenance" }, { title: "Contact Support", url: "/support" }]}
-/>;
-export default Issues;
+
+export default function Issues() {
+  return <SupportPage title="Known Issues" description="Get help confirming and investigating a service problem."
+    sections={[
+      { heading: 'Issue information unavailable', content: 'A verified list of current service incidents is not available on this page. Contact support to confirm whether a wider issue is affecting your service.' },
+      { heading: 'Report an issue', content: 'Describe what happened, when it started, the device and player you use, and whether other channels or titles work. Include the exact error message and keep passwords and playback URLs private.' },
+    ]}
+    relatedLinks={[{ title: 'Service Status', url: '/support/status' }, { title: 'Playback Troubleshooting', url: '/support/streaming' }, { title: 'Maintenance Schedule', url: '/support/maintenance' }, { title: 'Contact Support', url: '/support' }]}
+  />;
+}

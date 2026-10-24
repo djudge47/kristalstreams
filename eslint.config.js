@@ -19,6 +19,12 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // ESLint 9.39 no longer supplies these defaults to older TS rule wrappers.
+      '@typescript-eslint/no-unused-expressions': ['error', {
+        allowShortCircuit: false,
+        allowTernary: false,
+        allowTaggedTemplates: false,
+      }],
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

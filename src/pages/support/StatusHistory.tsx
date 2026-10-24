@@ -1,10 +1,11 @@
-import React from 'react';
 import SupportPage from './SupportPage';
-const StatusHistory: React.FC = () => <SupportPage title="Status History" description="Historical uptime and incident reports."
-  sections={[
-    { heading: "Current Month", content: "Uptime: 99.9%\nNo major incidents reported." },
-    { heading: "Service Level", content: "Kristal Streams maintains a 99.9% uptime target. Any incidents are resolved as quickly as possible and documented here." },
-  ]}
-  relatedLinks={[{ title: "Service Status", url: "/support/status" }, { title: "Known Issues", url: "/support/issues" }, { title: "Maintenance Schedule", url: "/support/maintenance" }]}
-/>;
-export default StatusHistory;
+
+export default function StatusHistory() {
+  return <SupportPage title="Status History" description="Availability of verified uptime and incident records."
+    sections={[
+      { heading: 'Incident history unavailable', content: 'Verified incident records and uptime measurements are not currently available on this page. Contact support if you need information about a past disruption.' },
+      { heading: 'Ask about a past issue', content: 'Provide the date, time, device model and affected channel or title. Support can investigate your report and explain what information is available.' },
+    ]}
+    relatedLinks={[{ title: 'Service Status', url: '/support/status' }, { title: 'Known Issues', url: '/support/issues' }, { title: 'Maintenance Schedule', url: '/support/maintenance' }, { title: 'Contact Support', url: '/support' }]}
+  />;
+}

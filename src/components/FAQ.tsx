@@ -13,7 +13,7 @@ const questions = [
   ['Can I cancel?', 'Yes. You can manage cancellation from your subscription settings.'],
 ];
 
-const FAQ: React.FC = () => {
+const FrequentlyAskedQuestions: React.FC = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState<number | null>(0);
 
@@ -43,4 +43,4 @@ const FAQ: React.FC = () => {
   );
 };
 
-export default FAQ;
+export default FrequentlyAskedQuestions;

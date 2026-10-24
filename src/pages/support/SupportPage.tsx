@@ -1,22 +1,20 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import type { HelpDocument, HelpLink } from '../../lib/help-content';
 
-interface SupportPageProps {
-  title: string;
-  description: string;
-  sections: { heading: string; content: string }[];
-  relatedLinks?: { title: string; url: string }[];
+interface SupportPageProps extends HelpDocument {
+  backLink?: HelpLink;
 }
 
-const SupportPage: React.FC<SupportPageProps> = ({ title, description, sections, relatedLinks }) => {
-  useEffect(() => { window.scrollTo(0, 0); }, []);
+const SupportPage: React.FC<SupportPageProps> = ({ title, description, sections, relatedLinks, backLink = { title: 'Back to Support', url: '/support' } }) => {
+  useEffect(() => { window.scrollTo(0, 0); }, [title]);
   return (
     <div className="min-h-screen py-32 bg-dark-300">
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto">
-          <Link to="/support" className="text-gray-400 hover:text-white flex items-center mb-6">
-            <ArrowLeft size={18} className="mr-2" />Back to Support
+          <Link to={backLink.url} className="text-gray-400 hover:text-white flex items-center mb-6">
+            <ArrowLeft size={18} className="mr-2" />{backLink.title}
           </Link>
           <h1 className="text-3xl font-bold text-white mb-4">{title}</h1>
           <p className="text-gray-400 text-lg mb-8">{description}</p>

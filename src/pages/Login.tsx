@@ -11,10 +11,6 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>((location.state as { message?: string } | null)?.message || null);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -49,28 +45,6 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleForgotPassword = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (resetLoading) return;
-    if (!hasSupabaseConfig) {
-      setResetMessage('Account recovery is unavailable on this preview. Please contact support.');
-      return;
-    }
-    setResetLoading(true);
-    setResetMessage(null);
-
-    try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      setResetMessage(resetError ? resetError.message : 'Password reset email sent. Check your inbox.');
-    } catch {
-      setResetMessage('Could not connect to account recovery. Check your connection and try again.');
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen py-12 container-padding">
       <div className="mx-auto max-w-md">
@@ -88,26 +62,10 @@ const Login: React.FC = () => {
             {notice && <div className="rounded-lg border border-green-500/40 bg-green-900/20 p-4 text-sm text-green-300">{notice}</div>}
             {error && <div className="rounded-lg border border-red-500/40 bg-red-900/20 p-4 text-sm text-red-300">{error}</div>}
             <button type="submit" disabled={loading} className="w-full btn-primary">{loading ? 'Signing in...' : 'Sign In'}</button>
-            <button type="button" onClick={() => { setShowForgotPassword(true); setResetEmail(email); }} className="w-full text-sm text-primary hover:underline">Forgot your password?</button>
+            <Link to="/forgot-password" className="inline-flex min-h-12 items-center text-sm text-primary hover:underline">Forgot your password?</Link>
             <p className="text-center text-sm text-gray-400">Don't have an account? <Link to="/register" className="text-primary hover:underline">Sign up here</Link></p>
           </form>
         </div>
-
-        {showForgotPassword && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-            <div className="w-full max-w-md rounded-xl border border-gray-800 bg-dark-100 p-8">
-              <h2 className="mb-4 text-xl font-semibold text-white">Reset Password</h2>
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="Email address" className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
-                {resetMessage && <p className="text-sm text-gray-300">{resetMessage}</p>}
-                <div className="flex gap-3">
-                  <button type="submit" disabled={resetLoading} className="flex-1 rounded-lg bg-primary px-4 py-2 text-white hover:bg-red-700">{resetLoading ? 'Sending...' : 'Send Reset Email'}</button>
-                  <button type="button" onClick={() => { setShowForgotPassword(false); setResetMessage(null); }} className="flex-1 rounded-lg bg-dark-200 px-4 py-2 text-white">Close</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { unavailableAdminModule } from '../../lib/admin-modules';
 import {
-  LayoutDashboard, Users, TicketCheck, BarChart3,
-  Image, Film, List, Building2, Handshake,
-  Activity, LogOut, ChevronLeft, Menu, Wifi
+  LayoutDashboard, Users, TicketCheck, List,
+  LogOut, ChevronLeft, Menu, Wifi, HelpCircle
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'djudge47@gmail.com';
@@ -13,18 +13,9 @@ const navItems = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { path: '/admin/roomba', label: 'Roomba Connection', icon: Wifi },
   { path: '/admin/setup', label: 'Prepare Setup', icon: List },
-  { path: '/admin/customers', label: 'Customers', icon: Users },
+  { path: '/admin/crm', label: 'Customer Workspace', icon: Users, exact: true },
   { path: '/admin/tickets', label: 'Support Tickets', icon: TicketCheck },
-  { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { path: '/admin/slider', label: 'Slider Manager', icon: Image },
-  { path: '/admin/demo-reel', label: 'Demo Reel', icon: Film },
-  { path: '/admin/programs', label: 'Programs', icon: List },
-  { divider: true, label: 'CRM' },
-  { path: '/admin/crm', label: 'CRM Dashboard', icon: Handshake, exact: true },
-  { path: '/admin/crm/contacts', label: 'Contacts', icon: Users },
-  { path: '/admin/crm/companies', label: 'Companies', icon: Building2 },
-  { path: '/admin/crm/deals', label: 'Deals', icon: Handshake },
-  { path: '/admin/crm/activities', label: 'Activities', icon: Activity },
+  { path: '/admin/modules', label: 'Unavailable Modules', icon: HelpCircle },
 ];
 
 const AdminLayout: React.FC = () => {
@@ -107,27 +98,21 @@ const AdminLayout: React.FC = () => {
         </div>
 
         <nav id="admin-navigation" aria-label="Admin pages" className="min-h-0 flex-1 overflow-y-auto py-4">
-          {navItems.map((item, i) => {
-            if ('divider' in item && item.divider) {
-              return sidebarOpen ? (
-                <div key={i} className="px-4 py-3 text-xs uppercase tracking-wider text-gray-500 font-semibold">
-                  {item.label}
-                </div>
-              ) : <div key={i} className="border-t border-gray-800 my-2" />;
-            }
-
-            const isActive = item.exact
-              ? location.pathname === item.path
-              : location.pathname.startsWith(item.path!);
+          {navItems.map(item => {
+            const isActive = item.path === '/admin/modules'
+              ? location.pathname === item.path || Boolean(unavailableAdminModule(location.pathname))
+              : item.path === '/admin/crm' ? location.pathname === item.path || location.pathname.startsWith('/admin/crm/customer/')
+              : item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
 
             const Icon = item.icon!;
 
             return (
               <Link
                 key={item.path}
-                to={item.path!}
+                to={item.path}
                 onClick={closeSidebarOnMobile}
                 aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
                 title={sidebarOpen ? undefined : item.label}
                 className={`flex items-center px-4 py-2.5 mx-2 rounded-lg transition-colors ${
                   isActive
@@ -167,7 +152,7 @@ const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+      <main id="admin-main-content" className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
         <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-gray-800/90 bg-gray-900/95 px-3 py-3 backdrop-blur sm:px-5 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button

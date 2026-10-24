@@ -1,3 +1,4 @@
+import { getRetailPrice } from '../../../_shared/ks-retail-pricing.js';
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Zap, Check, ArrowLeft } from 'lucide-react';
@@ -21,8 +22,8 @@ const BasicPlan: React.FC = () => {
     return null;
   }
 
-  const planPriceMap: Record<number, number> = { 1: 20, 2: 35, 3: 50, 4: 65, 5: 80 };
-  const finalPriceTotal = planPriceMap[selectedConnections] ?? 0;
+  const retailPrice = getRetailPrice(1, selectedConnections);
+  const finalPriceTotal = retailPrice ? retailPrice.totalCents / 100 : 0;
 
   const features = [
     '1 Connection',

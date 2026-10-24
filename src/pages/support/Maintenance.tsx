@@ -1,11 +1,11 @@
-import React from 'react';
 import SupportPage from './SupportPage';
-const Maintenance: React.FC = () => <SupportPage title="Maintenance Schedule" description="Planned maintenance windows and service updates."
-  sections={[
-    { heading: "Regular Maintenance", content: "We perform routine maintenance weekly during off-peak hours (typically Tuesday 3-5 AM EST). During this time, you may experience brief interruptions." },
-    { heading: "Upcoming Maintenance", content: "No major maintenance is currently scheduled. Check back for updates." },
-    { heading: "Emergency Maintenance", content: "In rare cases, emergency maintenance may be required. We will notify users via email and update the service status page." },
-  ]}
-  relatedLinks={[{ title: "Service Status", url: "/support/status" }, { title: "Status History", url: "/support/status-history" }]}
-/>;
-export default Maintenance;
+
+export default function Maintenance() {
+  return <SupportPage title="Maintenance Schedule" description="Confirm maintenance information before planning around an interruption."
+    sections={[
+      { heading: 'Schedule unavailable', content: 'A verified maintenance schedule is not currently available on this page. Contact support to confirm any planned work and its expected effect on your service.' },
+      { heading: 'Confirm the details', content: 'Ask for the affected service, date, time zone and expected duration. Report any current playback problem to support with your device model, the time it occurred and the exact error message.' },
+    ]}
+    relatedLinks={[{ title: 'Service Status', url: '/support/status' }, { title: 'Status History', url: '/support/status-history' }, { title: 'Contact Support', url: '/support' }]}
+  />;
+}

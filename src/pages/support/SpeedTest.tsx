@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Activity, Download, Upload, RefreshCw } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 
 const SpeedTest: React.FC = () => {
   const [downloadSpeed, setDownloadSpeed] = useState<number | null>(null);

@@ -21,7 +21,7 @@ const Reselling: React.FC = () => {
     {
       icon: Shield,
       title: 'Reliable Service',
-      description: '99.9% uptime guarantee and premium infrastructure ensure customer satisfaction.'
+      description: 'Confirm service availability and any applicable service terms with Kristal Streams before offering plans to customers.'
     },
     {
       icon: Headphones,

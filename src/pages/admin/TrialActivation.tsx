@@ -57,7 +57,7 @@ const TrialActivation: React.FC<Props> = ({ input, onBusy, onCreated }) => {
         throw new Error(payload?.error || 'The trial request could not be checked. Use Check saved trial status before continuing.');
       }
       if (operation === 'status') {
-        if (!payload || typeof payload.enabled !== 'boolean' || !Object.hasOwn(payload, 'attempt')) throw new Error('Saved status could not be verified.');
+        if (!payload || typeof payload.enabled !== 'boolean' || !Object.prototype.hasOwnProperty.call(payload, 'attempt')) throw new Error('Saved status could not be verified.');
         setAttempt(payload.attempt); setReview(null); setConfirmed(false);
         setCreatedHere(false); onCreated(payload.attempt?.state === 'succeeded');
         if (!payload.attempt) setNotice('No trial attempt is saved. You can check the trial details for review.');

@@ -1,0 +1,68 @@
+name: Support and profile security checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/ks-support-hardening.yml'
+      - 'supabase/functions/resend-email/**'
+      - 'supabase/migrations/*_ks_support_and_profile_hardening.sql'
+      - 'scripts/ks-support-profile-hardening*'
+      - 'scripts/test-ks-support-*'
+      - 'scripts/fixtures/ks-support-hardening.sql'
+      - 'src/lib/support-mail.ts'
+      - 'src/lib/email-service.ts'
+      - 'src/components/NewsletterSignup.tsx'
+      - 'src/pages/admin/SupportTickets.tsx'
+      - 'src/pages/client/ClientSupport.tsx'
+      - 'src/pages/Dashboard.tsx'
+
+permissions:
+  contents: read
+
+jobs:
+  support-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17.11-bookworm
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fictional-support-fixture
+          POSTGRES_DB: ks_support_hardening_test
+        ports:
+          - '127.0.0.1:5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ks_support_hardening_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm install --prefix "$RUNNER_TEMP/ks-support-db" --no-save --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.3.14
+      - name: Verify SQL, handler, client and UI boundaries with fictional accounts
+        run: |
+          KS_PGLITE_MODULE="$RUNNER_TEMP/ks-support-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-support-hardening.mjs
+          node scripts/test-ks-support-client.mjs
+          node scripts/test-ks-support-ui.mjs
+          npx eslint src/lib/support-mail.ts src/lib/email-service.ts src/components/NewsletterSignup.tsx src/pages/admin/SupportTickets.tsx src/pages/client/ClientSupport.tsx --rule '@typescript-eslint/no-unused-expressions: ["error", {"allowShortCircuit": false,"allowTernary": false,"allowTaggedTemplates": false}]'
+      - name: Verify independent PostgreSQL sessions
+        env:
+          KS_NATIVE_PG_URL: postgresql://postgres:fictional-support-fixture@127.0.0.1:5432/ks_support_hardening_test
+          KS_NATIVE_DISPOSABLE_ACK: support-hardening-fixtures
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends postgresql-client
+          fi
+          node scripts/test-ks-support-native.mjs
+      - run: npm run build

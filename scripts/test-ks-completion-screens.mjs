@@ -6,7 +6,7 @@ import { join,basename } from 'node:path';
 import { build } from 'esbuild';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { StaticRouter } from 'react-router-dom/server.js';
+import { StaticRouter } from 'react-router-dom';
 
 const require=createRequire(import.meta.url),reactPath=require.resolve('react');
 const directory=await mkdtemp(join(process.cwd(),'node_modules','.ks-completion-screens-'));

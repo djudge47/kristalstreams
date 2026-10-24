@@ -1,107 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 
-interface TrendingContent {
-  id: number;
-  title: string;
-  image: string;
-  category: string;
-  releaseYear: number;
-  rating: number;
-  type: 'movie' | 'tv' | 'sports';
-  tmdbId: number;
-}
-
-const trendingContent: TrendingContent[] = [
-  {
-    id: 501,
-    tmdbId: 1233413,
-    title: 'Sinners',
-    image: 'https://media.themoviedb.org/t/p/w1280/4CkZl1LK6a5rXBqJB2ZP77h3N5i.jpg',
-    category: 'Horror',
-    releaseYear: 2025,
-    rating: 7.6,
-    type: 'movie'
-  },
-  {
-    id: 502,
-    tmdbId: 696506,
-    title: 'Mickey 17',
-    image: 'https://media.themoviedb.org/t/p/w1280/edKpE9B5qN3e559OuMCLZdW1iBZ.jpg',
-    category: 'Sci-Fi',
-    releaseYear: 2025,
-    rating: 6.7,
-    type: 'movie'
-  },
-  {
-    id: 503,
-    tmdbId: 1061474,
-    title: 'Superman',
-    image: 'https://media.themoviedb.org/t/p/w1280/wPLysNDLffQLOVebZQCbXJEv6E6.jpg',
-    category: 'Action',
-    releaseYear: 2025,
-    rating: 7.1,
-    type: 'movie'
-  },
-  {
-    id: 504,
-    tmdbId: 950387,
-    title: 'A Minecraft Movie',
-    image: 'https://media.themoviedb.org/t/p/w1280/yFHHfHcUgGAxziP1C3lLt0q2T4s.jpg',
-    category: 'Adventure',
-    releaseYear: 2025,
-    rating: 5.6,
-    type: 'movie'
-  },
-  {
-    id: 505,
-    tmdbId: 95396,
-    title: 'Severance',
-    image: 'https://media.themoviedb.org/t/p/w1280/pPHpeI2X1qEd1CS1SeyrdhZ4qnT.jpg',
-    category: 'Thriller',
-    releaseYear: 2025,
-    rating: 8.7,
-    type: 'tv'
-  },
-  {
-    id: 506,
-    tmdbId: 83867,
-    title: 'Andor',
-    image: 'https://media.themoviedb.org/t/p/w1280/khZqmwHQicTYoS7Flreb9EddFZC.jpg',
-    category: 'Sci-Fi',
-    releaseYear: 2025,
-    rating: 8.4,
-    type: 'tv'
-  },
-  {
-    id: 507,
-    tmdbId: 111803,
-    title: 'The White Lotus',
-    image: 'https://media.themoviedb.org/t/p/w1280/gbSaK9v1CbcYH1ISgbM7XObD2dW.jpg',
-    category: 'Drama',
-    releaseYear: 2025,
-    rating: 7.9,
-    type: 'tv'
-  },
-  {
-    id: 508,
-    tmdbId: 249042,
-    title: 'Adolescence',
-    image: 'https://media.themoviedb.org/t/p/w1280/20i4nShZZg1g1VFHSB8xpaYM4r7.jpg',
-    category: 'Crime',
-    releaseYear: 2025,
-    rating: 8.1,
-    type: 'tv'
-  }
-];
+import { catalogPreviewItems as trendingContent } from '../lib/catalog-preview';
 
 const TrendingSlider: React.FC = () => {
-  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [user, setUser] = useState(null);
-  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(4);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
@@ -115,30 +19,16 @@ const TrendingSlider: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
     setCurrentIndex(trendingContent.length);
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isPreviewPlaying) {
-        setCurrentIndex((prev) => prev + 1);
-      }
+      setCurrentIndex((prev) => prev + 1);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isPreviewPlaying]);
+  }, []);
 
   useEffect(() => {
     if (currentIndex >= trendingContent.length * 2) {
@@ -165,7 +55,8 @@ const TrendingSlider: React.FC = () => {
   return (
     <section className="py-16 bg-dark-300">
       <div className="container mx-auto px-4">
-        <h2 className="text-2xl font-bold text-white mb-8">Trending Now</h2>
+        <h2 className="mb-3 text-2xl font-bold text-white">Catalog Preview</h2>
+        <p className="mb-8 text-sm text-gray-300">Browse example titles. Check your streaming player for current availability. <Link to="/support/getting-started" className="text-primary underline">Streaming setup</Link></p>
         
         <div className="relative">
           <div
@@ -206,9 +97,9 @@ const TrendingSlider: React.FC = () => {
                   key={`${item.id}-${index}`}
                   className="w-full md:w-1/4 flex-shrink-0 px-0 md:px-2"
                 >
-                  <div
-                    className="relative group cursor-pointer"
-                    onClick={() => navigate(`/content/${item.type}/${item.id}`)}
+                  <Link
+                    className="relative block group"
+                    to={`/content/${item.type}/${item.id}`}
                   >
                     <div className="aspect-[2/3] rounded-lg overflow-hidden">
                       <img
@@ -237,7 +128,7 @@ const TrendingSlider: React.FC = () => {
                         <span>{item.releaseYear}</span>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 </div>
               ))}
             </div>

@@ -3,22 +3,6 @@ import { supabase } from './supabase';
 
 const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
 
-interface EmailTemplate {
-  id: string;
-  name: string;
-  subject: string;
-  body: string;
-  variables: string[];
-}
-
-interface EmailSettings {
-  id: string;
-  name: string;
-  email: string;
-  display_name: string;
-  reply_to: string | null;
-}
-
 export async function sendEmail(
   templateName: string,
   to: string,

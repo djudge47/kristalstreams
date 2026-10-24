@@ -1,0 +1,87 @@
+# Record a renewal payment without changing service
+
+The Preview CRM **Record renewal payment** form replaces the one-month shortcut. Choose the customer's requested 1/3/6/12 months and 1–5 connections; the current shared website catalog supplies the full-term USD price. Actual amount, payment date/time and method are required and start blank. A differing received amount requires an explanation (for example, an agreed discount or partial payment). The displayed catalog price is never treated as proof of money received.
+
+The administrator explicitly confirms that money has already been received. This form records an external/manual payment; it does not charge a card, contact a payment provider, send email, renew XUI, or spend credits. Trial, personal and Preview setup customers cannot receive these entries. A customer can request a different package without changing the current XUI package, connection allowance or expiration.
+
+## Transaction and scope
+
+The existing CRM function's `view=renewal-payment` accepts a small same-origin JSON POST or authenticated receipt-status GET. Preview, the active project and confirmed non-anonymous administrator are mandatory. Browser data supplies no actor, catalog price, customer status or service patch. Both server and SQL compute/check the existing catalog; one private service-invoker transaction inserts the actual full-term payment, requested-renewal receipt and history together. No customer row is updated, so the old automatic payment trigger is not invoked and no duplicate monthly receipt or invented service period is created. Existing prices, old-pricing classifications, payment rows and dates remain unchanged.
+
+`ks_crm_renewal_payments` has RLS, no browser table privileges/policies, and no browser function execution. The two functions use empty search paths and security invoker. A transaction advisory lock and immutable request fingerprint bind the receipt UUID to the verified actor and complete payment data. Replaying an identical reference returns the original payment. Conflicting content or actor is rejected; any insert failure rolls back the receipt, payment and activity together.
+
+## Response recovery
+
+A versioned per-customer session-storage record retains only the payment reference and bounded payment form values, never login credentials. It is written before dispatch; storage failure prevents dispatch. An uncertain response freezes the form and offers **Check saved result** or **Retry same saved payment**, which always reuse the identical UUID/payload. Reopening the form recovers the same reference and never posts automatically. After a verified result, a second payment needs the explicit **Record another payment** action and new actual amount/date/method. Local submit locking also prevents two same-render submits from replacing the recovery reference.
+
+The receipt/history records the chosen term/connections, actual amount/date/method, website price snapshot and any price-difference reason. `period_start` and `period_end` stay null until there is real service evidence. The current customer classification is deliberately not used as the receipt: legacy payment confirmation still describes the old service term. XUI renewal remains a separate reviewed action. The saved result can supply its selection to a new review only when the administrator explicitly chooses that action.
+
+## Verification
+
+Use isolated PGlite 0.3.14:
+
+```
+KS_PGLITE_MODULE=<isolated-runtime>/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-ks-crm-renewal-payments.mjs
+node scripts/test-ks-crm-renewal-payment-ui.mjs
+```
+
+Nine SQL/HTTP scenarios cover all 20 catalog totals, actual full-term payments, the old customer payment trigger, unchanged service/customer fields, strict auth/environment/origin/confirmation, exclusions, idempotency, actor/content conflicts, lost-response recovery, private grants and rollback. Three actual React interaction scenarios cover selectable pricing, blank actual amounts/dates, duplicate submission, uncertain-result recovery, reopening and explicit next-payment flow. Fixtures are fictional; no connected payment is created to test the form.
+
+Installed in the active project as migration `20261022154007_ks_crm_renewal_payments`. Source/migration SHA256: `7ec4511b1cd15f9706fa23f10151e8fe80d81581f560185e42dc971310242cef`. Connected SELECT verification found zero new renewal receipts, the same four payment rows and 46 activity rows, and identical safe customer snapshot digest `23edac4df15d8d47ed01138531ff2edf` before and after installation. RLS, browser revocations and both private invoker functions passed permission checks. All three XUI purchase controls remain off; the one existing operation/completion was preserved. Security advisors retain the one pre-existing warning; the new no-policy INFO is intentional for server-only receipt storage. No real payment or XUI action was used for validation.
+## Payment details on customer cards
+
+The CRM customer card now shows **Last recorded payment** with the positive paid
+amount, payment method and actual received date in America/New_York. The date
+comes from payment history, not the date the receipt was entered into the CRM.
+The current package, service expiration, legacy payment classification and next
+renewal price keep their existing behavior.
+
+Payment history is read using the signed-in client's existing RLS permissions,
+with six explicit fields and all 200-row pages in stable paid-at/ID order. This
+avoids losing a customer's receipt behind the previous global 100-row limit.
+Only positive rows marked paid can populate the card; newer $0, pending or
+refunded entries cannot replace the latest received payment. A failed page
+discards the partial result and reports an error rather than presenting partial
+history as complete. Legacy wording now points to recorded history rather than
+claiming every amount and payment date is unknown.
+
+This addition performs SELECT reads only. It adds no database migration, payment,
+customer update, provider call, credit spend, email, flag or production release.
+`node scripts/test-ks-crm-payment-summary.mjs` checks the actual Supabase client's
+two-page read, error handling, payment selection and actual CRM card rendering
+with fictional accounts, including a New York date boundary.
+
+## Carry a saved selection into a new review
+
+The verified payment confirmation now offers **Review new renewal**. Choosing
+**Done** keeps a past payment in History and opens no review. The new action is
+explicit; saving, recovering or reopening a receipt never starts a renewal review
+automatically.
+
+The new dialog retains the saved customer, receipt reference, amount, method,
+received date and selected months/connections. It prefills the existing requested
+order review with that selection instead of the current connection allowance or
+the former 12-month default. A different-customer receipt cannot render a review.
+If the administrator changes the requested package, the screen warns that it no
+longer matches the payment selection. Partial or adjusted received amounts are
+also called out. The underlying receipt and payment history remain immutable.
+
+Opening the dialog makes no provider request. **Review requested order** uses the
+existing authenticated GET path and fresh identity/package/group/expiry checks.
+Existing protected purchase controls still require their own enabled server
+controls and explicit review/consent; a payment receipt does not authorize credit
+spending. This is a manual selection handoff, not an automatic fulfillment queue,
+payment-allocation ledger or proof that service has been renewed. Closing or
+refreshing the review changes no service and does not create another payment.
+
+The interaction tests cover historical Done, explicit selection handoff with no
+extra POST, actual dialog prefill against a different current package, wrong
+customer rejection, partial-payment messaging, selection-change warnings and the
+existing authenticated read-only quote. All fixtures remain fictional.
+## Recent payment display
+
+Recent Payments and Paid This Month now use the same received-payment rule as the customer cards: paid status, positive finite amount and a valid received date. The recent list filters before its six-row display limit and shows the actual received date/time in America/New_York, including the year. Older zero-dollar administrative entries stay in customer History; they are not evidence of an actual received amount/date. Separate positive receipts for the same customer remain separate. This correction changes no saved payment, service record, date, price or provider operation. Six actual SDK/helper/React scenarios cover pagination, invalid/unreceived entries, the zero-entry duplication case, legitimate repeat payments, empty states and monthly received totals.
+
+## Production release — October 23, 2026
+
+Manual receipt entry and saved-receipt recovery now admit explicit Preview or Production deployments. This records money already received; it does not charge a customer, extend service, call XUI or spend credits. Existing confirmed administrator, same-origin consent, active-project, catalog, idempotency and SQL permission checks are unchanged. Development/unknown environments remain closed. The actual SQL/HTTP suite is run independently in both deployment environments. Publishing itself records no payment.

@@ -1,3 +1,5 @@
+import { useEffect, useState, type ComponentType, type RefObject } from 'react';
+
 export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
@@ -24,9 +26,9 @@ export const throttle = <T extends (...args: unknown[]) => unknown>(
 };
 
 export const lazyWithRetry = (
-  componentImport: () => Promise<{ default: React.ComponentType<unknown> }>
+  componentImport: () => Promise<{ default: ComponentType<unknown> }>
 ) => {
-  return new Promise<{ default: React.ComponentType<unknown> }>((resolve, reject) => {
+  return new Promise<{ default: ComponentType<unknown> }>((resolve, reject) => {
     const hasRefreshed = JSON.parse(
       window.sessionStorage.getItem('retry-lazy-refreshed') || 'false'
     );
@@ -63,12 +65,12 @@ export const prefetchRoute = (routePath: string): void => {
 };
 
 export const useIntersectionObserver = (
-  ref: React.RefObject<Element>,
+  ref: RefObject<Element>,
   options?: IntersectionObserverInit
 ): boolean => {
-  const [isIntersecting, setIntersecting] = React.useState(false);
+  const [isIntersecting, setIntersecting] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       setIntersecting(entry.isIntersecting);
     }, options);

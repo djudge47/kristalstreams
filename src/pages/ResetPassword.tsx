@@ -1,81 +1,56 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Link } from 'react-router-dom';
+import { passwordRecovery } from '../lib/password-recovery';
+import type { RecoveryState } from '../lib/password-recovery-controller';
 
-const ResetPassword: React.FC = () => {
-  const navigate = useNavigate();
+const RecoveryForm: React.FC<{ state: RecoveryState }> = ({ state }) => {
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState('');
+  const busy = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
-  useEffect(() => {
-    let active = true;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (active) setReady(Boolean(data.session));
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || session) setReady(true);
-    });
-
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const handleSubmit = async (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setMessage(null);
-
-    if (password.length < 8) {
-      setMessage('Use at least 8 characters.');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setMessage('The passwords do not match.');
-      return;
-    }
-
-    setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setLoading(false);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    navigate('/login', { state: { message: 'Password updated. Sign in with your new password.' } });
+    if (busy.current || state.status !== 'ready') return;
+    busy.current = true;
+    const pending = passwordRecovery.submit(password, confirmation, () => mounted.current);
+    if (passwordRecovery.getState().status === 'submitting') { setPassword(''); setConfirmation(''); }
+    try { await pending; } finally { busy.current = false; }
   };
 
+  return (
+    <form onSubmit={submit} className="space-y-6">
+      <fieldset disabled={state.status === 'submitting'} className="space-y-6">
+        <div>
+          <label htmlFor="password" className="mb-2 block text-sm font-medium text-gray-300">New website password</label>
+          <input id="password" type="password" autoComplete="new-password" minLength={8} value={password} onChange={event => setPassword(event.target.value)} className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
+        </div>
+        <div>
+          <label htmlFor="confirm-password" className="mb-2 block text-sm font-medium text-gray-300">Confirm website password</label>
+          <input id="confirm-password" type="password" autoComplete="new-password" minLength={8} value={confirmation} onChange={event => setConfirmation(event.target.value)} className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
+        </div>
+        {state.message && <p role="alert" className="text-sm text-red-400">{state.message}</p>}
+        <button type="submit" className="w-full btn-primary">{state.status === 'submitting' ? 'Updating website password...' : 'Update website password'}</button>
+      </fieldset>
+      <p className="text-sm text-gray-300" role="status">{state.status === 'submitting' ? 'Please wait while your password update is checked.' : 'This changes your website password.'}</p>
+    </form>
+  );
+};
+
+const ResetPassword: React.FC = () => {
+  const state = useSyncExternalStore(passwordRecovery.subscribe, passwordRecovery.getState);
   return (
     <div className="min-h-screen py-12 container-padding">
       <div className="mx-auto max-w-md">
         <h1 className="mb-6 text-3xl font-bold text-white">Choose a New Password</h1>
         <div className="rounded-xl border border-gray-800 bg-dark-100 p-8">
-          {!ready ? (
+          {state.status === 'ready' || state.status === 'submitting' ? <RecoveryForm key={state.revision} state={state} /> : (
             <div className="space-y-4 text-gray-300">
-              <p>This reset link is invalid or has expired.</p>
-              <Link to="/login" className="text-primary hover:underline">Request another password reset</Link>
+              <p role="status">{state.status === 'checking' ? 'Checking your website password-reset link...' : state.status === 'complete' ? 'Website password updated. Use your new password the next time you sign in.' : state.message}</p>
+              {state.status !== 'checking' && <Link to={state.status === 'complete' || state.status === 'uncertain' ? '/login' : '/forgot-password'} className="text-primary hover:underline">{state.status === 'complete' || state.status === 'uncertain' ? 'Go to website sign in' : 'Request another password reset'}</Link>}
+              {state.status === 'unavailable' && <p><Link to="/client/security" className="text-primary hover:underline">Open website Security</Link></p>}
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="password" className="mb-2 block text-sm font-medium text-gray-300">New Password</label>
-                <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
-              </div>
-              <div>
-                <label htmlFor="confirm-password" className="mb-2 block text-sm font-medium text-gray-300">Confirm Password</label>
-                <input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
-              </div>
-              {message && <p className="text-sm text-red-400">{message}</p>}
-              <button type="submit" disabled={loading} className="w-full btn-primary">{loading ? 'Updating...' : 'Update Password'}</button>
-            </form>
           )}
         </div>
       </div>

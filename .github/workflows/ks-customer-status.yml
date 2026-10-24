@@ -10,14 +10,52 @@ on:
       - '_server/ks-crm-renewal-*.js'
       - '_server/ks-fixie-proxy.js'
       - 'src/pages/admin/RoombaCustomerStatus.tsx'
+      - 'src/pages/admin/RequestedRenewalReview.tsx'
       - 'src/pages/admin/LiveRenewalControls.tsx'
+      - 'src/pages/admin/OrderRenewalControls.tsx'
       - 'src/pages/admin/CRMOperationsCenter.tsx'
+      - 'src/pages/admin/CRMPremiumOverview.tsx'
+      - 'scripts/test-ks-crm-legacy-payments.mjs'
+      - 'scripts/ks-crm-legacy-payment-confirmation.sql'
+      - 'src/pages/admin/BulkXuiCheck.tsx'
+      - '_shared/ks-crm-bulk-check.*'
+      - '_shared/ks-crm-service-sync-client.*'
+      - '_server/ks-crm-service-sync.js'
+      - '_server/ks-crm-renewal-payment.js'
+      - '_server/ks-customer-crm.js'
+      - '_shared/ks-customer-crm.*'
+      - '_server/ks-streaming-login.js'
+      - 'api/ks-customer-setup.js'
+      - 'src/components/CustomerCrmService.tsx'
+      - 'src/pages/admin/CustomerPortalLink.tsx'
+      - 'src/pages/client/ClientSubscription.tsx'
+      - 'src/pages/Dashboard.tsx'
+      - 'scripts/test-ks-customer-crm*.mjs'
+      - 'scripts/ks-crm-customer-portal*'
+      - 'supabase/migrations/*_ks_crm_customer_portal.sql'
+      - '_shared/ks-crm-renewal-payment.*'
+      - '_shared/ks-crm-payment-summary.*'
+      - 'scripts/test-ks-crm-payment-summary.mjs'
+      - 'src/pages/admin/RenewalPaymentForm.tsx'
+      - 'src/pages/admin/PaidRenewalReview.tsx'
+      - 'scripts/ks-crm-renewal-payments-schema.sql'
+      - 'src/pages/admin/BulkCrmServiceSync.tsx'
+      - 'scripts/test-ks-crm-service-sync*.mjs'
+      - 'scripts/ks-crm-bulk-service-sync-schema.sql'
+      - 'scripts/test-ks-crm-bulk-check.mjs'
       - 'scripts/test-ks-roomba-customer-status.mjs'
       - 'scripts/test-ks-roomba-renewal-review.mjs'
       - 'scripts/test-ks-crm-renewal-*.mjs'
       - 'scripts/fixtures/ks-crm-renewal/**'
       - 'scripts/ks-crm-renewal-simulation-readme.md'
       - 'scripts/ks-crm-renewal-screen-readme.md'
+      - '_shared/ks-retail-pricing.*'
+      - '_shared/ks-crm-status.*'
+      - 'scripts/ks-crm-personal-credit-accounts-schema.sql'
+      - '_server/ks-payment-validation.js'
+      - 'src/components/PricingPlans.tsx'
+      - 'src/pages/pricing/**'
+      - 'scripts/ks-crm-renewal-retail-pricing-schema.sql'
       - 'package*.json'
 
 permissions:
@@ -37,10 +75,28 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install pinned isolated SQL test runtime
+        run: npm install --prefix "$RUNNER_TEMP/ks-sync-db" --no-save --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.3.14
+      - name: Bulk CRM sync SQL and client checks (fictional accounts only)
+        run: |
+          KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-crm-service-sync.mjs
+          node scripts/test-ks-crm-service-sync-client.mjs
+          KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-crm-renewal-payments.mjs
+          node scripts/test-ks-crm-renewal-payment-ui.mjs
+          node scripts/test-ks-crm-payment-summary.mjs
+          KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-customer-crm.mjs
+          node scripts/test-ks-customer-crm-ui.mjs
+          node scripts/test-ks-customer-setup.mjs
+          node scripts/test-ks-customer-status-view.mjs
+          KS_PGLITE_MODULE="$RUNNER_TEMP/ks-sync-db/node_modules/@electric-sql/pglite/dist/index.js" node scripts/test-ks-crm-legacy-payments.mjs
       - name: Synthetic provider and CRM checks (no connected credentials)
         run: |
+          node scripts/test-ks-crm-renewal-retail-pricing.mjs
+          node scripts/test-ks-payments.mjs
           node scripts/test-ks-roomba-customer-status.mjs
+          node scripts/test-ks-crm-bulk-check.mjs
           node scripts/test-ks-roomba-renewal-review.mjs
+          node scripts/test-ks-crm-renewal-order-review.mjs
           node scripts/test-ks-crm-renewal-simulation.mjs
           node scripts/test-ks-crm-renewal-approval.mjs
           node scripts/test-ks-crm-renewal-test-approval.mjs
@@ -53,7 +109,17 @@ jobs:
       - name: Check changed React components
         run: >-
           npx eslint src/pages/admin/RoombaCustomerStatus.tsx
+          src/pages/admin/RequestedRenewalReview.tsx
           src/pages/admin/LiveRenewalControls.tsx
+          src/pages/admin/OrderRenewalControls.tsx
           src/pages/admin/CRMOperationsCenter.tsx
+          src/pages/admin/RenewalPaymentForm.tsx
+          src/pages/admin/PaidRenewalReview.tsx
+          src/pages/admin/CustomerPortalLink.tsx
+          src/components/CustomerCrmService.tsx
+          src/pages/client/ClientSubscription.tsx
+          src/pages/admin/CRMPremiumOverview.tsx
+          src/pages/admin/BulkXuiCheck.tsx
+          src/pages/admin/BulkCrmServiceSync.tsx
           --rule '@typescript-eslint/no-unused-expressions: ["error", {"allowShortCircuit": false,"allowTernary": false,"allowTaggedTemplates": false}]'
       - run: npm run build

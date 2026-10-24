@@ -1,9 +1,10 @@
-import React, { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ComponentType } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import InstallPrompt from './components/InstallPrompt';
 import Layout from './components/Layout';
+import NotFound from './pages/NotFound';
 
-function lazyRetry(importFn: () => Promise<any>) {
+function lazyRetry(importFn: () => Promise<{ default: ComponentType }>) {
   return lazy(async () => {
     try {
       const module = await importFn();
@@ -42,11 +43,13 @@ const pages = {
   Login: lazyRetry(() => import('./pages/Login')),
   Register: lazyRetry(() => import('./pages/Register')),
   ResetPassword: lazyRetry(() => import('./pages/ResetPassword')),
+  ForgotPassword: lazyRetry(() => import('./pages/ForgotPassword')),
   Dashboard: lazyRetry(() => import('./pages/Dashboard')),
   PaymentSuccess: lazyRetry(() => import('./pages/PaymentSuccess')),
   LandingPage: lazyRetry(() => import('./pages/LandingPage')),
   StandaloneLanding: lazyRetry(() => import('./pages/StandaloneLanding')),
   Privacy: lazyRetry(() => import('./pages/Privacy')),
+  Accessibility: lazyRetry(() => import('./pages/Accessibility')),
   Terms: lazyRetry(() => import('./pages/Terms')),
   RefundPolicy: lazyRetry(() => import('./pages/RefundPolicy')),
   Testimonials: lazyRetry(() => import('./pages/Testimonials')),
@@ -55,6 +58,7 @@ const pages = {
   CheckoutPage: lazyRetry(() => import('./pages/pricing/CheckoutPage')),
   PPV: lazyRetry(() => import('./pages/PPV')),
   ContentDetail: lazyRetry(() => import('./pages/ContentDetail')),
+  PlayerDemo: lazyRetry(() => import('./pages/PlayerDemo')),
   AboutUs: lazyRetry(() => import('./pages/AboutUs')),
   OurServices: lazyRetry(() => import('./pages/OurServices')),
   DownloadApp: lazyRetry(() => import('./pages/DownloadApp')),
@@ -121,17 +125,10 @@ const adminPages = {
   Dashboard: lazyRetry(() => import('./pages/admin/AdminDashboard')),
   RoombaConnection: lazyRetry(() => import('./pages/admin/RoombaConnection')),
   PrepareSetup: lazyRetry(() => import('./pages/admin/PrepareSetup')),
-  Customers: lazyRetry(() => import('./pages/admin/Customers')),
   Tickets: lazyRetry(() => import('./pages/admin/SupportTickets')),
-  Analytics: lazyRetry(() => import('./pages/admin/Analytics')),
-  Slider: lazyRetry(() => import('./pages/admin/SliderManager')),
-  DemoReel: lazyRetry(() => import('./pages/admin/DemoReelManager')),
-  Programs: lazyRetry(() => import('./pages/admin/ProgramManager')),
+  Modules: lazyRetry(() => import('./pages/admin/AdminModules')),
+  UnavailableModule: lazyRetry(() => import('./pages/admin/AdminModuleUnavailable')),
   CRM: lazyRetry(() => import('./pages/admin/CRMDashboard')),
-  Contacts: lazyRetry(() => import('./pages/admin/Contacts')),
-  Companies: lazyRetry(() => import('./pages/admin/Companies')),
-  Deals: lazyRetry(() => import('./pages/admin/Deals')),
-  Activities: lazyRetry(() => import('./pages/admin/Activities')),
 };
 
 const LoadingFallback = () => <div className="flex min-h-screen items-center justify-center bg-gray-900 text-gray-300">Loading...</div>;
@@ -167,16 +164,19 @@ function App() {
             <Route path="login" element={<P.Login />} />
             <Route path="register" element={<P.Register />} />
             <Route path="reset-password" element={<P.ResetPassword />} />
+            <Route path="forgot-password" element={<P.ForgotPassword />} />
             <Route path="dashboard" element={<P.Dashboard />} />
             <Route path="landing" element={<P.LandingPage />} />
             <Route path="standalone-landing" element={<P.StandaloneLanding />} />
             <Route path="privacy" element={<P.Privacy />} />
+            <Route path="accessibility" element={<P.Accessibility />} />
             <Route path="terms" element={<P.Terms />} />
             <Route path="refund-policy" element={<P.RefundPolicy />} />
             <Route path="testimonials" element={<P.Testimonials />} />
             <Route path="cookies" element={<P.CookiePolicy />} />
             <Route path="ppv" element={<P.PPV />} />
             <Route path="content/:type/:id" element={<P.ContentDetail />} />
+            <Route path="player-demo" element={<P.PlayerDemo />} />
             <Route path="about" element={<P.AboutUs />} />
             <Route path="services" element={<P.OurServices />} />
             <Route path="download-app" element={<P.DownloadApp />} />
@@ -188,6 +188,7 @@ function App() {
             <Route path="support/getting-started" element={<S.GettingStarted />} />
             <Route path="support/billing" element={<S.Billing />} />
             <Route path="support/streaming" element={<S.StreamingHelp />} />
+            <Route path="support/technical" element={<Navigate to="/support/streaming" replace />} />
             <Route path="support/faq" element={<S.FAQ />} />
             <Route path="support/buffering" element={<S.Buffering />} />
             <Route path="support/login-help" element={<S.LoginHelp />} />
@@ -198,6 +199,7 @@ function App() {
             <Route path="support/computer-setup" element={<S.ComputerSetup />} />
             <Route path="support/console-setup" element={<S.ConsoleSetup />} />
             <Route path="support/devices" element={<S.DeviceSetup />} />
+            <Route path="support/device-setup" element={<Navigate to="/support/devices" replace />} />
             <Route path="support/requirements" element={<S.Requirements />} />
             <Route path="support/browsers" element={<S.Browsers />} />
             <Route path="support/apps" element={<S.Apps />} />
@@ -233,23 +235,28 @@ function App() {
               <Route path="settings" element={<C.Settings />} />
               <Route path="support" element={<C.Support />} />
               <Route path="support/new" element={<C.NewTicket />} />
+              <Route path="*" element={<NotFound />} />
             </Route>
+            <Route path="*" element={<NotFound />} />
           </Route>
           <Route path="admin" element={<A.Layout />}>
             <Route index element={<A.Dashboard />} />
             <Route path="roomba" element={<A.RoombaConnection />} />
             <Route path="setup" element={<A.PrepareSetup />} />
-            <Route path="customers" element={<A.Customers />} />
+            <Route path="customers" element={<Navigate to="/admin/crm" replace />} />
             <Route path="tickets" element={<A.Tickets />} />
-            <Route path="analytics" element={<A.Analytics />} />
-            <Route path="slider" element={<A.Slider />} />
-            <Route path="demo-reel" element={<A.DemoReel />} />
-            <Route path="programs" element={<A.Programs />} />
+            <Route path="modules" element={<A.Modules />} />
+            <Route path="analytics" element={<A.UnavailableModule />} />
+            <Route path="slider" element={<A.UnavailableModule />} />
+            <Route path="demo-reel" element={<A.UnavailableModule />} />
+            <Route path="programs" element={<A.UnavailableModule />} />
             <Route path="crm" element={<A.CRM />} />
-            <Route path="crm/contacts" element={<A.Contacts />} />
-            <Route path="crm/companies" element={<A.Companies />} />
-            <Route path="crm/deals" element={<A.Deals />} />
-            <Route path="crm/activities" element={<A.Activities />} />
+            <Route path="crm/customer/:customerId" element={<A.CRM />} />
+            <Route path="crm/contacts" element={<A.UnavailableModule />} />
+            <Route path="crm/companies" element={<A.UnavailableModule />} />
+            <Route path="crm/deals" element={<A.UnavailableModule />} />
+            <Route path="crm/activities" element={<A.UnavailableModule />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </Suspense>

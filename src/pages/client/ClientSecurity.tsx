@@ -1,157 +1,96 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { changeWebsitePassword, passwordValidationError } from '../../lib/website-password';
 import { Shield, Key, AlertTriangle } from 'lucide-react';
 
-const ClientSecurity: React.FC = () => {
+export default function ClientSecurity() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const busy = useRef(false);
+  const mounted = useRef(false);
+  const revision = useRef(0);
+  const account = useRef<string | null | undefined>(undefined);
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
+  useEffect(() => {
+    mounted.current = true;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const next = session?.user.id ?? null;
+      if ((account.current !== undefined && account.current !== next) || (account.current === undefined && busy.current)) {
+        revision.current += 1;
+        setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+        setSuccess(null);
+        setError('Your account session changed. Sign in again before changing your website password.');
+      }
+      account.current = next;
+    });
+    return () => { mounted.current = false; revision.current += 1; subscription.unsubscribe(); };
+  }, []);
 
-    if (newPassword !== confirmPassword) {
-      setError('New passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-
-    setLoading(true);
-
+  const handlePasswordChange = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (busy.current) return;
+    setError(null); setSuccess(null);
+    const input = { currentPassword, newPassword, confirmPassword };
+    const validation = passwordValidationError(input);
+    if (validation) { setError(validation); return; }
+    busy.current = true; setLoading(true);
+    const startedAt = revision.current;
+    const stillCurrent = () => mounted.current && revision.current === startedAt;
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) throw error;
-
-      setSuccess('Password updated successfully');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (err) {
-      console.error('Error updating password:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update password');
+      await changeWebsitePassword(input, stillCurrent);
+      if (stillCurrent()) setSuccess('Website password updated. Use your new password the next time you sign in.');
+    } catch (problem) {
+      if (stillCurrent()) setError(problem instanceof Error ? problem.message : 'The website password-change result could not be confirmed. Use password recovery before trying again.');
     } finally {
-      setLoading(false);
+      busy.current = false;
+      if (mounted.current) {
+        setLoading(false);
+        setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+      }
     }
   };
 
   return (
     <div>
-      <div className="flex items-center mb-8">
-        <Shield className="text-primary w-8 h-8 mr-4" />
-        <h1 className="text-3xl font-bold text-white">Security Settings</h1>
-      </div>
-
-      <div className="bg-dark-100 rounded-xl p-8 border border-gray-800">
-        <div className="flex items-center mb-6">
-          <Key className="text-primary w-6 h-6 mr-3" />
-          <h2 className="text-xl font-semibold text-white">Change Password</h2>
-        </div>
-
-        <form onSubmit={handlePasswordChange} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Current Password
-            </label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full bg-dark-200 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              New Password
-            </label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full bg-dark-200 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Confirm New Password
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full bg-dark-200 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-start">
-              <AlertTriangle className="text-red-500 w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-              <p className="text-red-500">{error}</p>
+      <div className="mb-8 flex items-center gap-4"><Shield className="h-8 w-8 text-primary" aria-hidden="true" /><h1 className="text-3xl font-bold text-white">Security Settings</h1></div>
+      <section aria-labelledby="website-password-heading" className="rounded-xl border border-gray-800 bg-dark-100 p-6 sm:p-8">
+        <div className="mb-4 flex items-center gap-3"><Key className="h-6 w-6 text-primary" aria-hidden="true" /><h2 id="website-password-heading" className="text-xl font-semibold text-white">Change Website Password</h2></div>
+        <p id="website-password-help" className="mb-6 text-sm text-gray-300">Verify your current website password to change it. Your streaming player login is separate. If you forgot your website password or use another sign-in method, use <Link to="/login" className="text-primary underline">Forgot your password?</Link> on the sign-in page.</p>
+        <form onSubmit={handlePasswordChange} className="space-y-6" aria-describedby="website-password-help" aria-busy={loading}>
+          <fieldset disabled={loading} className="space-y-6">
+            <legend className="sr-only">Website password change</legend>
+            <div>
+              <label htmlFor="current-website-password" className="mb-2 block text-sm font-medium text-gray-300">Current Website Password</label>
+              <input id="current-website-password" type="password" autoComplete="current-password" value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
             </div>
-          )}
-
-          {success && (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-start">
-              <Shield className="text-green-500 w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-              <p className="text-green-500">{success}</p>
+            <div>
+              <label htmlFor="new-website-password" className="mb-2 block text-sm font-medium text-gray-300">New Website Password</label>
+              <input id="new-website-password" type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={event => setNewPassword(event.target.value)} className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
             </div>
-          )}
-
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-primary hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors duration-200 disabled:bg-gray-700"
-            >
-              {loading ? 'Updating...' : 'Update Password'}
-            </button>
-          </div>
+            <div>
+              <label htmlFor="confirm-website-password" className="mb-2 block text-sm font-medium text-gray-300">Confirm New Website Password</label>
+              <input id="confirm-website-password" type="password" autoComplete="new-password" minLength={8} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} className="w-full rounded-lg border border-gray-700 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none" required />
+            </div>
+          </fieldset>
+          {error && <div role="alert" className="flex items-start gap-3 rounded-lg border border-red-500/20 bg-red-500/10 p-4"><AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" aria-hidden="true" /><p className="text-red-300">{error}</p></div>}
+          {success && <p role="status" className="rounded-lg border border-green-500/20 bg-green-500/10 p-4 text-green-300">{success}</p>}
+          <div className="flex justify-end"><button type="submit" disabled={loading} className="rounded-lg bg-primary px-6 py-2 text-white transition-colors hover:bg-red-700 disabled:bg-gray-700">{loading ? 'Verifying and updating…' : 'Update Website Password'}</button></div>
         </form>
-      </div>
-
-      <div className="mt-8 bg-dark-100 rounded-xl p-8 border border-gray-800">
-        <div className="flex items-center mb-6">
-          <AlertTriangle className="text-primary w-6 h-6 mr-3" />
-          <h2 className="text-xl font-semibold text-white">Security Recommendations</h2>
-        </div>
-
-        <ul className="space-y-4 text-gray-300">
-          <li className="flex items-start">
-            <Shield className="w-5 h-5 text-primary mr-3 mt-1" />
-            Use a strong password with at least 8 characters
-          </li>
-          <li className="flex items-start">
-            <Shield className="w-5 h-5 text-primary mr-3 mt-1" />
-            Include numbers, symbols, and both uppercase and lowercase letters
-          </li>
-          <li className="flex items-start">
-            <Shield className="w-5 h-5 text-primary mr-3 mt-1" />
-            Don't reuse passwords from other accounts
-          </li>
-          <li className="flex items-start">
-            <Shield className="w-5 h-5 text-primary mr-3 mt-1" />
-            Change your password regularly
-          </li>
+      </section>
+      <section aria-labelledby="security-recommendations" className="mt-8 rounded-xl border border-gray-800 bg-dark-100 p-6 sm:p-8">
+        <h2 id="security-recommendations" className="mb-4 text-xl font-semibold text-white">Security Recommendations</h2>
+        <ul className="list-disc space-y-3 pl-5 text-gray-300">
+          <li>Use a unique, long website password and a password manager.</li>
+          <li>Use at least 8 characters and follow any additional account requirements.</li>
+          <li>Change your password if you suspect it has been exposed.</li>
+          <li>Keep website and streaming credentials private.</li>
         </ul>
-      </div>
+      </section>
     </div>
   );
-};
-
-export default ClientSecurity;
+}

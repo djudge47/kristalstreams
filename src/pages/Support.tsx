@@ -19,7 +19,7 @@ const supportSections: SupportSection[] = [
   {
     id: 'ai-chat',
     title: 'AI Chat Support',
-    description: 'Get instant answers to your questions with our intelligent AI assistant.',
+    description: 'General automated guidance for setup and troubleshooting. Use a ticket for account-specific help.',
     icon: <Bot className="w-6 h-6 text-primary" />,
     links: [
       { title: 'Start AI Chat', url: '/support/ai-chat' },
@@ -137,7 +137,7 @@ const Support: React.FC = () => {
                 <h2 className="text-2xl font-semibold text-white">Get Personalized Help</h2>
               </div>
               <p className="text-gray-400 mb-6">
-                Create a support ticket for personalized assistance or try our AI chat for instant answers.
+                Create a support ticket for personalized assistance or try chat for general setup and troubleshooting guidance.
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4 mb-6">
                 <Link

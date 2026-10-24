@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { requestSupportMail } from '../../lib/support-mail';
 import { Bot, CheckCircle, Mail, RefreshCw, Search, Send, TicketCheck, X } from 'lucide-react';
 
 type SupportTicket = {
   id?: string;
+  user_id?: string | null;
   source?: string;
   customer_name?: string;
   customer_email?: string;
@@ -33,7 +35,6 @@ type ReplyState = {
 
 const INFO_EMAIL = 'info@kristalstream.com';
 const BILLING_EMAIL = 'billing@kristalstream.com';
-const SUPPORT_EMAIL = 'support@kristalstream.com';
 
 const getTicketName = (ticket: SupportTicket) =>
   ticket.customer_name || ticket.user_name || ticket.from_name || 'Website Visitor';
@@ -93,6 +94,7 @@ const SupportTickets: React.FC = () => {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const activeReply = useRef(false);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyState, setReplyState] = useState<ReplyState>({
     message: '',
@@ -144,12 +146,13 @@ const SupportTickets: React.FC = () => {
   };
 
   const selectTicket = (ticket: SupportTicket) => {
+    if (activeReply.current) return;
     setSelectedTicket(ticket);
     setReplyState({ message: '', sending: false, result: '', error: '' });
   };
 
   const createAgentDraft = () => {
-    if (!selectedTicket) return;
+    if (!selectedTicket || activeReply.current) return;
     setReplyState(previous => ({
       ...previous,
       message: buildAgentReply(selectedTicket),
@@ -159,73 +162,18 @@ const SupportTickets: React.FC = () => {
   };
 
   const sendReply = async () => {
-    if (!selectedTicket) return;
-
-    const customerEmail = getTicketEmail(selectedTicket);
-    if (!customerEmail) {
-      setReplyState(previous => ({ ...previous, error: 'This ticket does not have a customer email address.' }));
-      return;
-    }
-
-    if (!replyState.message.trim()) {
-      setReplyState(previous => ({ ...previous, error: 'Write a reply before sending.' }));
-      return;
-    }
-
+    if (!selectedTicket?.id || activeReply.current || !replyState.message.trim()) return;
+    const ticketId = selectedTicket.id;
+    activeReply.current = true;
     setReplyState(previous => ({ ...previous, sending: true, result: '', error: '' }));
-
-    const replySubject = `Re: ${selectedTicket.subject || 'Kristal Streams Support'}`;
-
     try {
-      const { data, error: sendError } = await supabase.functions.invoke('resend-email', {
-        body: {
-          type: 'support',
-          to: customerEmail,
-          data: {
-            user_name: getTicketName(selectedTicket),
-            user_email: customerEmail,
-            subject: replySubject,
-            message: replyState.message.trim(),
-            priority: 'normal',
-            category: selectedTicket.category || 'Support Reply',
-            reply_to: SUPPORT_EMAIL,
-          },
-        },
-      });
-
-      if (sendError || !data?.success) {
-        const message = data?.error || sendError?.message || 'Reply could not be sent.';
-        throw new Error(message);
-      }
-
-      const sentAt = new Date().toISOString();
-      const nextPayload = {
-        ...(selectedTicket.raw_payload || {}),
-        last_reply: {
-          subject: replySubject,
-          message: replyState.message.trim(),
-          sent_at: sentAt,
-          sent_to: customerEmail,
-        },
-      };
-
-      if (selectedTicket.id) {
-        await supabase
-          .from('support_tickets')
-          .update({ status: 'pending', raw_payload: nextPayload, updated_at: sentAt })
-          .eq('id', selectedTicket.id);
-      }
-
-      setTickets(previous => previous.map(ticket => ticket.id === selectedTicket.id
-        ? { ...ticket, status: 'pending', raw_payload: nextPayload, updated_at: sentAt }
-        : ticket));
-
-      setSelectedTicket({ ...selectedTicket, status: 'pending', raw_payload: nextPayload, updated_at: sentAt });
-      setReplyState({ message: '', sending: false, result: 'Reply sent successfully.', error: '' });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Reply could not be sent.';
-      setReplyState(previous => ({ ...previous, sending: false, error: message }));
-    }
+      const result = await requestSupportMail({type:'ticket_reply',ticketId,message:replyState.message.trim()});
+      if (!result.success) throw new Error(result.error || 'Your reply was saved, but email delivery is not confirmed. Check the same request again.');
+      setReplyState({message:'',sending:false,result:'Reply saved in the ticket thread and accepted by the email provider.',error:''});
+      await fetchTickets();
+    } catch (error) {
+      setReplyState(previous => ({...previous,sending:false,error:error instanceof Error ? error.message : 'Reply outcome could not be confirmed.'}));
+    } finally { activeReply.current = false; }
   };
 
   const filtered = useMemo(() => tickets.filter(ticket => {
@@ -350,7 +298,7 @@ const SupportTickets: React.FC = () => {
                 <h2 className="text-xl font-semibold text-white">{selectedTicket.subject || 'Ticket Details'}</h2>
                 <p className="text-gray-400 text-sm mt-1">{getTicketName(selectedTicket)} • {getTicketEmail(selectedTicket) || 'No email'}</p>
               </div>
-              <button onClick={() => setSelectedTicket(null)} className="text-gray-400 hover:text-white"><X size={24} /></button>
+              <button disabled={replyState.sending} onClick={() => setSelectedTicket(null)} className="text-gray-400 hover:text-white"><X size={24} /></button>
             </div>
 
             <div className="space-y-5">
@@ -380,7 +328,7 @@ const SupportTickets: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                {getTicketEmail(selectedTicket) && (
+                {getTicketEmail(selectedTicket) && !selectedTicket.user_id && (
                   <a
                     href={getMailtoHref(getTicketEmail(selectedTicket), `Re: ${selectedTicket.subject || 'Kristal Streams Support'}`, '')}
                     className="inline-flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
@@ -421,6 +369,7 @@ const SupportTickets: React.FC = () => {
                 </div>
 
                 <textarea
+                  disabled={replyState.sending}
                   value={replyState.message}
                   onChange={event => setReplyState(previous => ({ ...previous, message: event.target.value, result: '', error: '' }))}
                   placeholder="Write or generate a reply..."
@@ -442,10 +391,10 @@ const SupportTickets: React.FC = () => {
                 )}
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mt-4">
-                  <p className="text-gray-500 text-xs">Replies send through the existing Resend email function.</p>
+                  <p className="text-gray-500 text-xs">Replies are saved in the ticket. Website customers receive email at their confirmed account address.</p>
                   <button
                     onClick={sendReply}
-                    disabled={replyState.sending || !getTicketEmail(selectedTicket)}
+                    disabled={replyState.sending || !selectedTicket.id || !replyState.message.trim()}
                     className="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
                   >
                     <Send size={16} />

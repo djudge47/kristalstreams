@@ -36,6 +36,35 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// A password check must never replace the website's persisted account session.
+export const createPasswordVerificationClient = () => {
+  if (!hasSupabaseConfig) throw new Error('Website account services are unavailable.');
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: 'ks-password-verification',
+    },
+  });
+};
+
+export const invokeGeneralChat = async (
+  body: { message: string; conversationHistory: { role: 'user' | 'assistant'; content: string }[] },
+  ownerId: string | null,
+  signal: AbortSignal,
+) => {
+  if (!hasSupabaseConfig || signal.aborted) throw new Error('Chat unavailable.');
+  const { data, error } = await supabase.auth.getSession();
+  if (signal.aborted || error || (data.session?.user.id ?? null) !== ownerId) throw new Error('Chat account changed.');
+  // Pin the request's identity, including public/anon requests, so an SDK
+  // token refresh or account switch cannot send old context as the next user.
+  return supabase.functions.invoke('ai-chat', {
+    body,
+    headers: { Authorization: `Bearer ${data.session?.access_token ?? supabaseAnonKey}` },
+  });
+};
+
 supabase.auth.onAuthStateChange((event) => {
   if (import.meta.env.DEV) {
     console.log('Auth state changed:', event);

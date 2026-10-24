@@ -1,5 +1,6 @@
-import React from 'react';
 import SupportPage from './SupportPage';
-export default function HelpContent() {
-  return <SupportPage title="Streaming Help" description="Identify whether playback problems affect one stream, one device or your connection." sections={[{"heading": "Check the scope", "content": "Try two other channels and one on-demand video. Note whether the issue affects one channel, all live TV, or all content. Compare another device if available, staying within your plan connection allowance."}, {"heading": "Restart playback", "content": "Stop the stream, close and reopen the player, and try again. Refresh the channel list if your player provides that option. Restart the device if playback remains stuck."}, {"heading": "Buffering or poor picture quality", "content": "Pause large downloads and cloud backups. Test the connection from the device used to watch. Try Ethernet or move closer to the router. If the player provides a quality setting, lower it temporarily to check whether the connection is the limiting factor."}, {"heading": "Sound missing or out of sync", "content": "Check TV and player volume and the selected audio track. Restart the stream. If using Bluetooth headphones or a soundbar, test the TV speakers to isolate audio delay. Use the player audio-delay setting only if supported."}, {"heading": "Send a useful problem report", "content": "Include the channel or title, device model, player name and version, date and time, exact error, and whether other streams work. A screenshot is useful after hiding usernames, passwords and playback URLs."}]} relatedLinks={[{"title": "Buffering Issues", "url": "/support/buffering"}, {"title": "Audio/Video Sync", "url": "/support/sync-issues"}, {"title": "Support Tickets", "url": "/client/support"}]} />;
+import { supportDocuments } from '../../lib/help-content';
+
+export default function StreamingHelp() {
+  return <SupportPage {...supportDocuments.streaming} />;
 }

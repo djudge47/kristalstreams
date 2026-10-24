@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Clock, Film, Globe, Star, Tv, Users, Wifi, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -79,7 +79,7 @@ const stats = [
   { label: 'Live Channels', value: '18,000+', icon: Tv },
   { label: 'Movies & Shows', value: '60,000+', icon: Film },
   { label: 'Countries', value: '150+', icon: Globe },
-  { label: 'Uptime', value: '99.9%', icon: Wifi },
+  { label: 'Service Status', value: 'View status', icon: Wifi, href: '/support/status' },
 ];
 
 function badgeClass(badge: string) {
@@ -198,13 +198,13 @@ const DemoReel: React.FC = () => {
             </div>
 
             <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.04] p-4">
-              {stats.map(({ label, value, icon: Icon }) => (
+              {stats.map(({ label, value, icon: Icon, href }) => (
                 <div key={label} className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs text-gray-400">
                     <Icon size={15} className="text-red-500/80" />
                     {label}
                   </div>
-                  <span className="text-sm font-bold text-white">{value}</span>
+                  {href ? <Link to={href} className="text-sm font-bold text-white hover:underline">{value}</Link> : <span className="text-sm font-bold text-white">{value}</span>}
                 </div>
               ))}
             </div>

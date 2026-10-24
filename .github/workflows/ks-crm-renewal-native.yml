@@ -8,12 +8,17 @@ on:
       - '_server/ks-crm-renewal-*.js'
       - 'scripts/test-ks-crm-renewal-*.mjs'
       - 'scripts/fixtures/ks-crm-renewal/**'
+      - '_shared/ks-retail-pricing.*'
+      - 'scripts/ks-crm-renewal-retail-pricing-schema.sql'
       - 'scripts/fixtures/ks-reviewed-handoff/**'
       - 'scripts/*-schema.sql'
       - 'scripts/ks-crm-renewal-installation-verify.sql'
       - 'scripts/ks-crm-live-renewal-installation-verify.sql'
+      - 'scripts/ks-crm-order-renewal-installation-verify.sql'
       - 'supabase/migrations/*_ks_crm_live_renewal_disabled_foundation.sql'
+      - 'supabase/migrations/*_ks_crm_changed_order_renewal_disabled.sql'
       - 'src/pages/admin/LiveRenewalControls.tsx'
+      - 'src/pages/admin/OrderRenewalControls.tsx'
       - 'src/pages/admin/RoombaCustomerStatus.tsx'
 
 permissions:
@@ -75,5 +80,57 @@ jobs:
         with:
           name: native-renewal-result-${{ matrix.postgres }}-${{ matrix.schema }}
           path: ks-native-renewal-report.json
+          retention-days: 14
+          if-no-files-found: warn
+
+  changed-order-contention:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['17.6', '17.11']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}-bookworm
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fictional-native-fixture
+          POSTGRES_DB: ks_disposable_crm_renewal_test
+        ports:
+          - '127.0.0.1:5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ks_disposable_crm_renewal_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Ensure PostgreSQL client is available
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends postgresql-client
+          fi
+      - name: Run independent-session checks in the disposable service
+        env:
+          KS_NATIVE_PG_URL: postgresql://postgres:fictional-native-fixture@127.0.0.1:5432/ks_disposable_crm_renewal_test
+          KS_NATIVE_DISPOSABLE_ACK: crm-renewal-fixtures
+          KS_NATIVE_REPORT: ks-native-order-report.json
+        run: node scripts/test-ks-crm-renewal-order-db.mjs
+      - name: Retain bounded verification report
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: native-changed-order-result-${{ matrix.postgres }}
+          path: ks-native-order-report.json
           retention-days: 14
           if-no-files-found: warn
