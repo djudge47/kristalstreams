@@ -1,5 +1,5 @@
 export interface PaymentConfirmationView {
-  kind:'test'|'pending'|'ready'|'expired'|'review';
+  kind:'test'|'pending'|'ready'|'expired'|'review'|'renewed';
   title:string;
   message:string;
 }

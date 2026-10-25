@@ -15,6 +15,7 @@ function fixture(patch={}){
   // Real SDK constructs the PostgREST URL; fetch is intercepted before network.
   const admin=realCreateClient(env.VITE_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:async(input,options)=>{
     const url=new URL(typeof input==='string'?input:input.url);calls.requests.push({url,options});
+    if(url.pathname==='/rest/v1/rpc/ks_owner_paid_renewal_completions'){assert.equal(options.method,'POST');assert.deepEqual(JSON.parse(options.body),{p_user:owner,p_sessions:patch.rows.map(row=>row.receipt.checkout_session_id)});return Response.json(patch.liveProofs||[]);}
     assert.equal(options.method,'GET');const proof=url.pathname==='/rest/v1/ks_preview_paid_fulfillments';
     if(!proof)assert.equal(url.pathname,patch.env?.VERCEL_ENV==='production'?'/rest/v1/ks_setup_order_queue':'/rest/v1/ks_preview_paid_orders');
     if(proof){assert.ok(patch.proofs!==undefined);return Response.json(patch.proofs);}
@@ -99,5 +100,14 @@ await check('missing or foreign completion proof never hides a completed queue a
   for(const proofs of [[],[{...f.row,user_id:other}],[{...f.row,login:{...f.row.login,user_id:other}}]]){
     const res=await fixture({rows:[completed],proofs}).request();assert.equal(res.code,503);assert.equal(res.body.orders,undefined);assert.ok(res.body.error.includes('do not pay again'));
   }
+});
+await check('live owner status joins private proof and keeps renewal history separate from current access',async()=>{
+  const liveReceipt={...receipt,checkout_session_id:'cs_live_CompletedRenewal',livemode:true};
+  const completed={checkout_session_id:liveReceipt.checkout_session_id,fulfillment_status:'setup_complete',queued_at:liveReceipt.recorded_at,receipt:liveReceipt};
+  const proof={reference:liveReceipt.checkout_session_id,accountId:owner,status:'renewal_complete',testMode:false,providerActivated:false,renewalCompleted:true,
+    expiresAt:'2027-04-17T00:00:00Z',completedAt:'2026-10-17T13:00:00Z',tier:'bronze',connections:1,durationDays:30,amountCents:2000,currency:'usd',recordedAt:liveReceipt.recorded_at};
+  const res=await fixture({env:{VERCEL_ENV:'production'},rows:[completed],liveProofs:[proof]}).request();assert.equal(res.code,200);assert.equal(res.body.orders[0].status,'renewal_complete');assert.equal(res.body.orders[0].providerActivated,false);assert.equal(res.body.orders[0].completedAt,'2026-10-17T13:00:00.000Z');
+  const missing=await fixture({env:{VERCEL_ENV:'production'},rows:[completed]}).request();assert.equal(missing.code,200);assert.equal(missing.body.orders[0].status,'requires_review');
+  const foreign=await fixture({env:{VERCEL_ENV:'production'},rows:[completed],liveProofs:[{...proof,accountId:other}]}).request();assert.equal(foreign.code,503);assert.equal(foreign.body.orders,undefined);
 });
 console.log(`${checks} customer setup checks passed. Real SDK query construction with synthetic auth/storage only; no network, charges, provider calls or database mutations.`);

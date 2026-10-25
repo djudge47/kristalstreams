@@ -629,6 +629,31 @@ try{
     assert.deepEqual(await observer.json(`select to_jsonb(c)-array['expiration_at','connections_allowed','package_name'] from public.iptv_customers c where id='${customerA}'`),before);
     assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
   });
+  const ownerProjectionPath='../supabase/migrations/20261025124926_add_private_owner_renewal_completion_status.sql';
+  const ownerProjectionSql=await readFile(new URL(ownerProjectionPath,import.meta.url),'utf8');
+  report.sqlSources[ownerProjectionPath]=createHash('sha256').update(ownerProjectionSql).digest('hex');install(ownerProjectionSql);
+  const ownerStatus=(owner=liveOwner,refs=[completed.reference])=>`select public.ks_owner_paid_renewal_completions('${owner}',array[${refs.map(literal).join(',')}]::text[])`;
+  await check('owner completion projection preserves older completed terms after subsequent renewals',async()=>{
+    const rows=JSON.parse(await a.query(ownerStatus()));assert.equal(rows.length,1);assert.equal(rows[0].status,'renewal_complete');assert.equal(rows[0].providerActivated,false);
+    assert.equal(Date.parse(rows[0].expiresAt),Date.parse(completed.result.expiresAt));assert.equal(rows[0].renewalCompleted,true);
+    for(const hidden of['customerId','operationId','username','claimToken','binding','result','password'])assert.equal(hidden in rows[0],false);
+  });
+  await check('foreign owners and references without committed completion cannot read a renewal proof',async()=>{
+    assert.deepEqual(JSON.parse(await a.query(ownerStatus(legacyOwner))),[]);
+    assert.deepEqual(JSON.parse(await a.query(ownerStatus(liveOwner,['cs_live_NotCompleted']))),[]);
+  });
+  await check('changed owner email confirmation hides historical provider details until the link is reviewed',async()=>{
+    install(`update auth.users set email_confirmed_at='2026-01-02T00:00:00Z' where id='${liveOwner}'`);
+    assert.deepEqual(JSON.parse(await a.query(ownerStatus())),[]);
+    install(`update auth.users set email_confirmed_at='2026-01-01T00:00:00Z' where id='${liveOwner}'`);
+    assert.equal(JSON.parse(await a.query(ownerStatus())).length,1);
+  });
+  await check('historical status is bounded, service-only and never enables execution',async()=>{
+    for(const refs of[[],[completed.reference,completed.reference],Array(6).fill(completed.reference),['cs_test_Wrong']])await assert.rejects(()=>a.query(ownerStatus(liveOwner,refs)),error=>error.code==='P0001'&&/bounded_owner_renewal_references_required/.test(error.message));
+    const acl=await observer.json("select jsonb_build_object('anon',has_function_privilege('anon','public.ks_owner_paid_renewal_completions(uuid,text[])','execute'),'browser',has_function_privilege('authenticated','public.ks_owner_paid_renewal_completions(uuid,text[])','execute'),'server',has_function_privilege('service_role','public.ks_owner_paid_renewal_completions(uuid,text[])','execute'))");assert.deepEqual(acl,{anon:false,browser:false,server:true});
+    assert.equal(await a.query('select public.ks_paid_renewal_send_enabled()'),'f');
+    assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
+  });
   report.passed=true;
   console.log(`${report.tests.length} native PostgreSQL checks passed. Fictional loopback database only; no Supabase, Stripe, email or provider calls.`);
 }catch(error){report.passed=false;report.failure={message:error.message,code:error.code||null};console.error('Native receipt checks failed:',report.failure);process.exitCode=1;

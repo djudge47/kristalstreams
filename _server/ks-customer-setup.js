@@ -1,5 +1,6 @@
 import { getPlan } from './ks-payment-validation.js';
 import { loadPreviewCompletions } from './ks-preview-completion-status.js';
+import { loadLiveRenewalCompletions } from './ks-live-renewal-status.js';
 
 const options = { auth: { persistSession: false, autoRefreshToken: false } };
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -16,12 +17,13 @@ export function customerSetupSnapshot(rows, userId, live = false, completions = 
     const plan = getPlan(receipt?.tier, receipt?.connections);
     const sessionId = receipt.checkout_session_id;
     const completed = !live && row.fulfillment_status === 'setup_complete';
-    const review = live && ['requires_review', 'setup_complete'].includes(row.fulfillment_status);
-    const completion = completed ? completions.get(sessionId) : null;
+    const completion = row.fulfillment_status === 'setup_complete' ? completions.get(sessionId) : null;
+    const renewed = live && completion?.status === 'renewal_complete';
+    const review = live && (row.fulfillment_status === 'requires_review' || (row.fulfillment_status === 'setup_complete' && !renewed));
     if (receipt.user_id !== userId || receipt.livemode !== live
       || typeof receipt.activated !== 'boolean' || (receipt.expires_at !== null && !date(receipt.expires_at))
       || (!review && (receipt.activated !== false || receipt.expires_at !== null))
-      || (!review && !completed && row.fulfillment_status !== 'awaiting_activation')
+      || (!review && !completed && !renewed && row.fulfillment_status !== 'awaiting_activation')
       || (completed && !completion)
       || receipt.amount_cents !== plan.cents || receipt.duration_days !== plan.days || receipt.currency !== 'usd'
       || typeof sessionId !== 'string' || !/^cs_(test_|live_)?[A-Za-z0-9]+$/.test(sessionId)
@@ -32,9 +34,10 @@ export function customerSetupSnapshot(rows, userId, live = false, completions = 
     return {
       reference: sessionId, tier: plan.tier, interval: plan.interval, connections: plan.connections,
       amountCents: plan.cents, currency: 'usd', recordedAt: receipt.recorded_at,
-      status: review ? 'requires_review' : completed ? completion.status : row.fulfillment_status,
+      status: review ? 'requires_review' : (completed || renewed) ? completion.status : row.fulfillment_status,
       testMode: !live, providerActivated: completed ? completion.providerActivated : false,
-      ...(completed ? { expiresAt: completion.expiresAt } : {}),
+      ...((completed || renewed) ? { expiresAt: completion.expiresAt } : {}),
+      ...(renewed ? { renewalCompleted: true, completedAt: completion.completedAt } : {}),
     };
   });
 }
@@ -67,8 +70,9 @@ export function createCustomerSetupHandler({ createClient, env = process.env, no
       if (readError) throw new Error('storage_unavailable');
       if (!Array.isArray(rows) || rows.length > 5) throw new Error('invalid_orders');
       const checkedAt = now();
-      const completed = !live ? rows.filter(row => row?.fulfillment_status === 'setup_complete') : [];
-      const completions = completed.length ? await loadPreviewCompletions(admin, user.id, completed.map(row => row.receipt), checkedAt) : new Map();
+      const completed = rows.filter(row => row?.fulfillment_status === 'setup_complete' && (!live || (row.receipt?.activated === false && row.receipt?.expires_at === null)));
+      const loader = live ? loadLiveRenewalCompletions : loadPreviewCompletions;
+      const completions = completed.length ? await loader(admin, user.id, completed.map(row => row.receipt), checkedAt) : new Map();
       const orders = customerSetupSnapshot(rows, user.id, live, completions);
       return res.status(200).json({ accountId: user.id, mode: 'read-only', testMode: !live, orders, checkedAt: new Date(checkedAt).toISOString() });
     } catch {

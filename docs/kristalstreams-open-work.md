@@ -1,3 +1,10 @@
+# Customer renewal history projection — October 25, 2026
+
+- Verified live renewals now have a separate `renewal_complete` owner status. The dashboard, payment recheck and support context show the recorded completion and term without claiming current playback, delivering credentials or changing financial records.
+- A bounded private SELECT-only RPC checks the immutable completion, provider proof, final operation, receipt, queue and current confirmed owner/service link in one database snapshot. Later service terms do not invalidate old renewal history; missing proof stays review and failed reads stay unavailable.
+- Completed payment rechecks skip routing, review preparation and pending email. All existing Preview setup/expiry semantics remain separate. No new endpoint or function-budget slot is added.
+- Source is staged in PR #33. Provider execution/authorization, additional timing policies, financial reconciliation/payment-history projection, credential delivery, administrative UI and coordinated release remain open. All live controls remain off.
+
 # Installed private paid-renewal completion — October 25, 2026
 
 - A frozen pre-send expectation, matching provider/independent line proof and exact credit debit now precede local CRM completion. Only the owner-reviewed 6-month/4 → 6-month/3 reset policy is accepted, with explicit policy/lost-time confirmation. Unsupported cases remain for review.

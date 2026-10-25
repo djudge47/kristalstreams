@@ -24,10 +24,10 @@ try{
   const filename=join(directory,'status.mjs');await writeFile(filename,result.outputFiles[0].text);
   const {default:Status}=await import(pathToFileURL(filename).href);
   const base={reference:'cs_live_FictionalView',tier:'bronze',interval:'monthly',connections:1,amountCents:2000,currency:'usd',recordedAt:'2026-10-20T00:00:00Z',status:'awaiting_activation',testMode:false,providerActivated:false};
-  for(const kind of['live-pending','live-review','test-pending','test-complete','test-expired','mixed']){
+  for(const kind of['live-pending','live-review','live-renewed','test-pending','test-complete','test-expired','mixed']){
     const test=kind.startsWith('test')||kind==='mixed';
     const order={...base,...(test?{reference:'cs_test_FictionalView',testMode:true}:{}),
-      ...(kind==='live-review'?{status:'requires_review'}:kind==='test-complete'||kind==='mixed'?{status:'setup_complete',providerActivated:true,expiresAt:'2026-11-20T00:00:00Z'}:kind==='test-expired'?{status:'setup_expired',expiresAt:'2026-10-19T00:00:00Z'}:{})};
+      ...(kind==='live-renewed'?{status:'renewal_complete',renewalCompleted:true,completedAt:'2026-10-20T01:00:00Z',expiresAt:'2027-04-20T00:00:00Z'}:kind==='live-review'?{status:'requires_review'}:kind==='test-complete'||kind==='mixed'?{status:'setup_complete',providerActivated:true,expiresAt:'2026-11-20T00:00:00Z'}:kind==='test-expired'?{status:'setup_expired',expiresAt:'2026-10-19T00:00:00Z'}:{})};
     const orders=kind==='mixed'?[order,{...base,reference:'cs_test_PendingView',testMode:true}]:[order];
     globalThis.__ksStatusView={kind:'ready',orders,checkedAt:'2026-10-20T00:00:00Z'};
     const markup=renderToStaticMarkup(React.createElement(StaticRouter,{},React.createElement(Status,{accountId:'00000000-0000-4000-8000-000000000001'})));
@@ -37,9 +37,10 @@ try{
     assert.equal(markup.includes('Saved setup confirmed'),kind==='test-complete'||kind==='mixed');
     assert.equal(markup.includes('Saved service expiry'),['test-complete','test-expired','mixed'].includes(kind));
     assert.equal(markup.includes('Service period ended'),kind==='test-expired');
+    if(kind==='live-renewed'){assert.ok(markup.includes('Renewal completed'));assert.ok(markup.includes('Expiry recorded for this renewal'));assert.ok(markup.includes('later changes'));assert.ok(!markup.includes('Streaming setup confirmed'));}
     if(kind==='mixed'){assert.ok(markup.includes('Your streaming orders'));assert.ok(markup.includes('Streaming setup pending'));assert.equal((markup.match(/<article/g)||[]).length,2);}
     console.log(`PASS: actual customer status component renders ${kind} with per-order setup state`);
   }
-  console.log('6 initial-render checks passed. No browser or external request.');
+  console.log('7 initial-render checks passed. No browser or external request.');
 
 }finally{delete globalThis.__ksStatusView;await rm(directory,{recursive:true,force:true});}

@@ -8,6 +8,9 @@ import { createPaidRenewalReviewHandler } from '../_server/ks-paid-renewal-revie
 import { savePaidRenewalQuoteApproval } from '../_server/ks-paid-renewal-approval.js';
 import { createPaidRenewalSendConsent } from '../_server/ks-paid-renewal-send-consent.js';
 import { createPaidRenewalSendGuard,createPaidRenewalSendLedger } from '../_server/ks-paid-renewal-send-guard.js';
+import { loadLiveRenewalCompletions } from '../_server/ks-live-renewal-status.js';
+import { customerSetupSnapshot } from '../_server/ks-customer-setup.js';
+import { readSetupHelpOrders, setupHelpDetails } from '../_shared/ks-setup-help.js';
 import { createPaidRenewalCompletion } from '../_server/ks-paid-renewal-completion.js';
 
 const {PGlite}=await import(process.env.KS_PGLITE_MODULE||'@electric-sql/pglite');
@@ -38,7 +41,8 @@ async function fixture({currentMonths=6}={}){
     supabaseUrl:project,
     from(table){assert.equal(table,'ks_paid_renewal_review_bindings');const filters=[];return{select(v){assert.equal(v,'checkout_session_id,operation_id,user_id');return this;},eq(k,v){assert.ok(['checkout_session_id','operation_id'].includes(k));filters.push([k,v]);return this;},async maybeSingle(){return{data:(await query(`select checkout_session_id,operation_id,user_id from public.ks_paid_renewal_review_bindings where ${filters.map(([k],i)=>`${k}=$${i+1}`).join(' and ')}`,filters.map(([,v])=>v)))[0]??null,error:null};}};},
     async rpc(name,args){state.rpcs++;if(state.readError)return{data:null,error:{message:'fictional unavailable'}};
-      let value;if(name==='ks_prepare_paid_renewal_review')value=(await query('select public.ks_prepare_paid_renewal_review($1,$2) as value',[args.p_session,args.p_user]))[0].value;
+      let value;if(name==='ks_owner_paid_renewal_completions')value=(await query('select public.ks_owner_paid_renewal_completions($1,$2) as value',[args.p_user,args.p_sessions]))[0].value;
+      else if(name==='ks_prepare_paid_renewal_review')value=(await query('select public.ks_prepare_paid_renewal_review($1,$2) as value',[args.p_session,args.p_user]))[0].value;
       else if(name==='ks_check_paid_renewal_review')value=(await query('select public.ks_check_paid_renewal_review($1,$2,$3) as value',[args.p_session,args.p_user,args.p_operation]))[0].value;
       else if(name==='ks_lookup_paid_renewal_quote_approval')value=(await query('select public.ks_lookup_paid_renewal_quote_approval($1,$2,$3,$4) as value',[args.p_session,args.p_user,args.p_operation,args.p_actor]))[0].value;
       else if(name==='ks_paid_renewal_send_enabled')value=(await query('select public.ks_paid_renewal_send_enabled() as value'))[0].value;
@@ -82,6 +86,7 @@ try{
   for(const name of ['ks-crm-renewal-installation-schema.sql','ks-crm-live-renewal-installation-schema.sql','ks-crm-order-renewal-installation-schema.sql'])await db.exec(await readFile(new URL(name,import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../supabase/migrations/20261025084505_add_disabled_paid_renewal_send_guard.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../supabase/migrations/20261025091959_add_private_paid_renewal_completion.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261025124926_add_private_owner_renewal_completion_status.sql',import.meta.url),'utf8'));
   async function sendFixture(options){
     const f=await fixture(options),p=await f.prepare(),review=await f.verify(p.operationId),approval=await f.approve(p.operationId,review.quote);
     const consent=createPaidRenewalSendConsent({key:randomBytes(32),now:()=>f.state.now});
@@ -305,6 +310,39 @@ try{
     assert.equal((await f.completion.complete(f.input)).state,'crm_pending');
     assert.equal((await query('select package_name from public.iptv_customers where id=$1',[f.customer]))[0].package_name,'Manual change');
     assert.equal((await query('select count(*)::int as n from public.ks_paid_renewal_send_reseller_slots where operation_id=$1',[f.input.operationId]))[0].n,1);
+  });
+  async function ownerFixture(){
+    const f=await completionFixture();await f.completion.verify(f.input,f.line);assert.equal((await f.completion.complete(f.input)).state,'complete');
+    const order=(await query('select checkout_session_id,user_id,livemode,tier,connections,duration_days,amount_cents,currency,activated,expires_at,recorded_at from public.ks_payment_receipts where checkout_session_id=$1',[f.reference]))[0];
+    order.recorded_at=new Date(order.recorded_at).toISOString();
+    return {...f,order,load:()=>loadLiveRenewalCompletions(f.admin,f.owner,[order])};
+  }
+  await check('owner status projects the actual completed proof without credentials, provider readiness or customer identity',async()=>{
+    const f=await ownerFixture(),proofs=await f.load(),proof=proofs.get(f.reference);assert.equal(proof.status,'renewal_complete');assert.equal(proof.providerActivated,false);assert.equal(proof.renewalCompleted,true);
+    const orders=customerSetupSnapshot([{checkout_session_id:f.reference,fulfillment_status:'setup_complete',queued_at:f.order.recorded_at,receipt:f.order}],f.owner,true,proofs);
+    const safe=readSetupHelpOrders({accountId:f.owner,mode:'read-only',testMode:false,orders,checkedAt:new Date().toISOString()},f.owner);
+    assert.match(setupHelpDetails(safe.orders[0],safe.checkedAt),/renewal completed/);
+    const text=JSON.stringify(safe);for(const hidden of[f.customer,f.input.operationId,f.line.username,'claimToken','balance_before','password'])assert.ok(!text.includes(hidden));
+    assert.equal((await query('select public.ks_owner_paid_renewal_completions($1,$2) as value',[randomUUID(),[f.reference]]))[0].value.length,0);
+  });
+  await check('later CRM term edits preserve the historical renewal without announcing current service readiness',async()=>{
+    const f=await ownerFixture(),before=(await f.load()).get(f.reference);
+    await db.exec(`reset role;update public.iptv_customers set expiration_at=expiration_at+interval '1 year',connections_allowed=5,package_name='Later service term' where id='${f.customer}';set role service_role;`);
+    assert.deepEqual((await f.load()).get(f.reference),before);
+    const historical=await loadLiveRenewalCompletions(f.admin,f.owner,[f.order],Date.parse(before.expiresAt)+86400000);assert.equal(historical.get(f.reference).status,'renewal_complete');
+  });
+  await check('ownership confirmation drift or unverified completion fails closed without hiding payment',async()=>{
+    const f=await ownerFixture();await db.exec(`reset role;update auth.users set email_confirmed_at='2026-01-02T00:00:00Z' where id='${f.owner}';set role service_role;`);
+    assert.equal((await f.load()).size,0);assert.equal(customerSetupSnapshot([{checkout_session_id:f.reference,fulfillment_status:'setup_complete',queued_at:f.order.recorded_at,receipt:f.order}],f.owner,true,await f.load())[0].status,'requires_review');
+    await assert.rejects(()=>loadLiveRenewalCompletions({rpc:async()=>({data:null,error:{message:'PRIVATE'}})},f.owner,[f.order]),/verified_owner_renewal_status_unavailable/);
+    const pending=await fixture();assert.deepEqual((await query('select public.ks_owner_paid_renewal_completions($1,$2) as value',[pending.owner,[pending.reference]]))[0].value,[]);
+  });
+  await check('bounded private completion reads and malformed RPC results cannot widen owner access',async()=>{
+    const f=await ownerFixture();
+    for(const refs of[[],[f.reference,f.reference],Array(6).fill(f.reference),['cs_test_Wrong'],[null]])await assert.rejects(()=>query('select public.ks_owner_paid_renewal_completions($1,$2)',[f.owner,refs]),/bounded_owner_renewal_references_required/);
+    const raw=(await query('select public.ks_owner_paid_renewal_completions($1,$2) as value',[f.owner,[f.reference]]))[0].value[0];
+    for(const patch of[{accountId:randomUUID()},{reference:'cs_live_Foreign'},{connections:5},{amountCents:1},{providerActivated:true},{renewalCompleted:false},{completedAt:'2099-01-01T00:00:00Z'},{expiresAt:'2020-01-01T00:00:00Z'}])await assert.rejects(()=>loadLiveRenewalCompletions({rpc:async()=>({data:[{...raw,...patch}],error:null})},f.owner,[f.order]));
+    const acl=(await query("select has_function_privilege('anon','public.ks_owner_paid_renewal_completions(uuid,text[])','execute') as anon,has_function_privilege('authenticated','public.ks_owner_paid_renewal_completions(uuid,text[])','execute') as browser,has_function_privilege('service_role','public.ks_owner_paid_renewal_completions(uuid,text[])','execute') as server"))[0];assert.deepEqual(acl,{anon:false,browser:false,server:true});
   });
   console.log(`${passed} paid-renewal verification SQL/handler/recovery checks passed. Fictional data and provider only.`);
 }finally{await db.close();}

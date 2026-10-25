@@ -98,7 +98,7 @@ export async function fulfill(sessionId, context, ownerId) {
     const receipt = await recordPaymentReceipt(session, true, ownerId, context.admin);
     // Preserve legacy delivery identities. Review-blocked receipts are not
     // eligible for a new pending alert or another activation attempt.
-    if (receipt.order_status === 'requires_review') return receipt;
+    if (['requires_review', 'renewal_complete'].includes(receipt.order_status)) return receipt;
     const routing = await routePaidOrder(session, true, ownerId, context.admin);
     const renewalReview = routing.destination === 'renewal_review'
       ? await preparePaidRenewalReview(session, ownerId, context.admin) : null;

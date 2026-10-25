@@ -14,6 +14,7 @@ function fixture(patch={}){
     from:table=>{assert.equal(table,'ks_setup_order_queue');return{select(){return this;},eq(){return this;},async maybeSingle(){return{data:patch.savedProtocol?{checkout_session_id:session.id}:null,error:patch.protocolError||null};}};},
     rpc:async(name,args)=>{
       calls.rpc.push({name,args});
+      if(name==='ks_owner_paid_renewal_completions')return{data:patch.completions||[],error:patch.completionError||null};
       if(name==='ks_prepare_paid_renewal_review')return{data:{reference:session.id,accountId:owner,operationId:'00000000-0000-4000-8000-000000000099',state:'awaiting_verification',reason:'binding_matches',preparedAt:receipt.recorded_at,replayed:false,mayDispatch:false,providerActivated:false},error:null};
       if(name==='ks_route_paid_order')return{data:{ok:true,reference:session.id,account_id:owner,test_mode:false,
         request_kind:null,destination:'manual_review',reason:'missing_intent',routed_at:receipt.recorded_at,replayed:false,...patch.routing},error:patch.routingError||null};
@@ -114,5 +115,15 @@ await check('legacy requests retain the existing unactivated-live guard and do n
 await check('a completed live queue recheck preserves payment and skips pending email without inferring live readiness',async()=>{
   const f=fixture({receipt:{order_status:'setup_complete',replayed:true,queue_replayed:true}});
   const result=await fulfill(session.id,f.context,owner);assert.equal(result.order_status,'requires_review');assert.equal(result.provider_activated,false);assert.equal(f.calls.notifications.length,0);
+});
+await check('a verified renewal recheck returns historical completion and never routes, renews or sends another alert',async()=>{
+  const completion={reference:session.id,accountId:owner,status:'renewal_complete',testMode:false,providerActivated:false,renewalCompleted:true,
+    expiresAt:'2027-04-20T00:00:00Z',completedAt:'2026-10-20T01:00:00Z',tier:'bronze',connections:1,durationDays:30,amountCents:2000,currency:'usd',recordedAt:receipt.recorded_at};
+  const f=fixture({receipt:{order_status:'setup_complete',replayed:true,queue_replayed:true},completions:[completion]});
+  const result=await fulfill(session.id,f.context,owner);assert.equal(result.order_status,'renewal_complete');assert.equal(result.provider_activated,false);assert.equal(result.activated,false);
+  assert.equal(paymentConfirmationView(result,session.id).kind,'renewed');assert.equal(f.calls.notifications.length,0);
+  assert.deepEqual(f.calls.rpc.map(r=>r.name),['ks_record_paid_checkout','ks_owner_paid_renewal_completions']);
+  for(const patch of[{provider_activated:true},{activated:true},{test_mode:true},{renewal_completed:false},{renewal_completed_at:'bad'},{setup_expires_at:'2020-01-01T00:00:00Z'}])assert.throws(()=>paymentConfirmationView({...result,...patch},session.id));
+  const failed=fixture({receipt:{order_status:'setup_complete',replayed:true,queue_replayed:true},completionError:{message:'PRIVATE'}});await assert.rejects(()=>fulfill(session.id,failed.context,owner),/do not pay again/);assert.equal(failed.calls.notifications.length,0);
 });
 console.log(`${checks} live receipt rollout checks passed with fictional payments and intercepted notification transport. No external requests or mutations.`);
