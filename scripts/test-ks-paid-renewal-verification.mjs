@@ -369,7 +369,8 @@ try{
   await check('foreign ownership, changed confirmation and invented payment evidence do not enter customer history',async()=>{
     const f=await ownerFixture();const foreign=await fixture();assert.equal((await history(foreign)).payments.length,0);
     await db.exec(`reset role;update auth.users set email_confirmed_at='2026-01-02T00:00:00Z' where id='${f.owner}';set role service_role;`);assert.equal((await history(f)).payments.length,0);
-    const good=await ownerFixture(),raw=(await history(good)),website=raw.payments[0];for(const patch of[{id:randomUUID()},{source:'manual'},{method:'cash'},{amountCents:1},{renewalCompletedAt:'2099-01-01T00:00:00Z'},{renewalExpiresAt:'2020-01-01T00:00:00Z'}])assert.throws(()=>readCustomerCrm({...raw,payments:[{...website,...patch}]},good.owner));
+    const good=await ownerFixture(),raw=(await history(good)),website=raw.payments[0];for(const patch of[{id:randomUUID()},{source:'manual'},{method:'cash'},{amountCents:0},{renewalCompletedAt:'2099-01-01T00:00:00Z'},{renewalExpiresAt:'2020-01-01T00:00:00Z'}])assert.throws(()=>readCustomerCrm({...raw,payments:[{...website,...patch}]},good.owner));
+    assert.equal(readCustomerCrm({...raw,payments:[{...website,amountCents:12500}]},good.owner).payments[0].amountCents,12500);
     await assert.rejects(()=>query('select public.ks_client_crm_snapshot_v2($1,$2,null,$3)',[good.owner,`${good.owner}@example.invalid`,good.reference]),/customer_payment_page_invalid/);
     const acl=(await query("select has_function_privilege('authenticated','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute') as browser,has_function_privilege('service_role','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute') as server"))[0];assert.deepEqual(acl,{browser:false,server:true});
   });

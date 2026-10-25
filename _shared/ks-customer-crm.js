@@ -1,4 +1,3 @@
-import {retailPlans} from './ks-retail-pricing.js';
 export const portalUuid = v => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 export const portalPaymentId=v=>portalUuid(v)||(typeof v==='string'&&/^cs_live_[A-Za-z0-9]{1,192}$/.test(v));
 // Preserve PostgreSQL microseconds in keyset order; Date.parse alone rounds ties.
@@ -36,9 +35,10 @@ export function readCustomerCrm(v, accountId, allowLookahead = false) {
       || ((p.months === null) !== (p.connections === null))
       || (previous && (paymentTime(p.paidAt) > paymentTime(previous.paidAt)
         || (paymentTime(p.paidAt) === paymentTime(previous.paidAt) && p.id >= previous.id)))) throw Error('Your payment details could not be verified.');
+    // Amounts are historical receipt facts, not today's retail catalog. The
+    // private SQL binds the immutable paid receipt to its completed renewal.
     const website=p.source==='website_checkout';
-    const plan=Object.values(retailPlans).find(plan=>plan.months===p.months);
-    if(website ? portalUuid(p.id)||p.method!=='stripe_checkout'||!plan||p.amountCents!==plan.prices[p.connections-1]
+    if(website ? portalUuid(p.id)||p.method!=='stripe_checkout'||p.months===null||p.connections===null
       ||!date(p.renewalCompletedAt)||!date(p.renewalExpiresAt)||paymentTime(p.renewalCompletedAt)<paymentTime(p.paidAt)
       ||Date.parse(p.renewalCompletedAt)>Date.parse(v.checkedAt)+60000||Date.parse(p.renewalExpiresAt)<=Date.parse(p.renewalCompletedAt)
       : !portalUuid(p.id)||p.source!==undefined||p.renewalCompletedAt!==undefined||p.renewalExpiresAt!==undefined) throw Error('Your payment details could not be verified.');
