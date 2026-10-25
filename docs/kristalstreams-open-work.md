@@ -1,8 +1,9 @@
-# Checkout-purpose integration draft — October 25, 2026
+# Installed checkout-purpose prerequisite — October 24, 2026
 
 - Authenticated live-capable checkout now saves the selected purpose and canonical owner/plan/term/allowance before returning payment. Its separate private ledger preserves the installed Preview v1 protocol and existing attempts.
 - Verified live bound sessions retain receipt-only fulfillment after admission is paused, including before their first receipt/queue exists. Actual fulfillment tests connect saved new-service and approved-renewal choices to the immutable review route without granting provider access.
-- Local Preview/Production SQL, browser-adapter and retry tests passed. Native and application CI verification is pending before installation or release. See `docs/live-checkout-intent.md`.
+- The additive live ledger is installed as migration `20261025033932` in the active Kristal Stream project. Its function-body hashes, private grants and RLS match the tested source. Existing Preview function hashes, one request/intent, customer billing/access digests and receipt/queue/routing/alert counts stayed unchanged; no live request was created.
+- Local Preview/Production SQL, compiled browser-adapter and retry tests passed. Native PostgreSQL 17.6/17.11 each passed 40 cases at `1af8633`. Website code remains staged in PR #33; no Production deployment or flag enablement occurred. See `docs/live-checkout-intent.md` and `docs/verification/live-checkout-intent-install-20261024.json`.
 - Explicit multiple-service selection, execution-time revalidation, live completion/recovery/credential delivery and coordinated release remain open. No live flag or provider execution is enabled.
 
 # Installed purchase-routing foundation — October 24, 2026

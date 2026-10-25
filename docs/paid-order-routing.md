@@ -20,7 +20,7 @@ Installation is additive and performs no backfill or writes to receipts, queues,
 
 ## Release boundaries
 
-- Current Production checkout still lacks live authenticated purchase-intent capture; the existing v1 binding is Preview/test only. Existing/unbound receipts therefore need manual review. This change does not claim to finish live checkout binding.
+- Running Production checkout still lacks live authenticated purchase-intent capture. The live-capable binding implementation and installed private prerequisite are now recorded in `docs/live-checkout-intent.md`; website release remains pending. Existing/unbound receipts still need manual review.
 - New-service review is not proof that the owner has never had service; the established eligibility and conflict checks remain required.
 - A saved renewal destination is historical review evidence. A future executor must revalidate current ownership, receipt, line, requested order, provider package/cost, execution policy and completion status before any provider action. An immutable route must never be treated as a current authorization grant.
 - Multiple owned services need an explicit, authenticated service selector and a reviewed binding protocol. This change deliberately does not choose one arbitrarily.

@@ -98,7 +98,7 @@ try {
   await bootstrap(adminSql, { pglitePreflight: true });
   await db.exec(migration);
   await db.exec(await routingSupportSql());
-  await db.exec(await readFile(new URL('../supabase/migrations/20261025032724_add_private_live_checkout_intent_binding.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261025033932_add_private_live_checkout_intent_binding.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL(routingMigrationName,new URL('./fixtures/ks-paid-order-routing.mjs',import.meta.url)),'utf8'));
   await check('migration exposes no browser table or function and uses caller privileges', async () => {
     const grants = (await query(`select has_table_privilege('anon','public.${requestTable}','select') as anon,

@@ -292,7 +292,7 @@ try{
     assert.equal(JSON.parse(result.second).replayed,false);
     assert.equal(await observer.query("select count(*) from public.ks_paid_order_routes where checkout_session_id='cs_live_RollbackNative'"),'1');
   });
-  const liveBindingPath='../supabase/migrations/20261025032724_add_private_live_checkout_intent_binding.sql';
+  const liveBindingPath='../supabase/migrations/20261025033932_add_private_live_checkout_intent_binding.sql';
   const liveBinding=await readFile(new URL(liveBindingPath,import.meta.url),'utf8');
   report.sqlSources[liveBindingPath]=createHash('sha256').update(liveBinding).digest('hex');
   const previewFunctions="select jsonb_object_agg(proname,md5(prosrc)) from pg_proc where proname in ('ks_guard_checkout_request','ks_reserve_checkout_request','ks_bind_checkout_request')";
