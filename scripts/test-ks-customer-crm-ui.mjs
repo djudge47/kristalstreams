@@ -53,7 +53,7 @@ try{
  assert.ok(markup.includes('$95.00 · PayPal'));assert.ok(markup.includes('Aug 3, 2026'));assert.ok(markup.includes('4:17 PM EDT'));assert.ok(markup.includes('Payment history'));assert.ok(markup.includes('This receipt alone does not confirm a service extension'));assert.ok(!markup.includes('0 / 1'));
  assert.equal(requests[0].options.method,'GET');assert.ok(!requests[0].url.includes(customer));assert.ok(!requests[0].url.includes(owner));
  button(tree,'Load older payments').props.onClick();await drain();tree=render(Customer,{accountId:owner});markup=html(tree);
- assert.ok(requests[1].url.includes('beforeId='+payment.id));assert.equal((markup.match(/\$95\.00/g)||[]).length,2);assert.equal(button(tree,'Load older payments'),undefined);
+ assert.ok(requests[1].url.includes('beforeId='+payment.id));assert.equal((markup.match(/\$95\.00/g)||[]).length,1);assert.equal(button(tree,'Load older payments'),undefined);assert.ok(button(tree,'Newer payments'));
  console.log('PASS: actual customer view shows amount/method/New York received date, separates saved service from receipt, and loads older payments');
  let release;globalThis.fetch=async()=>new Promise(resolve=>{release=resolve;});button(tree,'Refresh service details').props.onClick();await drain();
  globalThis.__portalAccount=other;globalThis.__portalAuthChange('SIGNED_IN',{user:{id:other}});tree=render(Customer,{accountId:owner});assert.ok(!html(tree).includes('$95.00'));assert.ok(html(tree).includes('session changed'));

@@ -11,9 +11,10 @@ export type CustomerServiceState={accountId:string;status:'loading'|'linked'|'un
 
 export default function CustomerCrmService({accountId,onServiceStateChange,view='service'}:{accountId:string;onServiceStateChange?:(state:CustomerServiceState)=>void;view?:'service'|'connections'}) {
   const [snapshot,setSnapshot]=useState<CustomerCrmSnapshot|null>(null);
+  const [paymentPages,setPaymentPages]=useState<Array<PaymentCursor|null>>([null]);
   const [loading,setLoading]=useState(true),[error,setError]=useState(''),[hidden,setHidden]=useState(false),[signedOut,setSignedOut]=useState(false);
   const request=useRef<AbortController|null>(null);
-  const load=useCallback(async(cursor:PaymentCursor|null=null)=>{
+  const load=useCallback(async(cursor:PaymentCursor|null=null,direction:'first'|'next'|'previous'='first')=>{
     if(request.current)return;
     const controller=new AbortController();request.current=controller;
     const timeout=window.setTimeout(()=>controller.abort(),20000);
@@ -33,21 +34,17 @@ export default function CustomerCrmService({accountId,onServiceStateChange,view=
       if(controller.signal.aborted||request.current!==controller)return;
       if(!response.ok)throw Error('Your saved service and payment details could not be checked. Please try again or contact support.');
       const next=readCustomerCrm(payload,accountId);
-      setSnapshot(previous=>{
-        if(!cursor||!previous)return next;
-        // A changed ownership link invalidates previously loaded pages.
-        if(previous.services.map(s=>s.customerId).sort().join()!==next.services.map(s=>s.customerId).sort().join())return next;
-        const seen=new Set(previous.payments.map(p=>p.id));
-        return {...next,payments:[...previous.payments,...next.payments.filter(p=>!seen.has(p.id))]};
-      });
+      setPaymentPages(previous=>direction==='next'?[...previous,cursor]:direction==='previous'?previous.slice(0,-1):[null]);
+      // Each page replaces the previous list rather than growing the phone page.
+      setSnapshot(next);
     }catch{
       if(request.current===controller)setError(controller.signal.aborted?'The check took too long. Please try again.':'Your saved service and payment details could not be checked. Please try again or contact support.');
     }finally{window.clearTimeout(timeout);if(request.current===controller){request.current=null;setLoading(false);}}
   },[accountId]);
   useEffect(()=>{
-    setSnapshot(null);setError('');setHidden(false);setSignedOut(false);void load();
+    setSnapshot(null);setPaymentPages([null]);setError('');setHidden(false);setSignedOut(false);void load();
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
-      if(session?.user?.id!==accountId){request.current?.abort();request.current=null;setSnapshot(null);setSignedOut(true);setLoading(false);}
+      if(session?.user?.id!==accountId){request.current?.abort();request.current=null;setSnapshot(null);setPaymentPages([null]);setSignedOut(true);setLoading(false);}
     });
     return()=>{request.current?.abort();request.current=null;subscription.unsubscribe();};
   },[accountId,load]);
@@ -73,15 +70,16 @@ export default function CustomerCrmService({accountId,onServiceStateChange,view=
           <h4 className="mt-6 border-t border-gray-700 pt-5 font-semibold text-white">Payment history</h4>
           {service.legacyPaid&&<p className="mt-2 text-sm text-cyan-200">Your earlier service term was confirmed as paid under old pricing. Only recorded amounts and received dates are listed below.</p>}
           <div className="mt-3 space-y-3">{snapshot.payments.filter(p=>p.customerId===service.customerId).map(payment=><div key={payment.id} className="rounded-xl border border-gray-700 p-4">
-            <div className="flex flex-wrap justify-between gap-2"><p className="font-semibold text-emerald-300">{money(payment.amountCents)} · {paymentMethodLabel(payment.method||'')}</p><p className="text-sm text-gray-300">Received {date(payment.paidAt)}</p></div>
+            <div className="flex flex-wrap justify-between gap-2"><p className="font-semibold text-emerald-300">{money(payment.amountCents)} · {payment.source==='website_checkout'?'Website checkout':paymentMethodLabel(payment.method||'')}</p><p className="text-sm text-gray-300">{payment.source==='website_checkout'?'Payment recorded':'Received'} {date(payment.paidAt)}</p></div>
             {payment.months!==null&&<p className="mt-2 text-sm text-gray-300">Requested package: {payment.months} months · {payment.connections} connection{payment.connections===1?'':'s'}</p>}
-            <p className="mt-2 text-xs text-gray-400">Payment recorded. This receipt alone does not confirm a service extension.</p>
+            {payment.source==='website_checkout'?<div className="mt-2 text-xs leading-5 text-gray-300"><p>Renewal completed {date(payment.renewalCompletedAt||null)}.</p><p>Expiry recorded for this renewal: {date(payment.renewalExpiresAt||null)}.</p><p className="mt-1 text-gray-400">Your current saved service details are shown above and may include later changes.</p></div>:<p className="mt-2 text-xs text-gray-400">Payment recorded. This receipt alone does not confirm a service extension.</p>}
             <details className="mt-2 text-xs text-gray-500"><summary className="cursor-pointer">Payment reference for support</summary><p className="mt-2 break-all">{payment.id}</p></details>
           </div>)}</div>
           {!snapshot.payments.some(p=>p.customerId===service.customerId)&&<p className="mt-3 text-sm text-gray-400">No payment amounts are listed on this page. Older records may be available below. Contact support if you need a receipt.</p>}
           </>}
         </article>)}</div>
-        {!connectionsOnly&&snapshot.nextCursor&&<button type="button" disabled={loading} onClick={()=>void load(snapshot.nextCursor)} className="mt-5 min-h-11 rounded-xl border border-gray-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Load older payments</button>}
+        {!connectionsOnly&&paymentPages.length>1&&<button type="button" disabled={loading} onClick={()=>void load(paymentPages[paymentPages.length-2]??null,'previous')} className="mr-3 mt-5 min-h-11 rounded-xl border border-gray-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Newer payments</button>}
+        {!connectionsOnly&&snapshot.nextCursor&&<button type="button" disabled={loading} onClick={()=>void load(snapshot.nextCursor,'next')} className="mt-5 min-h-11 rounded-xl border border-gray-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Load older payments</button>}
         <p className="mt-4 text-xs text-gray-500">Records checked {date(snapshot.checkedAt)}.</p>
       </>}
       {!connectionsOnly&&<Link to="/client/support/new" className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-primary px-5 py-2 font-semibold text-white">Get account help</Link>}

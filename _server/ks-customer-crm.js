@@ -1,4 +1,4 @@
-import {portalUuid,portalEmail,readPortalLink,readCustomerCrm} from '../_shared/ks-customer-crm.js';
+import {portalUuid,portalPaymentId,portalEmail,readPortalLink,readCustomerCrm} from '../_shared/ks-customer-crm.js';
 import {readCheckoutServices} from '../_shared/ks-checkout-services.js';
 const project='https://wftfxerblhlsxiijtfbo.supabase.co';
 const options={auth:{persistSession:false,autoRefreshToken:false}};
@@ -32,7 +32,7 @@ export function createCustomerCrmHandler({createClient,env=process.env,adminLink
     }else{
       if(!keys(req.query,['view'])&&!keys(req.query,['view','beforeAt','beforeId']))return reply(400,{error:'Choose your account view.'});
       if(req.query.beforeAt!==undefined){
-        if(typeof req.query.beforeAt!=='string'||req.query.beforeAt.length>40||!Number.isFinite(Date.parse(req.query.beforeAt))||!portalUuid(req.query.beforeId))return reply(400,{error:'Load payment history again.'});
+        if(typeof req.query.beforeAt!=='string'||req.query.beforeAt.length>40||!Number.isFinite(Date.parse(req.query.beforeAt))||!portalPaymentId(req.query.beforeId))return reply(400,{error:'Load payment history again.'});
         cursor={paidAt:req.query.beforeAt,id:req.query.beforeId};
       }
     }
@@ -61,11 +61,11 @@ export function createCustomerCrmHandler({createClient,env=process.env,adminLink
         const result=readCheckoutServices(snapshot,user.id,true),services=result.services.slice(0,50);
         return reply(200,{...result,services,nextCursor:result.services.length>50?services.at(-1).customerId:null});
       }
-      const {data:snapshot,error:readError}=await admin.rpc('ks_client_crm_snapshot',{p_user:user.id,p_email:email,p_before_at:cursor?.paidAt??null,p_before_id:cursor?.id??null});
+      const {data:snapshot,error:readError}=await admin.rpc('ks_client_crm_snapshot_v2',{p_user:user.id,p_email:email,p_before_at:cursor?.paidAt??null,p_before_id:cursor?.id??null});
       if(readError)throw Error('storage_unavailable');
       const result=readCustomerCrm(snapshot,user.id,true);
-      const payments=result.payments.slice(0,200),last=payments.at(-1);
-      return reply(200,{...result,payments,nextCursor:result.payments.length>200?{paidAt:last.paidAt,id:last.id}:null});
+      const payments=result.payments.slice(0,20),last=payments.at(-1);
+      return reply(200,{...result,payments,nextCursor:result.payments.length>20?{paidAt:last.paidAt,id:last.id}:null});
     }catch{return reply(503,{error:adminLink?'The account link could not be verified. Review it again before saving.':'Your saved service and payment details could not be checked. If you already paid, do not pay again; contact support.'});}
   };
 }

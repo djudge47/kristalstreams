@@ -4,6 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { bootstrap, literal,fixture as legacyReviewFixture,reserveReview } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
+import {legacyPaymentSupportSql} from './fixtures/ks-customer-payment-history.mjs';
 import { routingCases, routingMigrationName, routingSupportSql } from './fixtures/ks-paid-order-routing.mjs';
 
 // Only a disposable loopback database is accepted. Never use DATABASE_URL,
@@ -653,6 +654,39 @@ try{
     const acl=await observer.json("select jsonb_build_object('anon',has_function_privilege('anon','public.ks_owner_paid_renewal_completions(uuid,text[])','execute'),'browser',has_function_privilege('authenticated','public.ks_owner_paid_renewal_completions(uuid,text[])','execute'),'server',has_function_privilege('service_role','public.ks_owner_paid_renewal_completions(uuid,text[])','execute'))");assert.deepEqual(acl,{anon:false,browser:false,server:true});
     assert.equal(await a.query('select public.ks_paid_renewal_send_enabled()'),'f');
     assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
+  });
+  install(legacyPaymentSupportSql);
+  const historyPath='../supabase/migrations/20261025133200_add_private_merged_customer_payment_history.sql',historySql=await readFile(new URL(historyPath,import.meta.url),'utf8');
+  report.sqlSources[historyPath]=createHash('sha256').update(historySql).digest('hex');install(historySql);
+  const paymentHistory=(uid=liveOwner,email='native-live@example.invalid',cursor=null)=>`select public.ks_client_crm_snapshot_v2('${uid}',${literal(email)},${cursor?literal(cursor.paidAt):'null'},${cursor?literal(cursor.id):'null'})`;
+  await check('merged customer history includes real completed renewal receipts without financial inserts',async()=>{
+    const before=await observer.query('select count(*) from public.iptv_payments'),rows=JSON.parse(await a.query(paymentHistory()));
+    assert.ok(rows.payments.some(p=>p.id===completed.reference&&p.source==='website_checkout'&&p.amountCents===15000));
+    assert.equal(await observer.query('select count(*) from public.iptv_payments'),before);
+    assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
+  });
+  await check('merged keyset pages cross manual UUIDs and website references without missing or repeating records',async()=>{
+    const before=JSON.parse(await a.query(paymentHistory())).payments.length;
+    install(`insert into public.iptv_payments(id,customer_id,amount,payment_method,payment_status,paid_at)
+      select gen_random_uuid(),'${customerA}',95,'manual_paypal','paid',r.recorded_at+n*interval '1 microsecond'
+      from public.ks_payment_receipts r cross join generate_series(-22,22) n where r.checkout_session_id='${completed.reference}'`);
+    const ids=[];let cursor=null;
+    for(let page=0;page<10;page++){const result=JSON.parse(await a.query(paymentHistory(liveOwner,'native-live@example.invalid',cursor))),items=result.payments.slice(0,20);ids.push(...items.map(p=>p.id));if(result.payments.length<=20)break;cursor={paidAt:items.at(-1).paidAt,id:items.at(-1).id};}
+    assert.equal(ids.length,before+45);assert.equal(new Set(ids).size,ids.length);
+  });
+  await check('exact matching legacy references suppress duplicate website display without rewriting either receipt',async()=>{
+    const manual='00000000-0000-4000-8000-000000090001';
+    install(`insert into public.iptv_payments values('${manual}','${customerA}',150,'manual_card_external','paid',clock_timestamp(),'${completed.reference}')`);
+    let cursor=null;const ids=[];
+    for(let page=0;page<10;page++){const result=JSON.parse(await a.query(paymentHistory(liveOwner,'native-live@example.invalid',cursor))),items=result.payments.slice(0,20);ids.push(...items.map(p=>p.id));if(result.payments.length<=20)break;cursor={paidAt:items.at(-1).paidAt,id:items.at(-1).id};}
+    assert.ok(ids.includes(manual));assert.ok(!ids.includes(completed.reference));assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_completions where checkout_session_id='${completed.reference}'`),'1');
+  });
+  await check('merged history remains private and changed owner confirmation removes every financial and service row',async()=>{
+    assert.deepEqual(JSON.parse(await a.query(paymentHistory(legacyOwner,'other@example.invalid'))).payments,[]);
+    install(`update auth.users set email_confirmed_at='2026-01-02T00:00:00Z' where id='${liveOwner}'`);
+    const changed=JSON.parse(await a.query(paymentHistory()));assert.deepEqual(changed.services,[]);assert.deepEqual(changed.payments,[]);
+    install(`update auth.users set email_confirmed_at='2026-01-01T00:00:00Z' where id='${liveOwner}'`);
+    const acl=await observer.json("select jsonb_build_object('anon',has_function_privilege('anon','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute'),'browser',has_function_privilege('authenticated','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute'),'server',has_function_privilege('service_role','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute'))");assert.deepEqual(acl,{anon:false,browser:false,server:true});
   });
   report.passed=true;
   console.log(`${report.tests.length} native PostgreSQL checks passed. Fictional loopback database only; no Supabase, Stripe, email or provider calls.`);

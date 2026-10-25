@@ -9,6 +9,7 @@ on:
       - 'scripts/test-ks-live-receipt-native.mjs'
       - 'scripts/fixtures/ks-reviewed-handoff/**'
       - 'scripts/fixtures/ks-paid-order-routing.mjs'
+      - 'scripts/fixtures/ks-customer-payment-history.mjs'
       - 'supabase/migrations/**'
       - '_server/ks-payments.js'
       - '_server/ks-receipt-only.js'
