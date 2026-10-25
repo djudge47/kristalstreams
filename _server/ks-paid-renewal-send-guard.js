@@ -1,13 +1,13 @@
 import { createHash } from 'node:crypto';
 const project='https://wftfxerblhlsxiijtfbo.supabase.co';
-const states=['reserved','send_started','reconciliation_required'];
+const states=['reserved','send_started','reconciliation_required','provider_verified','complete'];
 const uuid=v=>typeof v==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(v);
 export function createPaidRenewalSendLedger({client,projectUrl}={}){
   if(projectUrl!==project||client?.supabaseUrl!==project||typeof client.rpc!=='function')throw Error('active_paid_renewal_project_required');
   const rpc=async(name,args)=>{const{data,error}=await client.rpc(name,args);if(error)throw Error('paid_renewal_send_storage_unavailable');return data;};
   const args=(r,token)=>({p_operation:r.operationId,p_actor:r.actorId,p_consent:r.consentId,p_hash:createHash('sha256').update(token).digest('hex'),p_approval:r.approvalId,p_quote:r.quoteFingerprint,p_cost:r.costUnits});
   const record=r=>{if(!r||!states.includes(r.state)||!uuid(r.claimToken)||typeof r.replayed!=='boolean'||r.mayDispatch!==false
-    ||(r.state==='send_started'&&!Number.isFinite(Date.parse(r.startedAt))))throw Error('paid_renewal_send_record_unverified');return r;};
+    ||(['send_started','provider_verified','complete'].includes(r.state)&&!Number.isFinite(Date.parse(r.startedAt))))throw Error('paid_renewal_send_record_unverified');return r;};
   return Object.freeze({
     async enabled(){const v=await rpc('ks_paid_renewal_send_enabled',{});if(typeof v!=='boolean')throw Error('paid_renewal_send_gate_unavailable');return v;},
     async lookup(r,token){const v=await rpc('ks_lookup_paid_renewal_send_guard',args(r,token));return v===null?null:record(v);},
@@ -26,7 +26,7 @@ export function createPaidRenewalSendGuard({consent,ledger,review,now}={}){
     const answer=(state,receipt,claimAcquired=false,replayed=false)=>({state,operationId:receipt?.operationId??null,claimAcquired,replayed,mayDispatch:false,providerActivated:false});
     let receipt;try{receipt=consent.identify(input?.token,input);}catch{return answer('review_required');}
     let held,reservationStarted=false;
-    try{held=await ledger.lookup(receipt,input.token);if(held)return answer('reconciliation_required',receipt,false,true);
+    try{held=await ledger.lookup(receipt,input.token);if(held)return answer(held.state==='complete'?'complete':'reconciliation_required',receipt,false,true);
       if(!await ledger.enabled())return answer('disabled',receipt);
     }catch{return answer('check_status',receipt);}
     try{

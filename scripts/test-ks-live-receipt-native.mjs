@@ -476,6 +476,8 @@ try{
   }
   const sendPath='../supabase/migrations/20261025084505_add_disabled_paid_renewal_send_guard.sql';
   const sendMigration=await readFile(new URL(sendPath,import.meta.url),'utf8');report.sqlSources[sendPath]=createHash('sha256').update(sendMigration).digest('hex');install(sendMigration);
+  const completionPath='../supabase/migrations/20261025085917_add_private_paid_renewal_completion.sql';
+  const completionMigration=await readFile(new URL(completionPath,import.meta.url),'utf8');report.sqlSources[completionPath]=createHash('sha256').update(completionMigration).digest('hex');install(completionMigration);
   let sendSequence=0;
   async function sendFixture({reseller,shared}={}){
     const f=shared||await quoteFixture(),resellerId=reseller||String(98000+(++sendSequence));
@@ -549,9 +551,82 @@ try{
     install('update public.ks_paid_renewal_send_control set execution_enabled=false');
     assert.equal((await one.held()).state,'reconciliation_required');assert.equal(await a.query(one.begin(firstClaim)),'f');
     assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_send_reseller_slots where operation_id='${one.operationId}'`),'1');
-    await assert.rejects(()=>a.query(`delete from public.ks_paid_renewal_send_reseller_slots where operation_id='${one.operationId}'`),error=>error.code==='42501');
+    await assert.rejects(()=>a.query(`delete from public.ks_paid_renewal_send_reseller_slots where operation_id='${one.operationId}'`),error=>error.code==='P0001'&&/paid_renewal_complete_state_unverified/.test(error.message));
     const grants=await observer.json("select jsonb_build_object('browser',has_table_privilege('authenticated','public.ks_paid_renewal_send_operations','SELECT'),'switchWrite',has_table_privilege('service_role','public.ks_paid_renewal_send_control','UPDATE'),'browserBegin',has_function_privilege('anon','public.ks_begin_paid_renewal_send_guard(uuid,uuid)','EXECUTE'))");
     assert.deepEqual(grants,{browser:false,switchWrite:false,browserBegin:false});
+    assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
+  });
+  async function completionFixture(){
+    const n=++quoteSequence,request=`00000000-0000-4000-8000-${String(10000+n).padStart(12,'0')}`,reference=`cs_live_NativeComplete${n}`;
+    install(`update public.ks_paid_renewal_send_control set execution_enabled=true;
+      update public.iptv_customers set connections_allowed=4,package_name='6 Months + 4 Connections',expiration_at=date_trunc('second',clock_timestamp()+interval '7 days') where id='${customerA}';`);
+    await a.query(`select public.ks_reserve_live_service_checkout_request('${liveOwner}','${request}','gold',3,'renewal','https://kristalstream.com','native-live@example.invalid','${customerA}')`);
+    await a.query(bindLive(request,reference));await a.query(`select public.ks_record_paid_checkout('${reference}','pi_NativeComplete${n}','${liveOwner}',true,'gold',3,180,15000,'usd')`);
+    await a.query(`select public.ks_route_paid_order('${reference}')`);const op=JSON.parse(await a.query(prepareReview(reference))).operationId;
+    const saved=await observer.json(`select jsonb_build_object('binding',binding,'fingerprint',fingerprint) from public.ks_paid_renewal_review_bindings where operation_id='${op}'`),b=saved.binding;
+    const q={purpose:'paid-renewal-quote/v1',reference,operationId:op,bindingFingerprint:saved.fingerprint,resellerId:String(997000+n),lineId:b.lineId,username:b.username,customerId:b.customerId,
+      currentPackageId:'76',packageId:'77',packageName:'6 Months + 3 Connections',months:6,connections:3,previousExpiresAt:new Date(b.currentExpiresAt).toISOString(),bouquetIds:[1,60,63],catalogFingerprint:'c'.repeat(64),costUnits:'15000000'};
+    const canonical=JSON.stringify(q),hash=createHash('sha256').update(canonical).digest('hex');
+    const approved=JSON.parse(await a.query(`select public.ks_save_paid_renewal_quote_approval('${reference}','${liveOwner}','${op}','${quoteActor}',${literal(canonical)},'${hash}',15000000,68000000,clock_timestamp())`));
+    const consent=`00000000-0000-4000-8000-${String(30000+n).padStart(12,'0')}`;
+    const held=JSON.parse(await a.query(`with stamp as materialized(select clock_timestamp() as at)
+      select public.ks_reserve_paid_renewal_send_guard('${op}','${quoteActor}','${consent}',repeat('f',64),'${approved.approvalId}','${hash}',15000000,at,at,at+interval '5 minutes') from stamp`));
+    const claim=held.claimToken;assert.equal(await a.query(`select public.ks_begin_paid_renewal_send_guard('${op}','${claim}')`),'t');
+    const expectation=JSON.parse(await a.query(`select public.ks_prepare_paid_renewal_completion('${op}','${claim}','controlled_6m4_to_6m3_reset_ny/v1',true,68000000,clock_timestamp())`));
+    const result={customerId:q.customerId,lineId:q.lineId,username:q.username,resellerId:q.resellerId,packageId:q.packageId,connections:3,bouquetIds:q.bouquetIds,
+      expiresAt:new Date(expectation.expected_expiry).toISOString(),enabled:true,adminEnabled:true,trial:false};
+    const verify=(balance=53000000,patch={})=>`select public.ks_verify_paid_renewal_completion('${op}','${claim}',${literal(JSON.stringify({...result,...patch}))}::jsonb,${balance},clock_timestamp())`;
+    const complete=`select public.ks_complete_paid_renewal('${op}','${claim}',${literal(JSON.stringify(result))}::jsonb,clock_timestamp())`;
+    return{op,reference,claim,result,verify,complete};
+  }
+  const completed=await completionFixture();
+  await check('matching provider proof is stored once under competing verification workers',async()=>{
+    const sql=completed.verify(),r=await race(sql,sql);assert.equal(r.first,'t');assert.equal(r.second,'f');
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_provider_proofs where operation_id='${completed.op}'`),'1');
+  });
+  await check('competing local completion workers update one service and release one verified slot atomically',async()=>{
+    const r=await race(completed.complete,completed.complete);assert.equal(JSON.parse(r.first).replayed,false);assert.equal(JSON.parse(r.second).replayed,true);
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_completions where operation_id='${completed.op}'`),'1');
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_send_reseller_slots where operation_id='${completed.op}'`),'0');
+    assert.equal(await observer.query(`select fulfillment_status from public.ks_setup_order_queue where checkout_session_id='${completed.reference}'`),'setup_complete');
+    assert.equal(await observer.query(`select connections_allowed from public.iptv_customers where id='${customerA}'`),'3');
+  });
+  await check('rolled-back completion restores CRM, queue and reservation before the waiting worker completes once',async()=>{
+    const f=await completionFixture();await a.query(f.verify());const r=await race(f.complete,f.complete,{release:'rollback'});
+    assert.equal(JSON.parse(r.first).replayed,false);assert.equal(JSON.parse(r.second).replayed,false);
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_completions where operation_id='${f.op}'`),'1');
+  });
+  await check('queue write failure rolls back service updates and retains verified proof for recovery',async()=>{
+    const f=await completionFixture();await a.query(f.verify());const before=await observer.json(`select to_jsonb(c) from public.iptv_customers c where id='${customerA}'`);
+    install(`create function public.ks_fixture_completion_fault() returns trigger language plpgsql as $$ begin if new.checkout_session_id='${f.reference}' then raise exception 'fictional_queue_write_failure';end if;return new;end;$$;
+      create trigger ks_fixture_completion_fault before update on public.ks_setup_order_queue for each row execute function public.ks_fixture_completion_fault();`);
+    await assert.rejects(()=>a.query(f.complete),error=>error.code==='P0001'&&/fictional_queue_write_failure/.test(error.message));
+    assert.deepEqual(await observer.json(`select to_jsonb(c) from public.iptv_customers c where id='${customerA}'`),before);
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_completions where operation_id='${f.op}'`),'0');
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_send_reseller_slots where operation_id='${f.op}'`),'1');
+    install('drop trigger ks_fixture_completion_fault on public.ks_setup_order_queue;drop function public.ks_fixture_completion_fault()');
+    assert.equal(JSON.parse(await a.query(f.complete)).state,'complete');
+  });
+  await check('deferred completion ownership drift rolls back the entire local completion transaction',async()=>{
+    const f=await completionFixture();await a.query(f.verify());const before=await observer.json(`select to_jsonb(c) from public.iptv_customers c where id='${customerA}'`);
+    await a.query('begin');await a.query(f.complete);install(`update auth.users set email_confirmed_at='2026-01-02T00:00:00Z' where id='${liveOwner}'`);
+    await assert.rejects(()=>a.query('commit'),error=>error.code==='P0001'&&/paid_renewal_complete_state_unverified/.test(error.message));
+    assert.deepEqual(await observer.json(`select to_jsonb(c) from public.iptv_customers c where id='${customerA}'`),before);
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_send_reseller_slots where operation_id='${f.op}'`),'1');
+    install(`update auth.users set email_confirmed_at='2026-01-01T00:00:00Z' where id='${liveOwner}'`);
+  });
+  await check('SQL independently rejects wrong target, expiry and debit proof without recording success',async()=>{
+    const f=await completionFixture();
+    for(const sql of[f.verify(54000000),f.verify(53000000,{lineId:'99'}),f.verify(53000000,{expiresAt:new Date(Date.parse(f.result.expiresAt)+86400000).toISOString()})]){
+      await assert.rejects(()=>a.query(sql),error=>error.code==='P0001'&&/paid_renewal_provider_result_unverified/.test(error.message));
+    }
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_provider_proofs where operation_id='${f.op}'`),'0');
+  });
+  await check('verified local recovery survives quote expiry and disabled dispatch while preserving billing and profiles',async()=>{
+    const f=await completionFixture();await a.query(f.verify());install('update public.ks_paid_renewal_send_control set execution_enabled=false');
+    const before=await observer.json(`select to_jsonb(c)-array['expiration_at','connections_allowed','package_name'] from public.iptv_customers c where id='${customerA}'`);
+    await delay(31000);assert.equal(JSON.parse(await a.query(f.complete)).state,'complete');
+    assert.deepEqual(await observer.json(`select to_jsonb(c)-array['expiration_at','connections_allowed','package_name'] from public.iptv_customers c where id='${customerA}'`),before);
     assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
   });
   report.passed=true;
