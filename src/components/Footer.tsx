@@ -41,7 +41,7 @@ const Footer: React.FC = memo(() => {
               <h3 className="text-xl font-bold text-primary">Kristal Streams</h3>
             </div>
             <p className="text-gray-400 mb-4">
-              Your premier destination for unlimited entertainment with 18,000+ channels, movies, and shows streaming in crystal-clear HD and 4K quality worldwide.
+              Your premier destination for unlimited entertainment with 21,000+ channels, movies, and shows streaming in crystal-clear HD and 4K quality worldwide.
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((social) => (
