@@ -688,6 +688,34 @@ try{
     install(`update auth.users set email_confirmed_at='2026-01-01T00:00:00Z' where id='${liveOwner}'`);
     const acl=await observer.json("select jsonb_build_object('anon',has_function_privilege('anon','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute'),'browser',has_function_privilege('authenticated','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute'),'server',has_function_privilege('service_role','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute'))");assert.deepEqual(acl,{anon:false,browser:false,server:true});
   });
+  const adminHistoryPath='../supabase/migrations/20261025135609_add_private_admin_website_payment_history.sql',adminHistorySql=await readFile(new URL(adminHistoryPath,import.meta.url),'utf8');
+  report.sqlSources[adminHistoryPath]=createHash('sha256').update(adminHistorySql).digest('hex');install(adminHistorySql);
+  const adminHistory=(actor=quoteActor,at='null',id='null')=>`select public.ks_admin_website_payment_history('${actor}',${at},${id})`;
+  await check('admin audit returns only committed live website receipts without changing financial rows',async()=>{
+    const before=await observer.query('select count(*) from public.iptv_payments'),result=JSON.parse(await a.query(adminHistory()));assert.ok(result.payments.length>0);
+    assert.ok(result.payments.every(p=>p.source==='website_checkout'&&p.payment_status==='recorded'&&p.amount_cents===15000));
+    assert.ok(!result.payments.some(p=>p.id===completed.reference));
+    for(const p of result.payments)for(const key of['binding','claimToken','password','payment_intent_id','resellerId'])assert.equal(key in p,false);
+    assert.equal(await observer.query('select count(*) from public.iptv_payments'),before);
+  });
+  await check('historical admin audit survives current customer ownership confirmation and service-name changes',async()=>{
+    const before=JSON.parse(await a.query(adminHistory()));
+    install(`update auth.users set email_confirmed_at='2026-01-02T00:00:00Z' where id='${liveOwner}';update public.iptv_customers set username='later_native_audit_name' where id='${customerA}'`);
+    assert.deepEqual(JSON.parse(await a.query(adminHistory())).payments,before.payments);
+    assert.deepEqual(JSON.parse(await a.query(paymentHistory())).payments,[]);
+    install(`update auth.users set email_confirmed_at='2026-01-01T00:00:00Z' where id='${liveOwner}'`);
+  });
+  await check('admin audit uses strict keyset bounds and refuses user-controlled actor or partial cursors',async()=>{
+    const rows=JSON.parse(await a.query(adminHistory())).payments,first=rows[0];
+    assert.deepEqual(JSON.parse(await a.query(adminHistory(quoteActor,literal(first.paid_at),literal(first.id)))).payments,rows.slice(1));
+    await assert.rejects(()=>a.query(adminHistory(liveOwner)),e=>e.code==='P0001'&&/payment_history_admin_required/.test(e.message));
+    await assert.rejects(()=>a.query(adminHistory(quoteActor,'null',literal(first.id))),e=>e.code==='P0001'&&/payment_history_cursor_invalid/.test(e.message));
+  });
+  await check('admin audit remains browser-denied and revoked administrator confirmation stops the read',async()=>{
+    const acl=await observer.json("select jsonb_build_object('anon',has_function_privilege('anon','public.ks_admin_website_payment_history(uuid,timestamptz,text)','execute'),'browser',has_function_privilege('authenticated','public.ks_admin_website_payment_history(uuid,timestamptz,text)','execute'),'server',has_function_privilege('service_role','public.ks_admin_website_payment_history(uuid,timestamptz,text)','execute'))");assert.deepEqual(acl,{anon:false,browser:false,server:true});
+    install(`update auth.users set email_confirmed_at=null where id='${quoteActor}'`);await assert.rejects(()=>a.query(adminHistory()),e=>e.code==='P0001'&&/payment_history_admin_required/.test(e.message));
+    install(`update auth.users set email_confirmed_at='2026-01-01T00:00:00Z' where id='${quoteActor}'`);assert.equal(await a.query('select public.ks_paid_renewal_send_enabled()'),'f');
+  });
   report.passed=true;
   console.log(`${report.tests.length} native PostgreSQL checks passed. Fictional loopback database only; no Supabase, Stripe, email or provider calls.`);
 }catch(error){report.passed=false;report.failure={message:error.message,code:error.code||null};console.error('Native receipt checks failed:',report.failure);process.exitCode=1;

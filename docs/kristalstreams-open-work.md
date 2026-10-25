@@ -1,3 +1,9 @@
+# Administrator receipt projection — October 25, 2026
+
+- The command center, latest-payment cards and selected customer's History now combine existing manual records with independently verified completed website-renewal receipts. Website amounts retain their original recorded date and historical expiry; credit debits and imported activation do not become payments.
+- A private administrator-only GET view pages the new SQL read in the existing API function. Failed or changed-account reads discard partial data. History retains zero/pending/refunded manual entries, uses bounded 20-entry pages and guards late activity responses. Recorded monthly totals use New York month boundaries; MRR and all billing/access fields are unchanged.
+- Source is staged in PR #33. See `docs/admin-website-payment-history.md`. Refund/chargeback/accounting reconciliation, executable provider transport/authorization, additional timing policies, credential delivery, administrative execution controls and coordinated release remain open. All four controls stay off.
+
 # Merged customer receipt history — October 25, 2026
 
 - The existing customer service panel now reads manual receipts and verified completed website renewals together, with recorded amount/term, website recorded date, renewal completion and historical expiry. The current service summary stays separate. No financial rows, balances, billing or entitlements are changed.

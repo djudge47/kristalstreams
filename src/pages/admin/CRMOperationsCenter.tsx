@@ -1,5 +1,7 @@
+import AdminPaymentHistory from './AdminPaymentHistory';
+import {paymentDateLabel,adminPaymentMethod} from '../../../_shared/ks-admin-payment-history.js';
 import { paymentMethodLabel } from '../../../_shared/ks-crm-renewal-payment.js';
-import { isReceivedPayment, latestReceivedPayments, loadCrmPayments, receivedPaymentDate, receivedPaymentDateTime, type CrmPaymentSummary } from '../../../_shared/ks-crm-payment-summary.js';
+import { isReceivedPayment, recordedPaymentMonthTotal, latestReceivedPayments, loadCrmPayments, receivedPaymentDate, receivedPaymentDateTime, type CrmPaymentSummary } from '../../../_shared/ks-crm-payment-summary.js';
 import { getCustomerRetailPrice } from '../../../_shared/ks-retail-pricing.js';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -67,19 +69,6 @@ type Customer = {
   notes: string | null;
   xui_line_url: string | null;
   source: string;
-};
-
-type Payment = {
-  id: string;
-  customer_id: string;
-  amount: number;
-  payment_method: string;
-  payment_status: string;
-  paid_at: string;
-  period_start: string | null;
-  period_end: string | null;
-  reference: string | null;
-  notes: string | null;
 };
 
 type ActivityRow = {
@@ -194,7 +183,7 @@ const CRMOperationsCenter: React.FC = () => {
   const [paymentCustomer, setPaymentCustomer] = useState<Customer | null>(null);
   const [extendCustomer, setExtendCustomer] = useState<Customer | null>(null);
   const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null);
-  const [historyPayments, setHistoryPayments] = useState<Payment[]>([]);
+  const [paymentReadError,setPaymentReadError]=useState<string|null>(null);
   const [historyActivities, setHistoryActivities] = useState<ActivityRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [paymentReview, setPaymentReview] = useState<{ customer: Customer; receipt: RenewalPaymentReceipt } | null>(null);
@@ -204,6 +193,7 @@ const CRMOperationsCenter: React.FC = () => {
   const [sort, setSort] = useState<CustomerSort>(remembered.sort);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [customerReadError, setCustomerReadError] = useState<string | null>(null);
+  const historyGeneration=useRef(0);
   const refreshGeneration = useRef(0);
   const mounted = useRef(true);
 
@@ -216,6 +206,7 @@ const CRMOperationsCenter: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    historyGeneration.current++;
     setVisiblePasswords({});
     setShowForm(false); setEditing(null); setPaymentCustomer(null); setPaymentReview(null);
     setExtendCustomer(null); setHistoryCustomer(null); setPortalCustomer(null);
@@ -230,7 +221,7 @@ const CRMOperationsCenter: React.FC = () => {
     setError(null);
     const [c, p, a, r] = await Promise.all([
       loadCrmCustomers<Customer>(supabase),
-      loadCrmPayments(supabase),
+      loadCrmPayments(supabase,{website:true}),
       supabase.from('iptv_customer_activity').select('*').order('created_at', { ascending: false }).limit(30),
       supabase.from('iptv_reminder_queue').select('*').eq('status', 'pending').order('scheduled_for', { ascending: true }).limit(100),
     ]);
@@ -239,7 +230,7 @@ const CRMOperationsCenter: React.FC = () => {
     if (e) setError(e.message);
     setCustomerReadError(c.error?.message || null);
     setCustomers((c.data || []) as Customer[]);
-    setPayments(p.data || []);
+    setPayments(p.data || []);setPaymentReadError(p.error?.message||null);
     setActivities((a.data || []) as ActivityRow[]);
     setReminders((r.data || []) as Reminder[]);
     setLoading(false);
@@ -274,9 +265,6 @@ const CRMOperationsCenter: React.FC = () => {
   };
 
   const stats = useMemo(() => {
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
     return {
       total: customers.length,
       active: customers.filter((c) => displayedAccountStatus(c) === 'active').length,
@@ -286,7 +274,7 @@ const CRMOperationsCenter: React.FC = () => {
       overdue: customers.filter(isOverdue).length,
       unpaid: customers.filter(isUnpaidCustomer).length,
       mrr: customers.filter((c) => displayedAccountStatus(c) === 'active' && !isBillingExcluded(c) && !isLegacyPaidCustomer(c)).reduce((sum, c) => sum + Number(c.monthly_price || 0), 0),
-      paidMonth: payments.filter((p) => isReceivedPayment(p) && ts(p.paid_at) >= monthStart.getTime()).reduce((sum, p) => sum + Number(p.amount), 0),
+      paidMonth: recordedPaymentMonthTotal(payments),
       followups: reminders.length,
     };
   }, [customers, payments, reminders]);
@@ -385,20 +373,12 @@ const CRMOperationsCenter: React.FC = () => {
   };
 
   const openHistory = async (c: Customer) => {
-    setHistoryCustomer(c);
-    setHistoryPayments([]);
-    setHistoryActivities([]);
-    setHistoryLoading(true);
-    setError(null);
-    const [p, a] = await Promise.all([
-      supabase.from('iptv_payments').select('*').eq('customer_id', c.id).order('paid_at', { ascending: false }).limit(100),
-      supabase.from('iptv_customer_activity').select('*').eq('customer_id', c.id).order('created_at', { ascending: false }).limit(100),
-    ]);
-    const e = p.error || a.error;
-    if (e) setError(e.message);
-    setHistoryPayments((p.data || []) as Payment[]);
-    setHistoryActivities((a.data || []) as ActivityRow[]);
-    setHistoryLoading(false);
+    const generation=++historyGeneration.current;
+    setHistoryCustomer(c);setHistoryActivities([]);setHistoryLoading(true);
+    const result=await supabase.from('iptv_customer_activity').select('*').eq('customer_id',c.id).order('created_at',{ascending:false}).limit(100);
+    if(!mounted.current||historyGeneration.current!==generation)return;
+    if(result.error)setError(result.error.message);
+    setHistoryActivities((result.data||[]) as ActivityRow[]);setHistoryLoading(false);
   };
 
   const openCreate = () => {
@@ -502,7 +482,7 @@ const CRMOperationsCenter: React.FC = () => {
               <article key={c.id} className="overflow-hidden rounded-2xl border border-gray-700 bg-gray-900/80">
                 <div className="flex items-start justify-between gap-3 border-b border-gray-800 bg-gray-800/70 p-4"><div className="min-w-0"><h2 className="truncate font-semibold text-white"><Link to={`/admin/crm/customer/${c.id}`} state={{ crmList: listState }} className="underline-offset-4 hover:underline">{c.customer_name || c.username}</Link></h2><p className="mt-1 text-xs text-gray-500">Panel ID {c.external_id} · {c.username}</p></div><div className="flex flex-col items-end gap-1.5"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${displayedAccountStatus(c) === 'active' ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'}`}>{displayedAccountStatus(c)}</span><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${badge.cls}`}>{badge.label}</span></div></div>
                 <div className="grid grid-cols-2 gap-3 p-4 text-sm sm:grid-cols-3"><div><p className="text-xs text-gray-500">Package</p><p className="mt-1 text-gray-200">{c.package_name || 'Not assigned'}</p></div><div><p className="text-xs text-gray-500">{isPersonalCustomer(c) ? 'Customer charge' : isLegacyPaidCustomer(c) ? 'Next renewal price' : retail ? 'Plan price' : 'Monthly Price'}</p><p className="mt-1 text-gray-200">{isPersonalCustomer(c) ? 'No customer charge' : isPreviewPaidCustomer(c) ? 'Excluded from revenue' : isTrialCustomer(c) ? 'No charge' : retail ? `${money(retail.totalCents / 100)} / ${retail.months} month${retail.months === 1 ? '' : 's'}` : Number(c.monthly_price) > 0 ? money(c.monthly_price) : 'Not set'}</p>{retail && retail.months > 1 && <p className="mt-1 text-xs text-gray-400">{money(retail.monthlyCents / 100)}/month equivalent</p>}</div><div><p className="text-xs text-gray-500">Customer payment</p><p className={`mt-1 font-semibold ${isPersonalCustomer(c) ? 'text-cyan-300' : ['paid', 'legacy_paid'].includes(c.payment_status || '') ? 'text-green-300' : 'text-yellow-300'}`}>{customerPaymentLabel(c)}</p></div><div><p className="text-xs text-gray-500">{isPreviewPaidCustomer(c) ? 'Provider expires' : isTrialCustomer(c) ? 'Trial expires' : 'Renewal'}</p><p className="mt-1 text-gray-200">{isBillingExcluded(c) ? dateTime(c.expiration_at) : dateOnly(billingRenewalAt(c))}</p></div><div><p className="text-xs text-gray-500">Connection limit</p><p className="mt-1 text-gray-200">{c.connections_allowed} allowed</p><p className="mt-1 text-xs text-gray-400">Current streams unavailable</p></div><div><p className="text-xs text-gray-500">Device</p><p className="mt-1 truncate text-gray-200">{c.device_name || c.device_type || 'Not recorded'}</p></div></div>
-                {receivedPayment && <div aria-label="Last recorded payment" className="border-t border-gray-800 bg-green-500/5 px-4 py-3"><p className="text-xs text-gray-400">Last recorded payment</p><p className="mt-1 text-sm font-semibold text-green-300">{money(Number(receivedPayment.amount))} · {paymentMethodLabel(receivedPayment.payment_method)}</p><p className="mt-1 text-xs text-gray-300">Received <time dateTime={receivedPayment.paid_at}>{receivedPaymentDate(receivedPayment.paid_at)}</time></p></div>}
+                {receivedPayment && <div aria-label="Last recorded payment" className="border-t border-gray-800 bg-green-500/5 px-4 py-3"><p className="text-xs text-gray-400">Last recorded payment</p><p className="mt-1 text-sm font-semibold text-green-300">{money(Number(receivedPayment.amount))} · {adminPaymentMethod(receivedPayment)||paymentMethodLabel(receivedPayment.payment_method)}</p><p className="mt-1 text-xs text-gray-300">{paymentDateLabel(receivedPayment)} <time dateTime={receivedPayment.paid_at}>{receivedPaymentDate(receivedPayment.paid_at)}</time></p></div>}
                 {isLegacyPaidCustomer(c) && <p className="border-t border-gray-800 px-4 py-3 text-xs leading-5 text-cyan-200">Old-pricing payment status was confirmed by owner using XUI activation. See History for recorded payment details. New website pricing applies at the next renewal.</p>}
                 <div className="border-t border-gray-800 px-4 py-3"><p className="text-xs text-gray-500">IPTV password</p><div className="mt-1 flex items-center gap-2"><code className="min-w-0 flex-1 truncate rounded-lg bg-gray-950 px-2.5 py-1.5 text-xs text-gray-300">{visiblePasswords[c.id] ? c.iptv_password || 'Not set' : '••••••••••'}</code><button type="button" aria-label={visiblePasswords[c.id] ? "Hide IPTV password" : "Show IPTV password"} onClick={() => setVisiblePasswords((v) => ({ ...v, [c.id]: !v[c.id] }))} className="min-h-11 min-w-11 rounded-lg p-2 text-gray-400">{visiblePasswords[c.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
                 {pendingIds.has(c.id) && <div className="border-t border-gray-800 bg-yellow-500/5 px-4 py-2 text-xs font-medium text-yellow-300"><Bell className="mr-1.5 inline h-3.5 w-3.5" />Renewal follow-up queued</div>}
@@ -585,7 +565,7 @@ const CRMOperationsCenter: React.FC = () => {
 
       <section className="grid gap-3 md:grid-cols-3">
         <div className="rounded-2xl border border-gray-700 bg-gray-800/90 p-4"><div className="flex items-center justify-between"><span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Active MRR</span><DollarSign className="h-5 w-5 text-green-400" /></div><p className="mt-3 text-2xl font-bold text-white">{money(stats.mrr)}</p><p className="mt-1 text-xs text-gray-500">Recorded monthly value; unknown old-pricing amounts excluded</p></div>
-        <div className="rounded-2xl border border-gray-700 bg-gray-800/90 p-4"><div className="flex items-center justify-between"><span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Paid This Month</span><CreditCard className="h-5 w-5 text-cyan-400" /></div><p className="mt-3 text-2xl font-bold text-white">{money(stats.paidMonth)}</p><p className="mt-1 text-xs text-gray-500">From recorded payment history</p></div>
+        <div className="rounded-2xl border border-gray-700 bg-gray-800/90 p-4"><div className="flex items-center justify-between"><span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Payments This Month</span><CreditCard className="h-5 w-5 text-cyan-400" /></div><p className="mt-3 text-2xl font-bold text-white">{money(stats.paidMonth)}</p><p className="mt-1 text-xs text-gray-500">Recorded receipts · New York month</p></div>
         <div className="rounded-2xl border border-gray-700 bg-gray-800/90 p-4"><div className="flex items-center justify-between"><span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Follow-up Queue</span><Bell className="h-5 w-5 text-yellow-400" /></div><p className="mt-3 text-2xl font-bold text-white">{stats.followups}</p><p className="mt-1 text-xs text-gray-500">Pending manual renewal follow-ups</p></div>
       </section>
 
@@ -597,7 +577,7 @@ const CRMOperationsCenter: React.FC = () => {
 
         <div className="rounded-2xl border border-gray-700 bg-gray-800/90 p-4 sm:p-5">
           <div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-green-400">Billing</p><h2 className="mt-1 font-bold text-white">Recent Payments</h2></div><CreditCard className="h-5 w-5 text-green-400" /></div>
-          <div aria-label="Recent received payments" className="mt-4 space-y-2">{recordedPayments.length === 0 ? <p className="py-6 text-center text-sm text-gray-500">No received payment amounts recorded yet.</p> : recordedPayments.slice(0, 6).map((p) => <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-900/80 p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{labelFor(p.customer_id)}</p><p className="mt-1 text-xs text-gray-400">Received {receivedPaymentDateTime(p.paid_at)} · {paymentMethodLabel(p.payment_method)}</p></div><p className="shrink-0 text-sm font-bold text-green-300">{money(p.amount)}</p></div>)}</div>
+          <div aria-label="Recent received payments" className="mt-4 space-y-2">{recordedPayments.length === 0 ? <p className="py-6 text-center text-sm text-gray-500">No received payment amounts recorded yet.</p> : recordedPayments.slice(0, 6).map((p) => <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-900/80 p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{labelFor(p.customer_id)}</p><p className="mt-1 text-xs text-gray-400">{paymentDateLabel(p)} {receivedPaymentDateTime(p.paid_at)} · {adminPaymentMethod(p)||paymentMethodLabel(p.payment_method)}</p></div><p className="shrink-0 text-sm font-bold text-green-300">{money(p.amount)}</p></div>)}</div>
           <p className="mt-3 text-xs leading-5 text-gray-400">Only recorded positive payments are shown. Older entries without a received amount remain in customer History.</p>
         </div>
 
@@ -629,8 +609,8 @@ const CRMOperationsCenter: React.FC = () => {
       {extendCustomer && <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center sm:p-4"><div className="w-full rounded-t-3xl border border-gray-700 bg-gray-900 p-5 sm:max-w-md sm:rounded-3xl"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-widest text-blue-400">Update CRM Dates</p><h2 className="mt-1 text-xl font-bold text-white">{extendCustomer.customer_name || extendCustomer.username}</h2><p className="mt-2 text-sm text-gray-400">Stored renewal: {dateOnly(extendCustomer.renewal_at)}</p><p className="mt-2 text-sm text-amber-300">Updates this CRM record only. Renew streaming service separately in Roomba.</p></div><button onClick={() => setExtendCustomer(null)} className="rounded-xl bg-gray-800 p-2 text-gray-400"><X className="h-5 w-5" /></button></div><div className="mt-5 grid grid-cols-2 gap-3">{[1, 3, 6, 12].map((months) => <button key={months} disabled={busy === `extend-${extendCustomer.id}`} onClick={() => void extendService(extendCustomer, months)} className="rounded-2xl border border-gray-700 bg-gray-800 px-4 py-4 text-left hover:border-blue-500/60 disabled:opacity-50"><p className="text-lg font-bold text-white">+{months} month{months === 1 ? '' : 's'}</p><p className="mt-1 text-xs text-gray-500">Update CRM renewal and expiration</p></button>)}</div></div></div>}
 
       {portalCustomer && <CustomerPortalLink key={portalCustomer.id} customer={portalCustomer} onClose={() => setPortalCustomer(null)} />}
-      {historyCustomer && <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center sm:p-4"><div className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl border border-gray-700 bg-gray-900 sm:max-w-2xl sm:rounded-3xl"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-800 bg-gray-900/95 px-5 py-4"><div><p className="text-xs font-semibold uppercase tracking-widest text-purple-400">Customer History</p><h2 className="mt-1 text-xl font-bold text-white">{historyCustomer.customer_name || historyCustomer.username}</h2></div><button onClick={() => { setHistoryCustomer(null); setHistoryPayments([]); setHistoryActivities([]); }} className="rounded-xl bg-gray-800 p-2 text-gray-400"><X className="h-5 w-5" /></button></div><div className="grid gap-5 p-5 md:grid-cols-2">
-        <div><div className="mb-3 flex items-center gap-2"><CreditCard className="h-4 w-4 text-green-400" /><h3 className="text-sm font-semibold text-white">Payment History</h3></div>{isLegacyPaidCustomer(historyCustomer) && <p className="mb-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-sm text-cyan-200">Paid under old pricing — confirmed by owner using XUI activation. Recorded payment amounts and dates are listed below. Any older $0 CRM entries are retained; they do not establish the amount received.</p>}<div className="space-y-2">{historyLoading ? <p className="rounded-xl border border-gray-800 bg-gray-950 p-4 text-sm text-gray-500">Loading payment history...</p> : historyPayments.length === 0 ? <p className="rounded-xl border border-gray-800 bg-gray-950 p-4 text-sm text-gray-500">{isLegacyPaidCustomer(historyCustomer) ? 'No historical payment amounts recorded.' : 'No payments recorded yet.'}</p> : historyPayments.map((p) => <div key={p.id} className="rounded-xl border border-gray-700 bg-gray-950 p-3"><div className="flex justify-between gap-3"><p className="font-semibold text-green-300">{money(p.amount)}</p><span className="text-xs text-gray-500">{dateTime(p.paid_at)}</span></div><p className="mt-1 text-xs text-gray-400">{paymentMethodLabel(p.payment_method)} · {p.payment_status}</p>{p.period_end && <p className="mt-1 text-xs text-gray-500">Service through {dateOnly(p.period_end)}</p>}</div>)}</div></div>
+      {historyCustomer && <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center sm:p-4"><div className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl border border-gray-700 bg-gray-900 sm:max-w-2xl sm:rounded-3xl"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-800 bg-gray-900/95 px-5 py-4"><div><p className="text-xs font-semibold uppercase tracking-widest text-purple-400">Customer History</p><h2 className="mt-1 text-xl font-bold text-white">{historyCustomer.customer_name || historyCustomer.username}</h2></div><button onClick={() => { historyGeneration.current++; setHistoryCustomer(null); setHistoryActivities([]); }} className="rounded-xl bg-gray-800 p-2 text-gray-400"><X className="h-5 w-5" /></button></div><div className="grid gap-5 p-5 md:grid-cols-2">
+        <div><div className="mb-3 flex items-center gap-2"><CreditCard className="h-4 w-4 text-green-400" /><h3 className="text-sm font-semibold text-white">Payment History</h3></div>{isLegacyPaidCustomer(historyCustomer) && <p className="mb-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-sm text-cyan-200">Paid under old pricing — confirmed by owner using XUI activation. Recorded payment amounts and dates are listed below. Any older $0 CRM entries are retained; they do not establish the amount received.</p>}<AdminPaymentHistory key={historyCustomer.id} payments={payments.filter(p=>p.customer_id===historyCustomer.id)} loading={loading} error={paymentReadError}/></div>
         <div><div className="mb-3 flex items-center gap-2"><Activity className="h-4 w-4 text-cyan-400" /><h3 className="text-sm font-semibold text-white">Activity Timeline</h3></div><div className="space-y-2">{historyLoading ? <p className="rounded-xl border border-gray-800 bg-gray-950 p-4 text-sm text-gray-500">Loading activity history...</p> : historyActivities.length === 0 ? <p className="rounded-xl border border-gray-800 bg-gray-950 p-4 text-sm text-gray-500">No activity recorded yet.</p> : historyActivities.map((a) => <div key={a.id} className="rounded-xl border border-gray-700 bg-gray-950 p-3"><div className="flex justify-between gap-3"><p className="text-sm font-semibold text-white">{a.title}</p><span className="text-xs text-gray-500">{dateTime(a.created_at)}</span></div>{a.details && <p className="mt-1 text-xs leading-5 text-gray-400">{a.details}</p>}</div>)}</div></div>
       </div></div></div>}
     </div>
