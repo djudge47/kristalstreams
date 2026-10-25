@@ -1,3 +1,10 @@
+# Paid-renewal quote approval work — October 25, 2026
+
+- The administrator verification endpoint now returns an exact package/credit quote and can save one immutable quote approval for the existing paid-renewal operation. Fresh independent provider reads and current SQL ownership checks reject changed facts before saving.
+- Matching retry and lost-save recovery keep the same approval ID; conflicting, expired or changed-service cases cannot widen or replace it. Approval always denies dispatch authority and cannot spend credits.
+- Source is staged in PR #33. The private migration is not yet installed; exact-source native concurrency/expiry tests are pending. See `docs/paid-renewal-quote-approval.md`.
+- Execution consent, provider timing policy, dispatch/credit reservations, completion/reconciliation, credential delivery, administrative UI and coordinated release remain open. All live controls remain off.
+
 # Installed paid-renewal review prerequisite — October 25, 2026
 
 - The receipt path now gives an explicitly selected live renewal one immutable review identity, with same-operation retry after lost acknowledgements. Current Auth/link/service drift blocks the review without retargeting or repeating the old completed manual purchase.

@@ -423,6 +423,54 @@ try{
     await a.query('set role service_role');
     assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
   });
+  const quotePath='../supabase/migrations/20261025080908_add_private_paid_renewal_quote_approval.sql';
+  const quoteMigration=await readFile(new URL(quotePath,import.meta.url),'utf8');
+  report.sqlSources[quotePath]=createHash('sha256').update(quoteMigration).digest('hex');install(quoteMigration);
+  const quoteActor='00000000-0000-4000-8000-000000000090';
+  install(`update public.iptv_customers set connections_allowed=1 where id='${customerA}';
+    update auth.users set email='djudge47@gmail.com',email_confirmed_at='2026-01-01T00:00:00Z',is_anonymous=false where id='${quoteActor}';`);
+  let quoteSequence=34;
+  async function quoteFixture(){
+    const n=++quoteSequence,request=`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`,reference=`cs_live_NativeQuote${n}`;
+    await a.query(choose(customerA).replace(requestSelected,request));await a.query(bindLive(request,reference));
+    await a.query(record(`NativeQuote${n}`,{owner:liveOwner}));await a.query(`select public.ks_route_paid_order('${reference}')`);
+    const prepared=JSON.parse(await a.query(prepareReview(reference))),operationId=prepared.operationId;
+    const saved=await observer.json(`select jsonb_build_object('binding',binding,'fingerprint',fingerprint) from public.ks_paid_renewal_review_bindings where operation_id='${operationId}'`),binding=saved.binding;
+    const quote={purpose:'paid-renewal-quote/v1',reference,operationId,bindingFingerprint:saved.fingerprint,resellerId:'888',lineId:binding.lineId,username:binding.username,
+      customerId:binding.customerId,currentPackageId:'19',packageId:'20',packageName:'1 Month + 1 Connection',months:1,connections:1,
+      previousExpiresAt:new Date(binding.currentExpiresAt).toISOString(),bouquetIds:[1,60,63],catalogFingerprint:'c'.repeat(64),costUnits:'3000000'};
+    const save=(patch={},checked=new Date().toISOString())=>{const canonical=JSON.stringify({...quote,...patch}),fingerprint=createHash('sha256').update(canonical).digest('hex');
+      return `select public.ks_save_paid_renewal_quote_approval('${reference}','${liveOwner}','${operationId}','${quoteActor}',${literal(canonical)},'${fingerprint}',${(patch.costUnits||quote.costUnits)},68000000,'${checked}')`;};
+    const lookup=`select public.ks_lookup_paid_renewal_quote_approval('${reference}','${liveOwner}','${operationId}','${quoteActor}')`;
+    return{operationId,save,lookup};
+  }
+  const quoted=await quoteFixture();let savedApproval;
+  await check('concurrent quote approvals return one saved approval and never a dispatch claim',async()=>{
+    const sql=quoted.save(),result=await race(sql,sql);const first=JSON.parse(result.first),second=JSON.parse(result.second);savedApproval=first.approvalId;
+    assert.equal(first.replayed,false);assert.equal(second.replayed,true);assert.equal(second.approvalId,savedApproval);assert.equal(second.mayDispatch,false);
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_quote_approvals where operation_id='${quoted.operationId}'`),'1');
+  });
+  await check('a competing different credit quote cannot replace the first approval',async()=>{
+    const f=await quoteFixture(),result=await race(f.save(),f.save({costUnits:'4000000'}),{expectedError:'P0001'});
+    assert.match(result.error.message,/paid_renewal_quote_approval_conflict/);
+    assert.equal(await observer.query(`select cost_units from public.ks_paid_renewal_quote_approvals where operation_id='${f.operationId}'`),'3000000');
+  });
+  await check('a rolled-back quote save allows only the waiting approval to become durable',async()=>{
+    const f=await quoteFixture(),sql=f.save(),result=await race(sql,sql,{release:'rollback'});
+    const first=JSON.parse(result.first),second=JSON.parse(result.second);assert.notEqual(first.approvalId,second.approvalId);assert.equal(second.replayed,false);
+    assert.equal(JSON.parse(await a.query(f.lookup)).approvalId,second.approvalId);
+  });
+  await check('quote approval private grants and immutable guard protect the saved cost',async()=>{
+    const permissions=await observer.json("select jsonb_build_object('browser',has_table_privilege('authenticated','public.ks_paid_renewal_quote_approvals','SELECT'),'serviceRewrite',has_table_privilege('service_role','public.ks_paid_renewal_quote_approvals','UPDATE,DELETE'),'browserCall',has_function_privilege('anon','public.ks_lookup_paid_renewal_quote_approval(text,uuid,uuid,uuid)','EXECUTE'))");
+    assert.deepEqual(permissions,{browser:false,serviceRewrite:false,browserCall:false});
+    await a.query('reset role');await assert.rejects(()=>a.query(`update public.ks_paid_renewal_quote_approvals set cost_units=4000000 where operation_id='${quoted.operationId}'`),error=>error.code==='P0001');await a.query('set role service_role');
+  });
+  await check('expired quote evidence cannot insert and an expired saved approval remains recoverable without replacement',async()=>{
+    const f=await quoteFixture();await assert.rejects(()=>a.query(f.save({},new Date(Date.now()-31000).toISOString())),error=>error.code==='P0001'&&/paid_renewal_quote_expired/.test(error.message));
+    await delay(31000);const recovered=JSON.parse(await a.query(quoted.lookup));assert.equal(recovered.approvalId,savedApproval);assert.equal(recovered.reason,'quote_expired');assert.equal(recovered.state,'review_required');assert.equal(recovered.mayDispatch,false);
+    const retry=JSON.parse(await a.query(quoted.save()));assert.equal(retry.approvalId,savedApproval);assert.equal(retry.validUntil,recovered.validUntil);assert.equal(retry.reason,'quote_expired');
+    assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
+  });
   report.passed=true;
   console.log(`${report.tests.length} native PostgreSQL checks passed. Fictional loopback database only; no Supabase, Stripe, email or provider calls.`);
 }catch(error){report.passed=false;report.failure={message:error.message,code:error.code||null};console.error('Native receipt checks failed:',report.failure);process.exitCode=1;

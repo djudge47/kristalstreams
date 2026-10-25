@@ -1,6 +1,8 @@
 import { PaymentError, getPlan, validatePaidSession } from './ks-payment-validation.js';
 import { buildRequestedRenewalReview } from './ks-crm-renewal-order-review.js';
 import { buildPackageSummary } from '../_shared/ks-roomba-package-summary.js';
+import { createHash } from 'node:crypto';
+import { creditUnits } from './ks-paid-approval.js';
 const uuid = v => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(v);
 const date = v => typeof v === 'string' && Number.isFinite(Date.parse(v));
 const reasons = new Set(['binding_matches','renewal_route_required','ownership_or_service_changed','explicit_selection_required',
@@ -44,11 +46,12 @@ async function currentReview(admin, reference, ownerId, operationId) {
   return data;
 }
 
-export async function verifyPaidRenewalReview({ admin, provider, reference, ownerId, operationId, now = Date.now }) {
+// Internal evidence stays on the server; HTTP receives result only.
+export async function inspectPaidRenewalReview({ admin, provider, reference, ownerId, operationId, now = Date.now }) {
   if (!uuid(ownerId) || !uuid(operationId) || typeof reference !== 'string' || !/^cs_live_[A-Za-z0-9]+$/.test(reference)
     || typeof provider?.snapshot !== 'function') throw unavailable();
   const before = await currentReview(admin, reference, ownerId, operationId);
-  const stopped = () => ({ reference, operationId, state: 'review_required', mayDispatch: false, providerActivated: false });
+  const stopped = () => ({ result: { reference, operationId, state: 'review_required', mayDispatch: false, providerActivated: false }, quote: null });
   if (before.state !== 'awaiting_verification') return stopped();
   const b = before.binding;
   const customer = { id: b.customerId, external_id: b.lineId, username: b.username, expiration_at: b.currentExpiresAt,
@@ -62,7 +65,25 @@ export async function verifyPaidRenewalReview({ admin, provider, reference, owne
   const after = await currentReview(admin, reference, ownerId, operationId);
   if (after.state !== 'awaiting_verification' || after.fingerprint !== before.fingerprint
     || JSON.stringify(after.binding) !== JSON.stringify(before.binding) || Date.parse(review.validUntil) <= now()) return stopped();
-  return { reference, operationId, state: review.status === 'catalog_compatible' ? 'verified_for_review' : 'review_required',
+  const result = { reference, operationId, state: review.status === 'catalog_compatible' ? 'verified_for_review' : 'review_required',
     mayDispatch: false, providerActivated: false, requestedMonths: requested.months, requestedConnections: requested.connections,
     checkedAt: review.checkedAt, validUntil: review.validUntil, blockers: [...review.blockers] };
+  if (review.status !== 'catalog_compatible') return { result, quote: null };
+  const catalog = buildPackageSummary(snapshot.packages, snapshot.checkedAt).packages;
+  const target = catalog.find(p => p.id === review.packageId);
+  const canonicalPackage = p => ({ ...p, bouquets: [...p.bouquets].sort((a,b) => a-b) });
+  const hash = value => createHash('sha256').update(value).digest('hex');
+  const costUnits = String(creditUnits(review.credits));
+  const facts = { purpose: 'paid-renewal-quote/v1', reference, operationId, bindingFingerprint: before.fingerprint,
+    resellerId: String(snapshot.account.id), lineId: b.lineId, username: b.username, customerId: b.customerId,
+    currentPackageId: currentPackage.id, packageId: target.id, packageName: target.name,
+    months: requested.months, connections: requested.connections, previousExpiresAt: new Date(b.currentExpiresAt).toISOString(),
+    bouquetIds: [...review.currentGroupIds], catalogFingerprint: hash(JSON.stringify([canonicalPackage(currentPackage),canonicalPackage(target)])), costUnits };
+  const canonical = JSON.stringify(facts), fingerprint = hash(canonical);
+  result.quote = { fingerprint, costCredits: String(review.credits), packageName: target.name,
+    currentMonths: review.currentMonths, currentConnections: review.currentConnections };
+  return { result, quote: { canonical, fingerprint, costUnits, balanceUnits: String(creditUnits(snapshot.account.credits)),
+    checkedAt: review.checkedAt, validUntil: review.validUntil } };
 }
+
+export async function verifyPaidRenewalReview(input) { return (await inspectPaidRenewalReview(input)).result; }

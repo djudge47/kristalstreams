@@ -5,6 +5,7 @@ import { bootstrap, literal } from './fixtures/ks-reviewed-handoff/fixtures.mjs'
 import { routingSupportSql } from './fixtures/ks-paid-order-routing.mjs';
 import { preparePaidRenewalReview, verifyPaidRenewalReview } from '../_server/ks-paid-renewal-verification.js';
 import { createPaidRenewalReviewHandler } from '../_server/ks-paid-renewal-review-http.js';
+import { savePaidRenewalQuoteApproval } from '../_server/ks-paid-renewal-approval.js';
 
 const {PGlite}=await import(process.env.KS_PGLITE_MODULE||'@electric-sql/pglite');
 const db=new PGlite();let sequence=0,passed=0;
@@ -27,29 +28,35 @@ async function fixture(){
   await query('select public.ks_route_paid_order($1)',[reference]);
   const session={id:reference,livemode:true,mode:'payment',status:'complete',payment_status:'paid',currency:'usd',amount_total:15000,amount_subtotal:15000,payment_intent:`pi_ReviewFixture${n}`,
     metadata:{user_id:owner,plan:'gold',connections:'3',interval:'6 months',price:'150',duration_days:'180'}};
-  const state={now,reads:0,rpcs:0,loseAck:false,readError:false,afterSnapshot:null,patch:{},user:{id:randomUUID(),email:'djudge47@gmail.com',email_confirmed_at:new Date(now).toISOString(),is_anonymous:false}};
+  const state={now,reads:0,rpcs:0,loseAck:false,loseApprovalAck:false,readError:false,afterSnapshot:null,patch:{},targetCost:15,user:{id:randomUUID(),email:'djudge47@gmail.com',email_confirmed_at:new Date(now).toISOString(),is_anonymous:false}};
+  await db.exec(`reset role;insert into auth.users(id,email,email_confirmed_at,is_anonymous) values('${state.user.id}','djudge47@gmail.com','2026-01-01T00:00:00Z',false);set role service_role;`);
   const admin={
     from(table){assert.equal(table,'ks_paid_renewal_review_bindings');const filters=[];return{select(v){assert.equal(v,'checkout_session_id,operation_id,user_id');return this;},eq(k,v){assert.ok(['checkout_session_id','operation_id'].includes(k));filters.push([k,v]);return this;},async maybeSingle(){return{data:(await query(`select checkout_session_id,operation_id,user_id from public.ks_paid_renewal_review_bindings where ${filters.map(([k],i)=>`${k}=$${i+1}`).join(' and ')}`,filters.map(([,v])=>v)))[0]??null,error:null};}};},
     async rpc(name,args){state.rpcs++;if(state.readError)return{data:null,error:{message:'fictional unavailable'}};
       let value;if(name==='ks_prepare_paid_renewal_review')value=(await query('select public.ks_prepare_paid_renewal_review($1,$2) as value',[args.p_session,args.p_user]))[0].value;
-      else {assert.equal(name,'ks_check_paid_renewal_review');value=(await query('select public.ks_check_paid_renewal_review($1,$2,$3) as value',[args.p_session,args.p_user,args.p_operation]))[0].value;}
+      else if(name==='ks_check_paid_renewal_review')value=(await query('select public.ks_check_paid_renewal_review($1,$2,$3) as value',[args.p_session,args.p_user,args.p_operation]))[0].value;
+      else if(name==='ks_lookup_paid_renewal_quote_approval')value=(await query('select public.ks_lookup_paid_renewal_quote_approval($1,$2,$3,$4) as value',[args.p_session,args.p_user,args.p_operation,args.p_actor]))[0].value;
+      else {assert.equal(name,'ks_save_paid_renewal_quote_approval');value=(await query('select public.ks_save_paid_renewal_quote_approval($1,$2,$3,$4,$5,$6,$7,$8,$9) as value',[args.p_session,args.p_user,args.p_operation,args.p_actor,args.p_canonical,args.p_fingerprint,args.p_cost,args.p_balance,args.p_checked]))[0].value;
+        if(state.loseApprovalAck){state.loseApprovalAck=false;return{data:null,error:{message:'fictional lost approval acknowledgement'}};}}
       if(state.loseAck){state.loseAck=false;return{data:null,error:{message:'fictional lost acknowledgement'}};}return{data:value,error:null};}
   };
   const provider={async snapshot(c){state.reads++;assert.equal(c.id,customer);assert.equal(c.external_id,lineId);
     if(state.afterSnapshot)await state.afterSnapshot();
     return {checkedAt:new Date(state.now).toISOString(),account:{id:'888',credits:'68'},line:{id:lineId,username,resellerId:'888',packageId:'76',expiresAt,connections:4,trial:false,enabled:true,adminEnabled:true,bouquetIds:[1,60,63],...state.patch},
       packages:[{id:'76',name:'6 Months + 4 Connections',maxConnections:4,trial:null,paid:{count:6,unit:'months',credits:19},bouquets:[1,60,63,100],issues:[]},
-        {id:'77',name:'6 Months + 3 Connections',maxConnections:3,trial:null,paid:{count:6,unit:'months',credits:15},bouquets:[1,60,63,100],issues:[]}]};},renew(){assert.fail('review must not write to XUI');}};
+        {id:'77',name:'6 Months + 3 Connections',maxConnections:3,trial:null,paid:{count:6,unit:'months',credits:state.targetCost},bouquets:[1,60,63,100],issues:[]}]};},renew(){assert.fail('review must not write to XUI');}};
   const prepare=()=>preparePaidRenewalReview(session,owner,admin);
   const verify=operationId=>verifyPaidRenewalReview({admin,provider,reference,ownerId:owner,operationId,now:()=>state.now});
+  const approve=(operationId,quote,patch={})=>savePaidRenewalQuoteApproval({admin,provider,reference,ownerId:owner,operationId,actorId:state.user.id,now:()=>state.now,
+    expectedQuoteFingerprint:quote.fingerprint,costCredits:quote.costCredits,approvalOnlyConfirmed:true,preserveChannelsConfirmed:true,serviceChangesConfirmed:true,...patch});
   const http=createPaidRenewalReviewHandler({env,now:()=>state.now,providerFactory:()=>provider,createClient:(_url,key)=>key==='fictional-anon'?{auth:{getUser:async()=>({data:{user:state.user},error:null})}}:admin});
   const call=async(body={reference},patch={})=>{const res={code:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
     await http({method:'POST',query:{view:'paid-renewal-verification'},headers:{origin:'https://fixture.vercel.app',host:'fixture.vercel.app','content-type':'application/json',authorization:'Bearer fictional-admin'},body,...patch},res);return res;};
-  return{owner,customer,reference,session,admin,provider,state,prepare,verify,call};
+  return{owner,customer,reference,session,admin,provider,state,prepare,verify,call,approve};
 }
 try{
   await bootstrap({request:sql=>db.exec(sql)},{pglitePreflight:true});await db.exec(await routingSupportSql());
-  for(const name of ['20261025033932_add_private_live_checkout_intent_binding.sql','20261025031536_add_private_paid_order_routing.sql','20261025040332_add_verified_checkout_service_selection.sql','20261025042823_add_private_paid_renewal_review_binding.sql'])await db.exec(await readFile(new URL(`../supabase/migrations/${name}`,import.meta.url),'utf8'));
+  for(const name of ['20261025033932_add_private_live_checkout_intent_binding.sql','20261025031536_add_private_paid_order_routing.sql','20261025040332_add_verified_checkout_service_selection.sql','20261025042823_add_private_paid_renewal_review_binding.sql','20261025080908_add_private_paid_renewal_quote_approval.sql'])await db.exec(await readFile(new URL(`../supabase/migrations/${name}`,import.meta.url),'utf8'));
   await check('paid renewal preparation creates one immutable review identity, never dispatch authority',async()=>{
     const f=await fixture(),first=await f.prepare(),second=await f.prepare();assert.equal(first.state,'awaiting_verification');assert.ok(first.operationId);
     assert.deepEqual(second,{...first,replayed:true});assert.equal(first.mayDispatch,false);assert.equal(first.providerActivated,false);
@@ -111,6 +118,57 @@ try{
     await db.exec('reset role');await assert.rejects(()=>query('delete from public.ks_paid_renewal_review_bindings where checkout_session_id=$1',[f.reference]),/paid_renewal_review_is_immutable/);
     await db.exec('set role authenticated');await assert.rejects(()=>query('select public.ks_prepare_paid_renewal_review($1,$2)',[f.reference,f.owner]),/permission denied/);
     await assert.rejects(()=>query('select * from public.ks_paid_renewal_review_bindings'),/permission denied/);await db.exec('reset role;set role service_role');
+  });
+  await check('an exact reviewed quote saves one approval with no private evidence or dispatch authority',async()=>{
+    const f=await fixture(),p=await f.prepare(),review=await f.verify(p.operationId),before=(await query('select to_jsonb(c) as value from public.iptv_customers c where id=$1',[f.customer]))[0].value;
+    assert.equal(review.quote.costCredits,'15');const first=await f.approve(p.operationId,review.quote);assert.equal(first.state,'approval_saved');assert.equal(first.replayed,false);
+    const reads=f.state.reads,again=await f.approve(p.operationId,review.quote);assert.equal(again.approvalId,first.approvalId);assert.equal(again.replayed,true);assert.equal(f.state.reads,reads);
+    assert.equal(first.mayDispatch,false);for(const k of ['quote_canonical','quote','lineId','customerId','balanceUnits','claimToken','token'])assert.equal(k in first,false);
+    assert.deepEqual((await query('select to_jsonb(c) as value from public.iptv_customers c where id=$1',[f.customer]))[0].value,before);
+  });
+  await check('lost approval acknowledgement recovers the saved identity without another XUI read',async()=>{
+    const f=await fixture(),p=await f.prepare(),review=await f.verify(p.operationId);f.state.loseApprovalAck=true;
+    await assert.rejects(()=>f.approve(p.operationId,review.quote),/same attempt/);const reads=f.state.reads;
+    const row=(await query('select approval_id from public.ks_paid_renewal_quote_approvals where operation_id=$1',[p.operationId]))[0];
+    assert.equal((await f.approve(p.operationId,review.quote)).approvalId,row.approval_id);assert.equal(f.state.reads,reads);
+  });
+  await check('changed credit costs and channel choices cannot approve an earlier quote',async()=>{
+    for(const drift of ['cost','channels']){const f=await fixture(),p=await f.prepare(),review=await f.verify(p.operationId);
+      if(drift==='cost')f.state.targetCost=16;else f.state.patch={bouquetIds:[1,60]};
+      await assert.rejects(()=>f.approve(p.operationId,review.quote),e=>e.status===409);
+      assert.equal((await query('select count(*)::int as n from public.ks_paid_renewal_quote_approvals where operation_id=$1',[p.operationId]))[0].n,0);
+    }
+  });
+  await check('an existing approval cannot be replaced, widened or used after service ownership changes',async()=>{
+    const f=await fixture(),p=await f.prepare(),review=await f.verify(p.operationId),first=await f.approve(p.operationId,review.quote),reads=f.state.reads;
+    await assert.rejects(()=>f.approve(p.operationId,review.quote,{costCredits:'16'}),e=>e.status===409);assert.equal(f.state.reads,reads);
+    await db.exec(`reset role;update auth.users set email_confirmed_at='2026-01-02T00:00:00Z' where id='${f.owner}';set role service_role;`);
+    const recovered=await f.approve(p.operationId,review.quote);assert.equal(recovered.state,'review_required');assert.equal(recovered.reason,'service_changed');assert.equal(recovered.approvalId,first.approvalId);assert.equal(f.state.reads,reads);
+  });
+  await check('HTTP requires every exact quote confirmation and rejects write or target overrides before XUI',async()=>{
+    const f=await fixture(),p=await f.prepare(),review=await f.verify(p.operationId);
+    const body={reference:f.reference,operationId:p.operationId,action:'save-quote-approval',expectedQuoteFingerprint:review.quote.fingerprint,costCredits:'15',approvalOnlyConfirmed:true,preserveChannelsConfirmed:true,serviceChangesConfirmed:true};
+    for(const field of ['approvalOnlyConfirmed','preserveChannelsConfirmed','serviceChangesConfirmed'])assert.equal((await f.call({...body,[field]:false})).code,400);
+    assert.equal((await f.call({...body,execute:true})).code,400);assert.equal(f.state.reads,1);
+    const res=await f.call(body);assert.equal(res.code,200);assert.equal(res.body.state,'approval_saved');assert.equal(res.body.mayDispatch,false);
+    assert.equal((await f.call(body)).body.approvalId,res.body.approvalId);assert.equal(f.state.reads,2);
+  });
+  await check('quote approvals are private and immutable even to accidental privileged updates',async()=>{
+    const f=await fixture(),p=await f.prepare(),review=await f.verify(p.operationId);await f.approve(p.operationId,review.quote);
+    await assert.rejects(()=>query('delete from public.ks_paid_renewal_quote_approvals where operation_id=$1',[p.operationId]),/permission denied/);
+    await db.exec('reset role');await assert.rejects(()=>query('delete from public.ks_paid_renewal_quote_approvals where operation_id=$1',[p.operationId]),/paid_renewal_quote_is_immutable/);
+    await db.exec('set role authenticated');await assert.rejects(()=>query('select * from public.ks_paid_renewal_quote_approvals'),/permission denied/);await db.exec('reset role;set role service_role');
+  });
+  await check('failed independent provider reads leave no approval and retry retains the same renewal',async()=>{
+    const f=await fixture(),p=await f.prepare(),review=await f.verify(p.operationId),snapshot=f.provider.snapshot;
+    f.provider.snapshot=async()=>{throw Error('fictional provider unavailable');};await assert.rejects(()=>f.approve(p.operationId,review.quote),/fictional provider unavailable/);
+    assert.equal((await query('select count(*)::int as n from public.ks_paid_renewal_quote_approvals where operation_id=$1',[p.operationId]))[0].n,0);
+    f.provider.snapshot=snapshot;const recovered=await f.approve(p.operationId,review.quote);assert.equal(recovered.operationId,p.operationId);assert.equal(recovered.state,'approval_saved');
+  });
+  await check('current database administrator confirmation is required before any approval provider read',async()=>{
+    const f=await fixture(),p=await f.prepare(),review=await f.verify(p.operationId),reads=f.state.reads;
+    await db.exec(`reset role;update auth.users set email_confirmed_at=null where id='${f.state.user.id}';set role service_role;`);
+    await assert.rejects(()=>f.approve(p.operationId,review.quote),/paid_renewal_quote_admin_required/);assert.equal(f.state.reads,reads);
   });
   console.log(`${passed} paid-renewal verification SQL/handler/recovery checks passed. Fictional data and provider only.`);
 }finally{await db.close();}
