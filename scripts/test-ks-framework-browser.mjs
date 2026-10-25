@@ -87,6 +87,7 @@ try {
         assert.match(request.headers().authorization, /^Bearer /); activityReads++;
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
           status: activityReads === 1 ? 'activity_response_received' : 'activity_unverified', checkedAt: new Date().toISOString(),
+          diagnostic: activityReads === 1 ? 'activity_list_received' : activityReads === 2 ? 'provider_denied' : 'PRIVATE-UNTRUSTED-MESSAGE',
           message: 'PRIVATE-UNTRUSTED-MESSAGE', mode: 'read-only', databaseWrites: false }) });
       }
       if (url.origin === origin) return route.continue();
@@ -367,8 +368,13 @@ try {
   assert.equal(await activityPage.getByRole('button', { name: 'Available in 60s', exact: true }).isDisabled(), true);
   await activityPage.clock.fastForward(60_001); assert.equal(activityReads, 1);
   await activityPage.reload(); await activityButton.waitFor(); assert.equal(activityReads, 1);
-  await activityButton.click(); await activityPage.getByText(/Activity support is still unverified/).waitFor();
+  await activityButton.click(); await activityPage.getByText(/Roomba rejected the activity request/).waitFor();
   assert.equal(activityReads, 2); assert.equal(await activityPage.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  assert.equal(await activityPage.getByText('PRIVATE-UNTRUSTED-MESSAGE').count(), 0);
+  await activityPage.clock.fastForward(60_001); assert.equal(activityReads, 2);
+  await activityPage.reload(); await activityButton.waitFor(); assert.equal(activityReads, 2);
+  await activityButton.click(); await activityPage.getByText(/Activity support is still unverified/).waitFor();
+  assert.equal(activityReads, 3); assert.equal(await activityPage.getByText('PRIVATE-UNTRUSTED-MESSAGE').count(), 0);
   await activityContext.close();
   const ordinary = await contextFor('ordinary@example.invalid');
   const denied = await ordinary.newPage(); denied.on('pageerror', error => pageErrors.push(error.message));

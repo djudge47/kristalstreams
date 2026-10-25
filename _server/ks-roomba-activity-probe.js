@@ -1,6 +1,21 @@
 import { createAdminRoombaHandler } from './ks-roomba-admin.js';
 import { createRoombaPreviewHandler } from './ks-roomba-preview.js';
 
+// All labels are chosen locally. Never forward provider bodies or raw errors.
+function diagnosticFor(result) {
+  if (result.code === 200 && result.body?.status === 'activity_probe_complete')
+    return result.body?.probe?.recognized === true ? 'activity_list_received' : 'response_unrecognized';
+  if (result.code === 503) return 'configuration_unavailable';
+  if (result.body?.status !== 'connection_failed') return 'diagnostic_failed';
+  const { upstreamStatus, stage, reason } = result.body;
+  if (upstreamStatus === 401 || upstreamStatus === 403) return 'provider_denied';
+  if (upstreamStatus === 429) return 'provider_rate_limited';
+  if (Number.isInteger(upstreamStatus) && upstreamStatus >= 300 && upstreamStatus < 400) return 'provider_redirect';
+  if (Number.isInteger(upstreamStatus) && upstreamStatus >= 400 && upstreamStatus <= 599) return 'provider_http_error';
+  if (['TIMEOUT', 'ETIMEDOUT', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'KS_RESPONSE_TIMEOUT'].includes(reason)) return 'request_timeout';
+  return stage === 'response_body' ? 'response_unreadable' : 'transport_failed';
+}
+
 // Existing administrator verification and reseller-account preflight precede
 // every diagnostic. No provider/customer values are exposed by this route.
 export function createActivityProbeHandler(settings = {}) {
@@ -21,18 +36,24 @@ export function createActivityProbeHandler(settings = {}) {
     if (Object.keys(req.query || {}).join(',') !== 'view' || req.query.view !== 'activity-support') return reply(400, { error: 'Use the activity check button.' });
     try {
       const account = await capture(authorize, req);
-      if (account.code !== 200 || account.body?.status !== 'connected' || !/^[1-9]\d{0,14}$/.test(String(account.body?.account?.id)))
-        return reply([401, 403, 429].includes(account.code) ? account.code : 503, { error: 'Administrator and reseller connection must be verified before checking activity.' });
+      if (account.code !== 200 || account.body?.status !== 'connected' || !/^[1-9]\d{0,14}$/.test(String(account.body?.account?.id))) {
+        const retryAfterSeconds = account.code === 429 ? 60 : 0;
+        if (retryAfterSeconds) res.setHeader('Retry-After', String(retryAfterSeconds));
+        return reply([401, 403, 429].includes(account.code) ? account.code : 503, { error: 'Administrator and reseller connection must be verified before checking activity.', retryAfterSeconds });
+      }
       if (cached && now() - cached.at < 60000) return reply(200, { ...cached.body, cached: true });
       if (!pending && now() < retryAt) {
-        res.setHeader('Retry-After', '60'); return reply(429, { error: 'Please wait one minute before another activity check.' });
+        const retryAfterSeconds = Math.max(1, Math.ceil((retryAt - now()) / 1000));
+        res.setHeader('Retry-After', String(retryAfterSeconds)); return reply(429, { error: 'Please wait one minute before another activity check.', retryAfterSeconds });
       }
       if (!pending) {
         retryAt = now() + 60000;
         pending = (async () => {
           const result = await capture(probe, { method: 'GET', headers: { authorization: `Bearer ${env.ROOMBA_PREVIEW_SECRET}` } });
-          const recognized = result.code === 200 && result.body?.status === 'activity_probe_complete' && result.body?.probe?.recognized === true;
+          const diagnostic = diagnosticFor(result);
+          const recognized = diagnostic === 'activity_list_received';
           const body = { status: recognized ? 'activity_response_received' : 'activity_unverified',
+            diagnostic,
             checkedAt: new Date(now()).toISOString(), mode: 'read-only', databaseWrites: false,
             message: recognized ? 'Roomba returned an activity list. Customer matching and live counts still need verification.'
               : 'This request did not establish activity support. No online or offline result can be inferred.' };

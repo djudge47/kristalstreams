@@ -10,6 +10,19 @@ type AccountResult = {
   account: { id: string | number | null; username: string | number | null; credits: string | number | null };
 };
 
+const activityMessages: Readonly<Record<string, string>> = {
+  provider_denied: 'Roomba rejected the activity request. The reseller account check passed, but activity permission or compatibility is not established.',
+  provider_rate_limited: 'Roomba limited the activity request. Wait one minute before checking again.',
+  provider_redirect: 'Roomba redirected the activity request. The redirect was blocked to protect the connection.',
+  provider_http_error: 'Roomba returned an HTTP error for activity. The reseller account check passed, but no activity result was verified.',
+  request_timeout: 'The activity request timed out. The reseller account check passed, but no activity result was verified.',
+  response_unreadable: 'Roomba responded, but its activity response could not be read safely. No activity result was verified.',
+  response_unrecognized: 'Roomba responded, but it did not return the expected activity-list format. Activity compatibility remains unverified.',
+  transport_failed: 'The activity connection failed before a readable response was received. No activity result was verified.',
+  configuration_unavailable: 'The activity connection configuration could not be verified. No activity result was verified.',
+  diagnostic_failed: 'The activity check could not verify a result.',
+};
+
 const RoombaConnection: React.FC = () => {
   const [result, setResult] = useState<AccountResult | null>(null);
   const [activity, setActivity] = useState<{ message: string; checkedAt: string } | null>(null);
@@ -38,8 +51,8 @@ const RoombaConnection: React.FC = () => {
     const timeout = window.setTimeout(() => request.abort(), activityCheck ? 45000 : 25000);
     setLoading(true);
     setError(null);
-    setResult(null);
-    setActivity(null);
+    if (activityCheck) setActivity(null);
+    else setResult(null);
     try {
       const { data, error: sessionError } = await supabase.auth.getSession();
       if (request.signal.aborted || controller.current !== request) return;
@@ -52,6 +65,11 @@ const RoombaConnection: React.FC = () => {
       if (request.signal.aborted || controller.current !== request) return;
       if (!response.ok) {
         setCooldown(Math.min(60, Math.max(0, Number(payload?.retryAfterSeconds) || 0)));
+        if (activityCheck) throw new Error(response.status === 429
+          ? 'Please wait one minute before checking activity again.'
+          : response.status === 401 ? 'Please sign in again to your admin account.'
+          : response.status === 403 ? 'Activity checks require the confirmed Kristal Streams administrator.'
+          : 'The administrator or reseller account check could not be completed. No activity result was verified.');
         throw new Error(payload?.error || 'The connection could not be checked. Please try again.');
       }
       if (activityCheck) {
@@ -59,7 +77,7 @@ const RoombaConnection: React.FC = () => {
           throw new Error('The activity check response could not be verified.');
         setActivity({ message: payload.status === 'activity_response_received'
           ? 'Roomba returned an activity list. Customer matching and live counts still need verification.'
-          : 'Activity support is still unverified. This does not mean your customers are offline.', checkedAt: payload.checkedAt });
+          : `${typeof payload.diagnostic === 'string' && Object.prototype.hasOwnProperty.call(activityMessages, payload.diagnostic) ? activityMessages[payload.diagnostic] : 'Activity support is still unverified.'} This does not mean your customers are offline.`, checkedAt: payload.checkedAt });
         setCooldown(60);
         return;
       }

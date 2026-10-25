@@ -50,6 +50,7 @@ gate=new Promise(resolve=>{release=resolve;});
 const first=call(), second=call(); await new Promise(resolve=>setImmediate(resolve)); assert.equal(probeCount,1);
 release(); const results=await Promise.all([first,second]);
 assert.ok(results.every(r=>r.code===200&&r.body.status==='activity_response_received'));
+assert.ok(results.every(r=>r.body.diagnostic==='activity_list_received'));
 assert.ok(results.every(r=>!JSON.stringify(r.body).includes(secret)));
 assert.equal((await call()).body.cached,true); assert.equal(probeCount,1);
 assert.equal((await call({headers:{authorization:'Bearer customer'}})).code,403);
@@ -59,4 +60,37 @@ for(const VERCEL_ENV of ['production','development',undefined]) {
  const res=response();await blocked({method:'GET'},res);assert.equal(res.code,404);
 }
 console.log('PASS: admin preflight, query/method restrictions, reauthorization before cache, shared request and Preview gates');
+
+const diagnosticCases = [
+  [200, {status:'activity_probe_complete',probe:{recognized:false}}, 'response_unrecognized'],
+  [502, {status:'connection_failed',upstreamStatus:401}, 'provider_denied'],
+  [502, {status:'connection_failed',upstreamStatus:403}, 'provider_denied'],
+  [502, {status:'connection_failed',upstreamStatus:429}, 'provider_rate_limited'],
+  [502, {status:'connection_failed',upstreamStatus:302}, 'provider_redirect'],
+  [502, {status:'connection_failed',upstreamStatus:503}, 'provider_http_error'],
+  [502, {status:'connection_failed',upstreamStatus:200,stage:'response_body',reason:'NON_JSON_RESPONSE'}, 'response_unreadable'],
+  [502, {status:'connection_failed',stage:'proxy_request',reason:'TIMEOUT'}, 'request_timeout'],
+  [502, {status:'connection_failed',stage:'proxy_request',reason:'ENOTFOUND'}, 'transport_failed'],
+  [503, {status:'not_configured',missing:[secret]}, 'configuration_unavailable'],
+  [200, {status:secret}, 'diagnostic_failed'],
+];
+for (const [code, body, diagnostic] of diagnosticCases) {
+  let upstreamCalls=0;
+  const checked=createActivityProbeHandler({env, now:()=>time,
+    authorize:async(req,res)=>res.status(200).json({status:'connected',account:{id:12}}),
+    probe:async(req,res)=>{upstreamCalls++;return res.status(code).json({...body,error:secret,url:secret});}});
+  const res=response(); await checked({method:'GET',query:{view:'activity-support'}},res);
+  assert.equal(res.code,200); assert.equal(res.body.status,'activity_unverified');
+  assert.equal(res.body.diagnostic,diagnostic); assert.equal(res.body.databaseWrites,false);
+  assert.ok(!JSON.stringify(res.body).includes(secret)); assert.equal(upstreamCalls,1);
+  const cachedResult=response(); await checked({method:'GET',query:{view:'activity-support'}},cachedResult);
+  assert.equal(cachedResult.body.cached,true); assert.equal(cachedResult.body.diagnostic,diagnostic); assert.equal(upstreamCalls,1);
+}
+const throttled=createActivityProbeHandler({env,
+  authorize:async(req,res)=>res.status(429).json({error:secret,retryAfterSeconds:secret}),
+  probe:()=>{throw Error('must not contact');}});
+res=response(); await throttled({method:'GET',query:{view:'activity-support'}},res);
+assert.equal(res.code,429); assert.equal(res.headers['Retry-After'],'60'); assert.equal(res.body.retryAfterSeconds,60);
+assert.ok(!JSON.stringify(res.body).includes(secret));
+console.log('PASS: fixed failure categories distinguish denied, limited, redirect, HTTP, timeout, parse, format, transport and configuration without leaking upstream data');
 console.log('Activity diagnostic checks passed. All transport and identities are fictional; no live request was made.');
