@@ -629,7 +629,7 @@ try{
     assert.deepEqual(await observer.json(`select to_jsonb(c)-array['expiration_at','connections_allowed','package_name'] from public.iptv_customers c where id='${customerA}'`),before);
     assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
   });
-  const ownerProjectionPath='../supabase/migrations/20261025124926_add_private_owner_renewal_completion_status.sql';
+  const ownerProjectionPath='../supabase/migrations/20261025130107_add_private_owner_renewal_completion_status.sql';
   const ownerProjectionSql=await readFile(new URL(ownerProjectionPath,import.meta.url),'utf8');
   report.sqlSources[ownerProjectionPath]=createHash('sha256').update(ownerProjectionSql).digest('hex');install(ownerProjectionSql);
   const ownerStatus=(owner=liveOwner,refs=[completed.reference])=>`select public.ks_owner_paid_renewal_completions('${owner}',array[${refs.map(literal).join(',')}]::text[])`;
