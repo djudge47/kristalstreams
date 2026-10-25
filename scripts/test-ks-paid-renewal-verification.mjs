@@ -56,7 +56,7 @@ async function fixture(){
 }
 try{
   await bootstrap({request:sql=>db.exec(sql)},{pglitePreflight:true});await db.exec(await routingSupportSql());
-  for(const name of ['20261025033932_add_private_live_checkout_intent_binding.sql','20261025031536_add_private_paid_order_routing.sql','20261025040332_add_verified_checkout_service_selection.sql','20261025042823_add_private_paid_renewal_review_binding.sql','20261025080908_add_private_paid_renewal_quote_approval.sql'])await db.exec(await readFile(new URL(`../supabase/migrations/${name}`,import.meta.url),'utf8'));
+  for(const name of ['20261025033932_add_private_live_checkout_intent_binding.sql','20261025031536_add_private_paid_order_routing.sql','20261025040332_add_verified_checkout_service_selection.sql','20261025042823_add_private_paid_renewal_review_binding.sql','20261025082051_add_private_paid_renewal_quote_approval.sql'])await db.exec(await readFile(new URL(`../supabase/migrations/${name}`,import.meta.url),'utf8'));
   await check('paid renewal preparation creates one immutable review identity, never dispatch authority',async()=>{
     const f=await fixture(),first=await f.prepare(),second=await f.prepare();assert.equal(first.state,'awaiting_verification');assert.ok(first.operationId);
     assert.deepEqual(second,{...first,replayed:true});assert.equal(first.mayDispatch,false);assert.equal(first.providerActivated,false);

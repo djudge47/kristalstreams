@@ -423,7 +423,7 @@ try{
     await a.query('set role service_role');
     assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
   });
-  const quotePath='../supabase/migrations/20261025080908_add_private_paid_renewal_quote_approval.sql';
+  const quotePath='../supabase/migrations/20261025082051_add_private_paid_renewal_quote_approval.sql';
   const quoteMigration=await readFile(new URL(quotePath,import.meta.url),'utf8');
   report.sqlSources[quotePath]=createHash('sha256').update(quoteMigration).digest('hex');install(quoteMigration);
   const quoteActor='00000000-0000-4000-8000-000000000090';

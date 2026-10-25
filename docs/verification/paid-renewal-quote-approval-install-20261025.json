@@ -1,0 +1,87 @@
+{
+  "kind": "connected-paid-renewal-quote-approval-prerequisite",
+  "project": "wftfxerblhlsxiijtfbo",
+  "migration": {
+    "version": "20261025082051",
+    "name": "add_private_paid_renewal_quote_approval",
+    "sourcePath": "supabase/migrations/20261025082051_add_private_paid_renewal_quote_approval.sql",
+    "sha256": "17b429ae6a5165c32f25d038f55a54b0b04fef52b05c6fa067ed2a9a879f04d1",
+    "testedDraftPath": "supabase/migrations/20261025080908_add_private_paid_renewal_quote_approval.sql",
+    "sqlBytesChangedAfterNativeTest": false
+  },
+  "testedCommit": "258ed61550575855e3f9f17f7c5d6e48d4ad955c",
+  "successfulWorkflowRuns": {
+    "applicationQuality": 40176088606,
+    "crmXuiStatus": 40176088561,
+    "nativeReceiptAndApproval": 40176088548,
+    "nativePaidRecovery": 40176088562,
+    "nativeSignedHandoff": 40176088541,
+    "nativeCrmRenewalRehearsal": 40176088549
+  },
+  "nativeJobs": [
+    {
+      "postgres": "17.6",
+      "jobId": 121116962522,
+      "checksPassed": 53
+    },
+    {
+      "postgres": "17.11",
+      "jobId": 121116962755,
+      "checksPassed": 53
+    }
+  ],
+  "connectedFunctionBodyMd5": {
+    "ks_paid_renewal_quote_actor": "7eae67e871d46f7ac8ccc4c08baf7c68",
+    "ks_guard_paid_renewal_quote_approval": "5b645181b912e7d24f26dab148237c80",
+    "ks_lookup_paid_renewal_quote_approval": "bd1c6275ab97053aa475592409d8ec27",
+    "ks_save_paid_renewal_quote_approval": "9c532736379a33a83408e1a517368a52"
+  },
+  "unchangedPriorFunctionBodyMd5": {
+    "ks_paid_renewal_current_binding": "f45ce0e0d60f03b5150c38f709fe1885",
+    "ks_guard_paid_renewal_review_binding": "a714593153b6c7bdeb2ba7c309fdcd7f",
+    "ks_prepare_paid_renewal_review": "a5debefeae9a5ff811ebd68de8aa030e",
+    "ks_check_paid_renewal_review": "b81de2c4802984375f3b42d2308bd0c5"
+  },
+  "connectedChecks": {
+    "privateInvokerFunctionsWithEmptySearchPath": true,
+    "privateTablePermissions": true,
+    "rls": true,
+    "immutableGuardEnabled": true,
+    "quoteApprovals": 0,
+    "renewalControls": [
+      false,
+      false,
+      false
+    ],
+    "newSecurityWarningKinds": 0
+  },
+  "unchangedBeforeAndAfter": {
+    "crmCustomers": 20,
+    "crmServiceBillingDigest": "0adce2c433d59c54126b71a9c9138fd3",
+    "websiteEntitlementDigest": "eae960883bd1639904bf489ec82b2ea2",
+    "paymentReceipts": 2,
+    "liveCheckoutRequests": 0,
+    "previewRequests": 1,
+    "purchaseIntents": 1,
+    "liveQueuedOrders": 0,
+    "routes": 0,
+    "pendingAlerts": 0,
+    "reviewBindings": 0,
+    "existingNotificationRecords": 2
+  },
+  "scope": {
+    "websiteProductionRelease": false,
+    "flagChanges": false,
+    "realPaymentReplayOrEmail": false,
+    "providerOperationOrCreditSpend": false,
+    "customerDataBackfill": false,
+    "creditReservationOrDispatchAuthority": false,
+    "newAdministrativeUi": false
+  },
+  "remaining": [
+    "Explicit execution/credit consent and reviewed provider timing policy",
+    "Fresh current-fact claims and physical line/reseller reservations",
+    "Completion/reconciliation, credential delivery and administrative UI",
+    "Coordinated release and separately authorized provider execution"
+  ]
+}

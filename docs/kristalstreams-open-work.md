@@ -1,8 +1,8 @@
-# Paid-renewal quote approval work — October 25, 2026
+# Installed paid-renewal quote approval prerequisite — October 25, 2026
 
 - The administrator verification endpoint now returns an exact package/credit quote and can save one immutable quote approval for the existing paid-renewal operation. Fresh independent provider reads and current SQL ownership checks reject changed facts before saving.
 - Matching retry and lost-save recovery keep the same approval ID; conflicting, expired or changed-service cases cannot widen or replace it. Approval always denies dispatch authority and cannot spend credits.
-- Source is staged in PR #33. The private migration is not yet installed; exact-source native concurrency/expiry tests are pending. See `docs/paid-renewal-quote-approval.md`.
+- Private migration `20261025082051` is installed with matching function bodies, private invoker permissions, RLS and immutable guard. Customer billing/service and website access digests are unchanged; receipts remain two and live requests/queues/reviews/approvals remain empty. All six workflows passed at `258ed615`, including 53 native cases on each PostgreSQL version. Source remains staged in PR #33. See `docs/paid-renewal-quote-approval.md` and its installation report.
 - Execution consent, provider timing policy, dispatch/credit reservations, completion/reconciliation, credential delivery, administrative UI and coordinated release remain open. All live controls remain off.
 
 # Installed paid-renewal review prerequisite — October 25, 2026
