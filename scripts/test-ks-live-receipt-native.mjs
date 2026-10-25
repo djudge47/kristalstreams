@@ -292,6 +292,52 @@ try{
     assert.equal(JSON.parse(result.second).replayed,false);
     assert.equal(await observer.query("select count(*) from public.ks_paid_order_routes where checkout_session_id='cs_live_RollbackNative'"),'1');
   });
+  const liveBindingPath='../supabase/migrations/20261025032724_add_private_live_checkout_intent_binding.sql';
+  const liveBinding=await readFile(new URL(liveBindingPath,import.meta.url),'utf8');
+  report.sqlSources[liveBindingPath]=createHash('sha256').update(liveBinding).digest('hex');
+  const previewFunctions="select jsonb_object_agg(proname,md5(prosrc)) from pg_proc where proname in ('ks_guard_checkout_request','ks_reserve_checkout_request','ks_bind_checkout_request')";
+  const oldPreview=await observer.json(previewFunctions);
+  install(liveBinding);
+  const liveOwner='00000000-0000-4000-8000-000000000011';
+  const requestOne='00000000-0000-4000-8000-000000000012',requestTwo='00000000-0000-4000-8000-000000000013';
+  install(`insert into auth.users(id,email,email_confirmed_at,is_anonymous) values('${liveOwner}','native-live@example.invalid','2026-01-01T00:00:00Z',false);
+    insert into public.profiles(id,email) values('${liveOwner}','native-live@example.invalid');`);
+  const reserveLive=id=>`select public.ks_reserve_live_checkout_request('${liveOwner}',${literal(id)},'gold',3,'renewal','https://kristalstream.com','native-live@example.invalid')`;
+  const bindLive=(id,session)=>`select public.ks_bind_live_checkout_request('${liveOwner}',${literal(id)},${literal(session)})`;
+  const liveProfile=await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`);
+  await check('live migration leaves every existing Preview binding function byte-equivalent',async()=>{
+    assert.deepEqual(await observer.json(previewFunctions),oldPreview);
+    const funcs=await observer.json("select jsonb_agg(jsonb_build_object('definer',prosecdef,'config',proconfig)) from pg_proc where proname in ('ks_guard_live_checkout_request','ks_reserve_live_checkout_request','ks_bind_live_checkout_request')");
+    assert.equal(funcs.length,3);assert.ok(funcs.every(fn=>fn.definer===false&&fn.config.includes('search_path=\"\"')));
+  });
+  await check('concurrent live checkout reservations wait and retain one canonical purpose/price',async()=>{
+    const result=await race(reserveLive(requestOne),reserveLive(requestOne));
+    assert.deepEqual(JSON.parse(result.first),JSON.parse(result.second));
+    const row=JSON.parse(result.second);assert.equal(row.kind,'renewal');assert.equal(row.amount_cents,15000);assert.equal(row.livemode,true);
+  });
+  await check('concurrent live session binding saves one immutable purpose before returning checkout',async()=>{
+    const sql=bindLive(requestOne,'cs_live_NativeBound');const result=await race(sql,sql);
+    assert.deepEqual(JSON.parse(result.first),JSON.parse(result.second));
+    assert.equal(await observer.query("select count(*) from public.ks_setup_purchase_intents where checkout_session_id='cs_live_NativeBound'"),'1');
+  });
+  await check('live binding rollback recovers one request and intent without a second session',async()=>{
+    await a.query(reserveLive(requestTwo));const sql=bindLive(requestTwo,'cs_live_NativeBoundRollback');
+    await race(sql,sql,{release:'rollback'});
+    assert.equal(await observer.query("select count(*) from public.ks_setup_purchase_intents where checkout_session_id='cs_live_NativeBoundRollback'"),'1');
+  });
+  await check('live bindings reject purpose changes, cross-mode sessions and browser access',async()=>{
+    await assert.rejects(()=>a.query(reserveLive(requestOne).replace("'renewal'","'new_service'")),/checkout_request_binding_changed/);
+    await assert.rejects(()=>a.query(bindLive(requestOne,'cs_test_WrongMode')),/invalid_checkout_session/);
+    await b.query('reset role; set role authenticated');
+    await assert.rejects(()=>b.query(reserveLive(requestOne)),error=>error.code==='42501');
+    await assert.rejects(()=>b.query('select * from public.ks_live_checkout_requests'),error=>error.code==='42501');
+    await b.query('reset role; set role service_role');
+  });
+  await check('live checkout capture alone creates no payment, provider work or customer entitlement',async()=>{
+    assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
+    assert.equal(await observer.query(`select count(*) from public.ks_payment_receipts where user_id='${liveOwner}'`),'0');
+    assert.deepEqual(await observer.json("select jsonb_build_object('attempts',(select count(*) from public.ks_preview_provisioning_attempts),'claims',(select count(*) from public.ks_setup_review_claims),'spent',(select coalesce(sum(spent_units),0) from public.ks_setup_review_budgets))"),{attempts:0,claims:0,spent:0});
+  });
   report.passed=true;
   console.log(`${report.tests.length} native PostgreSQL checks passed. Fictional loopback database only; no Supabase, Stripe, email or provider calls.`);
 }catch(error){report.passed=false;report.failure={message:error.message,code:error.code||null};console.error('Native receipt checks failed:',report.failure);process.exitCode=1;

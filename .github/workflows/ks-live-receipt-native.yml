@@ -13,6 +13,7 @@ on:
       - '_server/ks-payments.js'
       - '_server/ks-receipt-only.js'
       - '_server/ks-paid-order-routing.js'
+      - '_server/ks-checkout-intent.js'
       - 'supabase/functions/ks-order-notification/**'
 
 permissions:

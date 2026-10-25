@@ -23,7 +23,11 @@ export async function createCheckoutSession(plan: string, price: number, interva
     }
 
     if (checkoutIntentEnabled && !purchaseKind) throw new Error('Choose the service type before continuing.');
-    const key = checkoutIntentEnabled && purchaseKind ? checkoutAttemptKey(session.user.id, plan, price, interval, connections ?? 1, purchaseKind) : null;
+    if (checkoutIntentEnabled && (typeof STRIPE_KEY !== 'string' || !/^pk_(test|live)_[A-Za-z0-9]+$/.test(STRIPE_KEY))) {
+      throw new Error('Checkout configuration needs attention. Contact support before paying.');
+    }
+    const live = typeof STRIPE_KEY === 'string' && STRIPE_KEY.startsWith('pk_live_');
+    const key = checkoutIntentEnabled && purchaseKind ? checkoutAttemptKey(session.user.id, plan, price, interval, connections ?? 1, purchaseKind, live) : null;
     const attempt = key ? savedCheckoutAttempt(window.sessionStorage, key) : null;
     const response = await fetch('/api/checkout', {
       method: 'POST',
@@ -32,7 +36,8 @@ export async function createCheckoutSession(plan: string, price: number, interva
         Authorization: `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({ plan, price, interval, connections,
-        ...(attempt ? { checkoutRequestId: attempt.requestId, purchaseKind } : {}) }),
+        ...(attempt ? { checkoutRequestId: attempt.requestId, purchaseKind,
+          ...(attempt.reference ? { checkoutReference: attempt.reference } : {}) } : {}) }),
     });
 
     if (!response.ok) {
@@ -42,7 +47,7 @@ export async function createCheckoutSession(plan: string, price: number, interva
 
     const { url, reference } = await response.json();
     if (!url) throw new Error('No checkout URL returned');
-    if (key && attempt) saveCheckoutReference(window.sessionStorage, key, attempt.requestId, reference);
+    if (key && attempt) saveCheckoutReference(window.sessionStorage, key, attempt.requestId, reference, live);
 
     window.location.href = url;
   } catch (error) {

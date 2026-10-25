@@ -1,3 +1,10 @@
+# Checkout-purpose integration draft — October 25, 2026
+
+- Authenticated live-capable checkout now saves the selected purpose and canonical owner/plan/term/allowance before returning payment. Its separate private ledger preserves the installed Preview v1 protocol and existing attempts.
+- Verified live bound sessions retain receipt-only fulfillment after admission is paused, including before their first receipt/queue exists. Actual fulfillment tests connect saved new-service and approved-renewal choices to the immutable review route without granting provider access.
+- Local Preview/Production SQL, browser-adapter and retry tests passed. Native and application CI verification is pending before installation or release. See `docs/live-checkout-intent.md`.
+- Explicit multiple-service selection, execution-time revalidation, live completion/recovery/credential delivery and coordinated release remain open. No live flag or provider execution is enabled.
+
 # Installed purchase-routing foundation — October 24, 2026
 
 - The receipt-only path now saves an immutable review destination from the verified receipt, saved authenticated purchase intent and approved CRM ownership link. Missing/ambiguous/stale evidence goes to manual review; no name/email matching grants ownership.

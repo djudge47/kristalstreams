@@ -57,6 +57,13 @@ jobs:
           node scripts/test-ks-help-content.mjs
           node scripts/test-ks-payments.mjs
           node scripts/test-ks-live-receipt-rollout.mjs
+          node scripts/test-ks-checkout-attempt.mjs
+          node scripts/test-ks-checkout-client.mjs
+          node scripts/test-ks-checkout-origin.mjs
+          node scripts/test-ks-checkout-view.mjs
+          for checkout_mode in preview production; do
+            KS_TEST_CHECKOUT_MODE="$checkout_mode" KS_PGLITE_MODULE=/tmp/ks-release-fixtures/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-ks-checkout-intent.mjs
+          done
           KS_PGLITE_MODULE=/tmp/ks-release-fixtures/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-ks-paid-order-routing-db.mjs
           KS_PGLITE_MODULE=/tmp/ks-release-fixtures/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-ks-pending-order-email-db.mjs
           node scripts/test-ks-support-client.mjs

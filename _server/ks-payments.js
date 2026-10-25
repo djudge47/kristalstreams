@@ -78,8 +78,11 @@ export async function fulfill(sessionId, context, ownerId) {
     throw new PaymentError(503, 'The receipt-only payment rollout is not configured for this environment.');
   }
   const session = await context.stripe.checkout.sessions.retrieve(sessionId);
-  if (session.metadata?.checkout_binding_version !== undefined) await verifiedCheckoutIntent(session, context, ownerId);
-  let receiptOnly = context.receiptOnlyLive === true;
+  const boundIntent = session.metadata?.checkout_binding_version !== undefined
+    ? await verifiedCheckoutIntent(session, context, ownerId) : null;
+  // A previously accepted live checkout retains receipt-only fulfillment even
+  // if admission is paused before its webhook/confirmation saves the queue.
+  let receiptOnly = context.receiptOnlyLive === true || boundIntent?.receiptOnly === true;
   if (!receiptOnly && context.environment === 'production' && context.live === true) {
     // An accepted receipt-only order stays in that protocol even if the flag
     // is later disabled. A lookup failure must never fall back to activation.

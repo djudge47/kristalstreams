@@ -43,4 +43,14 @@ check('a changed attempt ID or a non-test reference cannot replace a saved bindi
   assert.throws(()=>saveCheckoutReference(storage,key,id,'cs_live_Wrong'));assert.equal(savedCheckoutAttempt(storage,key).requestId,id);
   saveCheckoutReference(storage,key,id,'cs_test_Saved');assert.throws(()=>saveCheckoutReference(storage,key,id,'cs_test_Changed'));
 });
+check('live attempts retain their binding separately from existing Preview v1 storage',()=>{
+  const storage=store(),id=randomUUID();
+  const liveKey=checkoutAttemptKey('owner','bronze',20,'monthly',1,'new_service',true);
+  assert.notEqual(liveKey,key);assert.ok(key.startsWith('ks-checkout-v1:'));
+  savedCheckoutAttempt(storage,key,()=>id);saveCheckoutReference(storage,key,id,'cs_test_Saved');
+  savedCheckoutAttempt(storage,liveKey,()=>id);saveCheckoutReference(storage,liveKey,id,'cs_live_Saved',true);
+  assert.throws(()=>saveCheckoutReference(storage,liveKey,id,'cs_test_Saved',true));
+  completeCheckoutAttempt(storage,'cs_live_Saved');assert.equal(storage.getItem(liveKey),null);
+  assert.equal(savedCheckoutAttempt(storage,key).reference,'cs_test_Saved');
+});
 console.log(`${passed} browser retry checks passed without a browser session or payment request.`);
