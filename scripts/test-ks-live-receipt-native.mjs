@@ -3,7 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { bootstrap, literal } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
+import { bootstrap, literal,fixture as legacyReviewFixture,reserveReview } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
 import { routingCases, routingMigrationName, routingSupportSql } from './fixtures/ks-paid-order-routing.mjs';
 
 // Only a disposable loopback database is accepted. Never use DATABASE_URL,
@@ -469,6 +469,89 @@ try{
     const f=await quoteFixture();await assert.rejects(()=>a.query(f.save({},new Date(Date.now()-31000).toISOString())),error=>error.code==='P0001'&&/paid_renewal_quote_expired/.test(error.message));
     await delay(31000);const recovered=JSON.parse(await a.query(quoted.lookup));assert.equal(recovered.approvalId,savedApproval);assert.equal(recovered.reason,'quote_expired');assert.equal(recovered.state,'review_required');assert.equal(recovered.mayDispatch,false);
     const retry=JSON.parse(await a.query(quoted.save()));assert.equal(retry.approvalId,savedApproval);assert.equal(retry.validUntil,recovered.validUntil);assert.equal(retry.reason,'quote_expired');
+    assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
+  });
+  for(const name of ['ks-crm-renewal-installation-schema.sql','ks-crm-live-renewal-installation-schema.sql','ks-crm-order-renewal-installation-schema.sql']){
+    const sql=await readFile(new URL(name,import.meta.url),'utf8');report.sqlSources[name]=createHash('sha256').update(sql).digest('hex');install(sql);
+  }
+  const sendPath='../supabase/migrations/20261025083228_add_disabled_paid_renewal_send_guard.sql';
+  const sendMigration=await readFile(new URL(sendPath,import.meta.url),'utf8');report.sqlSources[sendPath]=createHash('sha256').update(sendMigration).digest('hex');install(sendMigration);
+  let sendSequence=0;
+  async function sendFixture({reseller,shared}={}){
+    const f=shared||await quoteFixture(),resellerId=reseller||String(98000+(++sendSequence));
+    if(!shared)await a.query(f.save({resellerId}));
+    const q=await observer.json(`select jsonb_build_object('approval',approval_id,'quote',quote_fingerprint,'cost',cost_units) from public.ks_paid_renewal_quote_approvals where operation_id='${f.operationId}'`);
+    const consent=`00000000-0000-4000-8000-${String(7000+(++sendSequence)).padStart(12,'0')}`,at=new Date().toISOString(),until=new Date(Date.parse(at)+300000).toISOString();
+    const binding=`'${f.operationId}','${quoteActor}','${consent}',repeat('d',64),'${q.approval}','${q.quote}',${q.cost}`;
+    const reserve=`select public.ks_reserve_paid_renewal_send_guard(${binding},'${at}','${at}','${until}')`;
+    const lookup=`select public.ks_lookup_paid_renewal_send_guard(${binding})`;
+    return{...f,resellerId,reserve,lookup,async held(){return JSON.parse(await a.query(lookup));},begin:claim=>`select public.ks_begin_paid_renewal_send_guard('${f.operationId}','${claim}')`};
+  }
+  await check('new send admission defaults disabled with all existing controls unchanged',async()=>{
+    const f=await sendFixture();assert.equal(await a.query('select public.ks_paid_renewal_send_enabled()'),'f');
+    await assert.rejects(()=>a.query(f.reserve),error=>error.code==='P0001'&&/paid_renewal_send_disabled/.test(error.message));
+    assert.equal(await observer.query('select count(*) from public.ks_paid_renewal_send_operations'),'0');
+  });
+  install('update public.ks_paid_renewal_send_control set execution_enabled=true');
+  await check('native concurrent reservations retain one claim and consent identity',async()=>{
+    const f=await sendFixture(),r=await race(f.reserve,f.reserve),first=JSON.parse(r.first),second=JSON.parse(r.second);
+    assert.equal(first.replayed,false);assert.equal(second.replayed,true);assert.equal(first.claimToken,second.claimToken);
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_send_operations where operation_id='${f.operationId}'`),'1');
+  });
+  const one=await sendFixture();let firstClaim;
+  await check('simultaneous begin commits one winner and never grants the waiting retry',async()=>{
+    firstClaim=JSON.parse(await a.query(one.reserve)).claimToken;const r=await race(one.begin(firstClaim),one.begin(firstClaim));
+    assert.equal(r.first,'t');assert.equal(r.second,'f');assert.equal((await one.held()).state,'send_started');
+  });
+  await check('a rolled-back begin rolls back both physical reservations before its waiting retry wins',async()=>{
+    const f=await sendFixture(),claim=JSON.parse(await a.query(f.reserve)).claimToken;
+    const r=await race(f.begin(claim),f.begin(claim),{release:'rollback'});assert.equal(r.first,'t');assert.equal(r.second,'t');
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_send_reseller_slots where operation_id='${f.operationId}'`),'1');
+  });
+  await check('separate paid orders cannot both consume the same physical line version',async()=>{
+    const reseller='99881',first=await sendFixture({reseller}),second=await sendFixture({reseller});
+    const c1=JSON.parse(await a.query(first.reserve)).claimToken,c2=JSON.parse(await a.query(second.reserve)).claimToken;
+    assert.equal(await a.query(first.begin(c1)),'t');assert.equal(await a.query(second.begin(c2)),'f');
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_send_reseller_slots where operation_id='${second.operationId}'`),'0');
+  });
+  await check('the new physical reservation blocks all five installed legacy reservation tables',async()=>{
+    const fake='00000000-0000-4000-8000-000000099999',reseller=one.resellerId;
+    const statements=[`insert into public.ks_preview_reseller_dispatches values('${reseller}','${fake}','${quoteActor}',repeat('a',64),clock_timestamp()+interval '1 minute',1,100,clock_timestamp())`,
+      `insert into public.ks_setup_review_reseller_slots(reseller_id,claim_id) values('${reseller}','${fake}')`,
+      ...['ks_crm_renewal_reseller_slots','ks_crm_live_renewal_reseller_slots','ks_crm_order_renewal_reseller_slots'].map(t=>`insert into public.${t} values('${reseller}','${fake}')`)];
+    for(const sql of statements)await assert.rejects(()=>a.query(sql),error=>error.code==='P0001'&&/reseller_reserved_for_other_work/.test(error.message));
+  });
+  await check('an already committed legacy reservation blocks new begin without leaving a line version',async()=>{
+    const reseller='99882',legacy=await legacyReviewFixture({request:sql=>observer.query(sql)},{reseller});
+    await a.query(`select ${reserveReview(legacy)}`);
+    const f=await sendFixture({reseller}),claim=JSON.parse(await a.query(f.reserve)).claimToken;
+    await assert.rejects(()=>a.query(f.begin(claim)),error=>error.code==='P0001'&&/reseller_reserved_for_other_work/.test(error.message));
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_send_line_versions where operation_id='${f.operationId}'`),'0');
+  });
+  await check('an in-flight legacy reservation rejects a new begin until the legacy transaction rolls back',async()=>{
+    const reseller='99883',legacy=await legacyReviewFixture({request:sql=>observer.query(sql)},{reseller}),f=await sendFixture({reseller});
+    const claim=JSON.parse(await a.query(f.reserve)).claimToken;
+    await a.query('begin');await a.query(`select ${reserveReview(legacy)}`);
+    await assert.rejects(()=>b.query(f.begin(claim)),error=>error.code==='P0001'&&/reseller_reservation_busy/.test(error.message));
+    await a.query('rollback');assert.equal(await b.query(f.begin(claim)),'t');
+  });
+  await check('a deferred ownership change rejects commit and rolls back every send reservation',async()=>{
+    const f=await sendFixture(),claim=JSON.parse(await a.query(f.reserve)).claimToken;
+    await a.query('begin');assert.equal(await a.query(f.begin(claim)),'t');
+    install(`update auth.users set email_confirmed_at='2026-01-02T00:00:00Z' where id='${liveOwner}'`);
+    await assert.rejects(()=>a.query('commit'),error=>error.code==='P0001'&&/paid_renewal_send_review_required/.test(error.message));
+    assert.equal((await f.held()).state,'reserved');assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_send_reseller_slots where operation_id='${f.operationId}'`),'0');
+    install(`update auth.users set email_confirmed_at='2026-01-01T00:00:00Z' where id='${liveOwner}'`);
+  });
+  await check('lost begin response and an uncertainty stop retain locks after all execution controls are off',async()=>{
+    assert.equal((await one.held()).state,'send_started');assert.equal(await a.query(one.begin(firstClaim)),'f');
+    await a.query(`select public.ks_stop_paid_renewal_send_guard('${one.operationId}','${firstClaim}')`);
+    install('update public.ks_paid_renewal_send_control set execution_enabled=false');
+    assert.equal((await one.held()).state,'reconciliation_required');assert.equal(await a.query(one.begin(firstClaim)),'f');
+    assert.equal(await observer.query(`select count(*) from public.ks_paid_renewal_send_reseller_slots where operation_id='${one.operationId}'`),'1');
+    await assert.rejects(()=>a.query(`delete from public.ks_paid_renewal_send_reseller_slots where operation_id='${one.operationId}'`),error=>error.code==='42501');
+    const grants=await observer.json("select jsonb_build_object('browser',has_table_privilege('authenticated','public.ks_paid_renewal_send_operations','SELECT'),'switchWrite',has_table_privilege('service_role','public.ks_paid_renewal_send_control','UPDATE'),'browserBegin',has_function_privilege('anon','public.ks_begin_paid_renewal_send_guard(uuid,uuid)','EXECUTE'))");
+    assert.deepEqual(grants,{browser:false,switchWrite:false,browserBegin:false});
     assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
   });
   report.passed=true;

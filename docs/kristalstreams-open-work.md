@@ -1,3 +1,10 @@
+# Disabled paid-renewal send guard work — October 25, 2026
+
+- A separate consent and durable send-claim guard now protects the existing paid-renewal identity. Lost replies and retries cannot reacquire a claim; uncertainty retains physical reseller and line-version reservations without automatic release.
+- The proposed migration extends the existing five-protocol reseller exclusion to this sixth protocol with exact-source preflight, existing-work rejection and unchanged legacy triggers/grants. A new private control defaults off; no HTTP execution or consent issuance route is added.
+- Local actual SQL/handler cases passed. Native cross-protocol/concurrency checks and connected installation are pending. Source remains staged in PR #33. See `docs/paid-renewal-send-guard.md`.
+- A claim always denies dispatch authority. Reviewed provider timing policy, executable transport bridge, completion/reconciliation/release, credential delivery, administrative UI and coordinated release remain open. No real payment, provider operation, email or credit spend is enabled.
+
 # Installed paid-renewal quote approval prerequisite — October 25, 2026
 
 - The administrator verification endpoint now returns an exact package/credit quote and can save one immutable quote approval for the existing paid-renewal operation. Fresh independent provider reads and current SQL ownership checks reject changed facts before saving.

@@ -1,0 +1,17 @@
+# Disabled paid-renewal send guard
+
+This step adds a durable at-most-once claim for the existing paid-renewal operation. It exposes no HTTP execution or consent-issuance route and contains no provider write, form, timing/expiry policy, completion or credential delivery. A claim is not permission to send; every result retains `mayDispatch:false` and `providerActivated:false`. The new private execution control is installed disabled and cannot be changed by service/browser roles.
+
+A trusted future server must obtain separate explicit execution/credit consent. The dedicated-key, domain-separated consent primitive binds the actor, owner, payment reference, existing operation and quote approval, exact quote/cost, unique consent ID and five-minute expiry. Quote-only or historical manual consent cannot be substituted. Expired consent identifies an existing attempt for recovery only.
+
+The guard independently checks fresh provider evidence through the existing review adapter, then saves the exact consent/approval identity once. Reservation and begin RPCs revalidate current confirmed administrator, quote approval, ownership and service facts. Begin locks the operation and current CRM row, reserves the unchanged physical line version and shared reseller, and commits `send_started` before returning. A deferred check rejects stale or changed facts at commit. Existing manual line versions are checked without adopting them.
+
+The shared reseller exclusion grows from five to six protocols under locked tables and an exact previous-body preflight. All existing triggers and grants are preserved. Existing active work prevents installation. Cross-protocol reservations use the same advisory lock and cannot overlap. The line version also prevents two separately paid operations from claiming the same unchanged service.
+
+A concurrent/replayed reservation is not a fresh winner. A lost reservation/begin acknowledgement yields `check_status`; retrying retrieves the same attempt and never reacquires a claim or rereads XUI. Uncertainty moves to `reconciliation_required`. Slots and line-version records cannot be deleted, time-released or reset. Recovery remains available after consent expiry and disabling the new gate. There is intentionally no release RPC until verified completion/reconciliation is implemented.
+
+Internal modules: `_server/ks-paid-renewal-send-consent.js` and `_server/ks-paid-renewal-send-guard.js`. They require explicit trusted dependencies; no project/key/environment fallback or production transport is created. Future execution must still enforce a reviewed provider policy and fresh pre-send checks, and use a separately approved release. No payment, customer, receipt, profile, email or real provider state is changed by this batch.
+
+Actual disposable SQL/handler checks cover disabled admission, separate consent, lost acknowledgements, owner drift, immutable identity and uncertainty retention. Independent native PostgreSQL cases cover same-operation reservation/begin races, rollback recovery, duplicate line versions, all five legacy exclusion paths, in-flight legacy work, deferred ownership drift and gate pause. Original application and manual renewal regressions remain required.
+
+Migration draft: `supabase/migrations/20261025083228_add_disabled_paid_renewal_send_guard.sql`. Connected installation is pending exact-source native verification. Website code remains staged in draft PR #33; no live control is enabled.
