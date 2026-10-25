@@ -15,7 +15,7 @@ Browser storage keeps separate live/test requests. Existing Preview keys remain 
 ## Review and release boundaries
 
 - A new-service route remains an eligibility review, not permission to create a provider line.
-- A renewal route needs exactly one approved current CRM ownership link. Missing, stale, multiple or trial links require review. Explicit selection for multiple services remains unfinished.
+- Unselected v1 renewal routes need exactly one approved current CRM ownership link. Explicit v2 service selection is now implemented and its database prerequisite installed; see `docs/checkout-service-selection.md`. A stale or lost selected link requires review without choosing another service. Website release remains pending.
 - This completes authenticated live-capable purchase-purpose capture and its connection to receipt/routing logic. It does not finish general live provider execution, live completion/recovery or credential delivery.
 - Historical unbound checkout sessions retain their old recovery protocol. No backfill or intent is invented for them.
 - Website changes remain staged until the full payment-to-service workflow and coordinated release are ready. A database migration must be installed before releasing code that uses it; installing the ledger does not enable checkout or automatic renewal.

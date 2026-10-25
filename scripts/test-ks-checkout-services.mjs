@@ -22,7 +22,7 @@ function handler({user=owner,failure=false,reply}={}){
 }
 try{
   await bootstrap({request:sql=>db.exec(sql)},{pglitePreflight:true});await db.exec(await routingSupportSql());
-  for(const path of ['../supabase/migrations/20261025033932_add_private_live_checkout_intent_binding.sql',routingMigrationName.replace('../../','../'),'../supabase/migrations/20261025034741_add_verified_checkout_service_selection.sql']){
+  for(const path of ['../supabase/migrations/20261025033932_add_private_live_checkout_intent_binding.sql',routingMigrationName.replace('../../','../'),'../supabase/migrations/20261025040332_add_verified_checkout_service_selection.sql']){
     await db.exec(await readFile(new URL(path,import.meta.url),'utf8'));
   }
   await db.exec(`insert into auth.users(id,email,email_confirmed_at,is_anonymous) values('${owner}','${owner}@example.invalid','2026-01-01T00:00:00Z',false),('${other}','${other}@example.invalid','2026-01-01T00:00:00Z',false);`);

@@ -1,8 +1,9 @@
-# Explicit renewal-service selection draft — October 24, 2026
+# Installed explicit renewal-service prerequisite — October 25, 2026
 
 - Live renewal checkout now lets the verified owner choose one linked service in a paged mobile-friendly control. The private v2 request freezes that exact CRM customer and provider identity before payment; retries cannot retarget it. Ownership/line changes at paid routing force review instead of selecting another account.
 - Existing Preview/live v1 requests and immutable routes are preserved; uncertain legacy renewal attempts are retained for review rather than silently replaced. The read shares the current account API and exposes no payment history or credentials.
-- Local actual SQL/handler, endpoint, client and mobile/desktop interaction checks passed. Native concurrency and final CI verification precede installation or release. See `docs/checkout-service-selection.md`.
+- Migration `20261025040332` is installed in the active Kristal Stream project. All three changed/new function bodies match tested source, while six Preview/live v1 binding bodies remain unchanged. Customer billing/access digests, one Preview request/intent, two receipts and zero live requests/queued orders/routes/alerts are preserved; all renewal controls remain off.
+- All five workflows passed at `392d3a5`, including 44 native cases on each PostgreSQL version. Actual SQL/handler, endpoint, compiled-client and eight mobile/desktop interaction journeys passed. Website changes remain staged in PR #33, with no Production release or flag change. See `docs/checkout-service-selection.md` and its connected installation report.
 - Live completion/recovery, credential delivery, execution-time validation and coordinated release remain open. No rollout flag or provider action is enabled.
 
 # Installed checkout-purpose prerequisite — October 24, 2026

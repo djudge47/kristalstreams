@@ -2,15 +2,18 @@
 
 Installed in the active Kristal Stream project as migration `20261025031536` on October 24, 2026 (America/New_York). The SQL bytes match the CLI-generated draft tested at `6523e7e`; the filename was aligned to the connected migration history. Three connected function-body hashes match, private permissions/guard are verified and existing customer/payment state is unchanged. Website integration remains in draft PR #33 and has not been promoted to Production.
 
+The routing candidate was subsequently extended by installed migration `20261025040332` for explicit v2 service selection; its current source/hash and verification are in `docs/checkout-service-selection.md`. The earlier installation report remains historical evidence of the initial candidate body.
+
 The receipt-only fulfillment path now saves a private, immutable review destination before requesting its existing pending-order notification. This is a review destination, not provider activation or credit authorization. The live receipt-only flag remains off; no execution gate changes are included.
 
 | Saved evidence | Review destination |
 | --- | --- |
 | Confirmed owner, authenticated new-service intent captured before the receipt, no approved existing-service link | New service review; existing eligibility checks still apply |
 | Confirmed owner, saved renewal intent, exactly one current approved CRM ownership link | Renewal review for that exact customer and external line |
+| Confirmed owner, saved v2 renewal intent and explicit current approved service target | Renewal review for the selected customer/line even when other services are linked |
 | No saved intent, help requested, no/multiple/stale links, unconfirmed owner or legacy receipt | Manual review with a fixed reason |
 
-Names and email equality against CRM records never create ownership. The private portal link must match the Auth UUID, current confirmed email and confirmation timestamp, CRM customer UUID and current external line ID. Preview customers and trial lines cannot become ordinary renewal targets. All links count when detecting ambiguity, including stale links.
+Names and email equality against CRM records never create ownership. The private portal link must match the Auth UUID, current confirmed email and confirmation timestamp, CRM customer UUID and current external line ID. Preview customers and trial lines cannot become ordinary renewal targets. Unselected v1 requests count all links when detecting ambiguity, including stale links. Selected v2 requests revalidate their frozen target and never fall back to a different service.
 
 `ks_paid_order_routes` references the durable queue and stores its canonical payment identity, purchaser, mode, original request kind and exact review target. RLS, server-only privileges and an invoker trigger validate every insert. Updates/deletes fail, including for the table owner. Concurrent confirmation/webhook retries serialize on a per-session transaction lock and return the first saved decision. Approving a link later does not silently reassign an earlier payment.
 
@@ -23,7 +26,7 @@ Installation is additive and performs no backfill or writes to receipts, queues,
 - Running Production checkout still lacks live authenticated purchase-intent capture. The live-capable binding implementation and installed private prerequisite are now recorded in `docs/live-checkout-intent.md`; website release remains pending. Existing/unbound receipts still need manual review.
 - New-service review is not proof that the owner has never had service; the established eligibility and conflict checks remain required.
 - A saved renewal destination is historical review evidence. A future executor must revalidate current ownership, receipt, line, requested order, provider package/cost, execution policy and completion status before any provider action. An immutable route must never be treated as a current authorization grant.
-- Multiple owned services need an explicit, authenticated service selector and a reviewed binding protocol. This change deliberately does not choose one arbitrarily.
+- Explicit authenticated selection for multiple owned services is implemented in the staged website change and installed database prerequisite. It does not authorize provider execution; current ownership and the frozen external identity still need revalidation at execution.
 - No live rollout switch, renewal control, paid entitlement, customer message, real payment or reseller credit operation is enabled by this work.
 
 ## Verification

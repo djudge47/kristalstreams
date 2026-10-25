@@ -338,7 +338,7 @@ try{
     assert.equal(await observer.query(`select count(*) from public.ks_payment_receipts where user_id='${liveOwner}'`),'0');
     assert.deepEqual(await observer.json("select jsonb_build_object('attempts',(select count(*) from public.ks_preview_provisioning_attempts),'claims',(select count(*) from public.ks_setup_review_claims),'spent',(select coalesce(sum(spent_units),0) from public.ks_setup_review_budgets))"),{attempts:0,claims:0,spent:0});
   });
-  const selectionPath='../supabase/migrations/20261025034741_add_verified_checkout_service_selection.sql';
+  const selectionPath='../supabase/migrations/20261025040332_add_verified_checkout_service_selection.sql';
   const selection=await readFile(new URL(selectionPath,import.meta.url),'utf8');
   report.sqlSources[selectionPath]=createHash('sha256').update(selection).digest('hex');
   const oldBound=await observer.json("select to_jsonb(r) from public.ks_live_checkout_requests r where checkout_session_id='cs_live_NativeBound'");
