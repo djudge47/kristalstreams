@@ -1,3 +1,16 @@
+# Current paid-workflow checkpoint — October 24, 2026
+
+- Installed the private pending-notification and payment-activation rollback foundation as migration `20261025024637` in the active Kristal Stream project only.
+- Deployed `ks-order-notification` version 3, retaining JWT checks and the exact legacy handler. No message was sent.
+- Verified unchanged customer service/billing and website access, two receipts and notification records, no live queued orders or new pending alerts, and all renewal controls off.
+- A saved completed 6-month/3-connection purchase at 15 credits already exists. Preserve it and its customer data; do not repeat that test.
+- Live receipt-only admission remains disabled. Its flag is absent. Completing the foundation does not complete customer payment-to-XUI automation.
+- Next: bind new purchases and existing-service renewals to their verified owner and intended fulfillment; complete live owner/completion/recovery and credential delivery before coordinated release or any separately scoped credit operation.
+
+The older recovery inventory below is historical; later release and completion notes take precedence.
+
+---
+
 # Kristal Streams — unfinished work
 
 Recovered October 19, 2026 (America/New_York). This list distinguishes prior

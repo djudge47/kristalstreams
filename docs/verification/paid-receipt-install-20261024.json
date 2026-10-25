@@ -1,0 +1,62 @@
+{
+  "observed_at_utc": "2026-10-25T02:50:08.857088+00:00",
+  "project_id": "wftfxerblhlsxiijtfbo",
+  "source_base_commit": "8266c4b30c5e16be446c7cc3b1c8dae4fdcff7b7",
+  "migration": {
+    "version": "20261025024637",
+    "name": "add_live_receipt_pending_alerts_and_rollback_guard",
+    "sha256": "c66b4ef6934867b0e2d7b185ebe25d5a0746d49acf6416828b386bf1d4893abd",
+    "sql_bytes_unchanged": true,
+    "former_draft_filename": "20261020044005_add_live_receipt_pending_alerts_and_rollback_guard.sql"
+  },
+  "notification": {
+    "slug": "ks-order-notification",
+    "previous_version": 2,
+    "active_version": 3,
+    "verify_jwt": true,
+    "legacy_handler_unchanged": true,
+    "deployed_files_match": true,
+    "unsigned_get_status": 401,
+    "source_sha256": {
+      "index.ts": "269e7438f162e0459dcca2bc8c4f5e3e4a6493da3f398103e31083496d02b062",
+      "handler.js": "01a33cf96d203980a0cc44ba26b160eea4b5a5a85e175e8977f251972afab33f",
+      "router.js": "c0624a6b7f5737ab8196b19b9bf50693eedc10a839f7b49f48c9625a5936cc3c",
+      "pending-handler.js": "dd968e44495cf0261494ab770669ffc7e6137f545d0dd5b12446328b12f947d4"
+    },
+    "deployed_at_utc": "2026-10-25T02:47:21.264Z"
+  },
+  "checks": {
+    "local_focused_checks": 85,
+    "native_preexisting_sql_versions": [
+      "17.6",
+      "17.11"
+    ],
+    "pending_alert_rls": true,
+    "browser_access_denied": true,
+    "receipt_guard_enabled": true,
+    "functions_security_invoker": true,
+    "functions_empty_search_path": true,
+    "new_advisor_warnings": 0,
+    "existing_advisor_warning": "auth_leaked_password_protection"
+  },
+  "preserved": {
+    "crm_customers": 20,
+    "crm_service_billing_digest": "0adce2c433d59c54126b71a9c9138fd3",
+    "website_entitlement_digest": "eae960883bd1639904bf489ec82b2ea2",
+    "payment_receipts": 2,
+    "live_queued_orders": 0,
+    "existing_notification_records": 2,
+    "new_pending_alert_records": 0,
+    "all_renewal_controls_off": true
+  },
+  "release": {
+    "receipt_only_flag_added": false,
+    "payment_flags_changed": false,
+    "provider_execution_enabled": false,
+    "real_emails_sent": 0,
+    "real_payments_created": 0,
+    "provider_calls": 0,
+    "credits_spent": 0,
+    "full_live_fulfillment_completed": false
+  }
+}

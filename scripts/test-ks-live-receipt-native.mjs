@@ -141,7 +141,7 @@ try{
     if(name==='ks-payment-schema.sql')install(source.slice(source.indexOf('CREATE OR REPLACE FUNCTION')).replace('$function$\n\nrevoke','$function$;\n\nrevoke').replaceAll('\n','\r\n'));
     else install(source);
   }
-  const migrationName='../supabase/migrations/20261020044005_add_live_receipt_pending_alerts_and_rollback_guard.sql';
+  const migrationName='../supabase/migrations/20261025024637_add_live_receipt_pending_alerts_and_rollback_guard.sql';
   const migration=await readFile(new URL(migrationName,import.meta.url),'utf8');
   report.sqlSources[migrationName]=createHash('sha256').update(migration).digest('hex');
   for(const name of ['ks-pending-order-email-schema.sql','ks-live-receipt-rollback-guard.sql']){
