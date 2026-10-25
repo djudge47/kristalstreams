@@ -24,12 +24,22 @@ let passed = 0, sequence = 0;
 const check = async (label, fn) => { await fn(); passed++; console.log(`PASS: ${label}`); };
 const query = async (sql, args = []) => (await db.query(sql, args)).rows;
 
-async function fixture(kind = 'new_service', order = getPlan('bronze', 1)) {
+async function fixture(kind = 'new_service', order = getPlan('bronze', 1), { choice = false, links = 2 } = {}) {
   const user = { id: randomUUID(), email: `fixture-${++sequence}@example.invalid`, is_anonymous: false, email_confirmed_at: new Date().toISOString() };
   await db.exec(`reset role; insert into auth.users(id,email,email_confirmed_at,is_anonymous) values(${literal(user.id)},${literal(user.email)},${literal(user.email_confirmed_at)},false);
     insert into public.profiles(id,email) values(${literal(user.id)},${literal(user.email)}); set role service_role;`);
   const calls = { creates: 0, retrieves: 0, rpcs: 0, sessions: new Map(), requests: new Map(), fault: '', legacyWrites: 0 };
   const body = { checkoutRequestId: randomUUID(), purchaseKind: kind };
+  const customers=[];
+  if(choice){
+    for(let n=0;n<links;n++){
+      const customer=randomUUID(),panel=sequence*100000+n+1;
+      await db.query("insert into public.iptv_customers(id,external_id,username,source,trial,payment_status) values($1,$2,$3,'roomba',false,'legacy_paid')",[customer,panel,`fixture_choice_${sequence}_${n}`]);
+      await db.query('insert into public.ks_crm_portal_links(customer_id,user_id,email_at_link,confirmed_at_link,external_id,linked_by) values($1,$2,$3,$4,$5,$2)',[customer,user.id,user.email,user.email_confirmed_at,panel]);
+      customers.push(customer);
+    }
+    body.renewalCustomerId=customers[0];
+  }
   const stripe = { checkout: { sessions: {
     async create(params, options) {
       calls.creates++;
@@ -50,11 +60,12 @@ async function fixture(kind = 'new_service', order = getPlan('bronze', 1)) {
   const admin = {
     async rpc(name, args) {
       calls.rpcs++;
-      if (name === reserveRpc) {
+      if (name === reserveRpc || name === 'ks_reserve_live_service_checkout_request') {
         if (calls.fault === 'reserve_failure') return { data: null, error: {} };
         try {
-          const data = (await query(`select public.${reserveRpc}($1,$2,$3,$4,$5,$6,$7) as value`,
-            [args.p_user_id,args.p_request_id,args.p_tier,args.p_connections,args.p_kind,args.p_origin,args.p_email]))[0].value;
+          const selected=name==='ks_reserve_live_service_checkout_request';
+          const data = (await query(`select public.${name}($1,$2,$3,$4,$5,$6,$7${selected?',$8':''}) as value`,
+            [args.p_user_id,args.p_request_id,args.p_tier,args.p_connections,args.p_kind,args.p_origin,args.p_email,...(selected?[args.p_customer]:[])]))[0].value;
           if (calls.fault === 'lost_reserve') { calls.fault=''; return {data:null,error:{}}; }
           return { data, error: null };
         } catch (error) { return { data: null, error }; }
@@ -91,7 +102,7 @@ async function fixture(kind = 'new_service', order = getPlan('bronze', 1)) {
   const input = { body, user, order, context, origin, env };
   const row = async () => (await query(`select to_jsonb(r) as row from public.${requestTable} r where user_id=$1 and request_id=$2`, [user.id,body.checkoutRequestId]))[0]?.row;
   const paid = () => { const session = [...calls.sessions.values()][0]; session.status = 'complete'; session.payment_status = 'paid'; return session; };
-  return { input, calls, user, body, row, paid, run: patch => createBoundCheckout({ ...input, ...patch }) };
+  return { input, calls, user, body, row, paid, customers, run: patch => createBoundCheckout({ ...input, ...patch }) };
 }
 
 try {
@@ -100,6 +111,7 @@ try {
   await db.exec(await routingSupportSql());
   await db.exec(await readFile(new URL('../supabase/migrations/20261025033932_add_private_live_checkout_intent_binding.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL(routingMigrationName,new URL('./fixtures/ks-paid-order-routing.mjs',import.meta.url)),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261025034741_add_verified_checkout_service_selection.sql',import.meta.url),'utf8'));
   await check('migration exposes no browser table or function and uses caller privileges', async () => {
     const grants = (await query(`select has_table_privilege('anon','public.${requestTable}','select') as anon,
       has_table_privilege('authenticated','public.${requestTable}','insert') as browser,
@@ -300,6 +312,54 @@ try {
       await assert.rejects(()=>fulfill(session.id,{...f.input.context,admin,receiptOnlyLive:false},f.user.id));
       assert.equal(f.calls.legacyWrites,0);assert.equal(f.calls.notifications,0);
       assert.equal((await query('select count(*)::int as n from public.ks_payment_receipts where user_id=$1',[f.user.id]))[0].n,0);
+    });
+  }
+  if(live){
+    await check('explicit selection routes a renewal to the chosen account among multiple owned services',async()=>{
+      const f=await fixture('renewal',getPlan('gold',3),{choice:true});await f.run();const session=f.paid();
+      const row=await f.row();assert.equal(row.binding_version,2);assert.equal(row.renewal_customer_id,f.customers[0]);
+      assert.equal(session.metadata.checkout_binding_version,'2');assert.equal(session.metadata.renewal_customer_id,f.customers[0]);
+      const result=await fulfill(session.id,{...f.input.context,receiptOnlyLive:false},f.user.id);
+      assert.equal(result.routing.destination,'renewal_review');assert.equal(result.provider_activated,false);
+      assert.equal((await query('select customer_id from public.ks_paid_order_routes where checkout_session_id=$1',[session.id]))[0].customer_id,f.customers[0]);
+      assert.equal(f.calls.legacyWrites,0);
+    });
+    await check('a saved selected-service checkout cannot change target, plan or protocol on retry',async()=>{
+      const f=await fixture('renewal',getPlan('bronze',1),{choice:true});const first=await f.run();
+      assert.deepEqual(await f.run(),first);
+      for(const patch of [{body:{...f.body,renewalCustomerId:f.customers[1]}},{body:{...f.body,renewalCustomerId:undefined}},{order:getPlan('gold',3)}])await assert.rejects(()=>f.run(patch));
+      assert.equal(f.calls.creates,1);
+      const session=f.paid();session.metadata.renewal_customer_id=f.customers[1];
+      await assert.rejects(()=>verifiedCheckoutIntent(session,f.input.context,f.user.id));
+    });
+    await check('foreign, stale or trial selections fail before a payment link can be created',async()=>{
+      const foreign=await fixture('renewal',getPlan('bronze',1),{choice:true});
+      const f=await fixture('renewal',getPlan('bronze',1),{choice:true});
+      await assert.rejects(()=>f.run({body:{...f.body,renewalCustomerId:foreign.customers[0]}}));assert.equal(f.calls.creates,0);
+      await db.exec(`reset role; update public.iptv_customers set trial=true where id=${literal(f.customers[0])}; set role service_role;`);
+      await assert.rejects(()=>f.run());assert.equal(f.calls.creates,0);
+    });
+    await check('lost selected-service binding acknowledgement recovers one session and original target',async()=>{
+      const f=await fixture('renewal',getPlan('bronze',1),{choice:true});f.calls.fault='lost_bind';await assert.rejects(()=>f.run());
+      const before=await f.row();await f.run();assert.deepEqual(await f.row(),before);assert.equal(f.calls.creates,1);
+    });
+    await check('ownership or external-line changes after payment force review without choosing another service',async()=>{
+      const f=await fixture('renewal',getPlan('bronze',1),{choice:true});await f.run();const session=f.paid();
+      await db.exec(`reset role; update public.iptv_customers set external_id=external_id+100 where id=${literal(f.customers[0])}; set role service_role;`);
+      const result=await fulfill(session.id,f.input.context,f.user.id);assert.equal(result.routing.destination,'manual_review');
+      assert.equal((await query('select customer_id from public.ks_paid_order_routes where checkout_session_id=$1',[session.id]))[0].customer_id,null);
+    });
+    await check('an old v1 request cannot be silently upgraded to a selected-service v2 checkout',async()=>{
+      const f=await fixture('renewal',getPlan('bronze',1),{choice:true});
+      const legacy={...f.body};delete legacy.renewalCustomerId;await f.run({body:legacy});
+      await assert.rejects(()=>f.run());assert.equal(f.calls.creates,1);assert.equal((await f.row()).binding_version,1);
+    });
+    await check('selected-service renewals preserve all twenty requested term and connection combinations',async()=>{
+      for(const tier of ['bronze','silver','gold','platinum'])for(let connections=1;connections<=5;connections++){
+        const order=getPlan(tier,connections),f=await fixture('renewal',order,{choice:true});await f.run();const row=await f.row();
+        assert.equal(row.binding_version,2);assert.equal(row.amount_cents,order.cents);assert.equal(row.duration_days,order.days);
+        assert.equal(row.connections,connections);assert.equal(row.renewal_customer_id,f.customers[0]);
+      }
     });
   }
   console.log(`${passed} ${environment} checkout intent checks passed using isolated SQL and simulated Stripe. No payment, provider operation or connected migration.`);

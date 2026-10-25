@@ -338,6 +338,46 @@ try{
     assert.equal(await observer.query(`select count(*) from public.ks_payment_receipts where user_id='${liveOwner}'`),'0');
     assert.deepEqual(await observer.json("select jsonb_build_object('attempts',(select count(*) from public.ks_preview_provisioning_attempts),'claims',(select count(*) from public.ks_setup_review_claims),'spent',(select coalesce(sum(spent_units),0) from public.ks_setup_review_budgets))"),{attempts:0,claims:0,spent:0});
   });
+  const selectionPath='../supabase/migrations/20261025034741_add_verified_checkout_service_selection.sql';
+  const selection=await readFile(new URL(selectionPath,import.meta.url),'utf8');
+  report.sqlSources[selectionPath]=createHash('sha256').update(selection).digest('hex');
+  const oldBound=await observer.json("select to_jsonb(r) from public.ks_live_checkout_requests r where checkout_session_id='cs_live_NativeBound'");
+  install(selection);
+  const customerA='00000000-0000-4000-8000-000000000031',customerB='00000000-0000-4000-8000-000000000032';
+  const requestSelected='00000000-0000-4000-8000-000000000033';
+  install(`insert into public.iptv_customers(id,external_id,username,source,trial,payment_status,connections_allowed)
+    values('${customerA}',990001,'fictional_native_choice_a','roomba',false,'legacy_paid',1),('${customerB}',990002,'fictional_native_choice_b','roomba',false,'legacy_paid',1);
+    insert into public.ks_crm_portal_links(customer_id,user_id,email_at_link,confirmed_at_link,external_id,linked_by)
+    values('${customerA}','${liveOwner}','native-live@example.invalid','2026-01-01T00:00:00Z',990001,'${liveOwner}'),('${customerB}','${liveOwner}','native-live@example.invalid','2026-01-01T00:00:00Z',990002,'${liveOwner}');`);
+  const choose=customer=>`select public.ks_reserve_live_service_checkout_request('${liveOwner}','${requestSelected}','bronze',1,'renewal','https://kristalstream.com','native-live@example.invalid',${literal(customer)})`;
+  await check('selection migration preserves existing v1 request values and all Preview definitions',async()=>{
+    assert.deepEqual(await observer.json("select to_jsonb(r)-array['renewal_customer_id','renewal_external_id'] from public.ks_live_checkout_requests r where checkout_session_id='cs_live_NativeBound'"),oldBound);
+    assert.deepEqual(await observer.json(previewFunctions),oldPreview);
+  });
+  await check('concurrent different target choices cannot overwrite the first frozen renewal',async()=>{
+    const conflict=await race(choose(customerA),choose(customerB),{expectedError:'P0001'});
+    assert.match(conflict.error.message,/checkout_request_binding_changed/);
+    const replay=await race(choose(customerA),choose(customerA));assert.deepEqual(JSON.parse(replay.first),JSON.parse(replay.second));
+    assert.equal(JSON.parse(replay.second).renewal_customer_id,customerA);
+  });
+  await check('native binding and paid routing retain the chosen target among two approved services',async()=>{
+    const sql=bindLive(requestSelected,'cs_live_NativeSelected');await race(sql,sql);
+    await a.query(record('NativeSelected',{owner:liveOwner}));
+    const route=JSON.parse(await a.query("select public.ks_route_paid_order('cs_live_NativeSelected')"));
+    assert.equal(route.destination,'renewal_review');assert.equal('customer_id' in route,false);
+    assert.equal(await observer.query("select customer_id from public.ks_paid_order_routes where checkout_session_id='cs_live_NativeSelected'"),customerA);
+    assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
+  });
+  await check('service snapshot is owner-scoped, paged and browser-denied with no target update grant',async()=>{
+    const snapshot=JSON.parse(await a.query(`select public.ks_checkout_services_snapshot('${liveOwner}','native-live@example.invalid',null)`));
+    assert.equal(snapshot.services.length,2);assert.deepEqual(snapshot.services.map(s=>s.customerId),[customerA,customerB]);
+    const next=JSON.parse(await a.query(`select public.ks_checkout_services_snapshot('${liveOwner}','native-live@example.invalid','${customerA}')`));assert.equal(next.services.length,1);
+    const grants=await observer.json("select jsonb_build_object('browser',has_function_privilege('authenticated','public.ks_checkout_services_snapshot(uuid,text,uuid)','EXECUTE'),'targetUpdate',has_column_privilege('service_role','public.ks_live_checkout_requests','renewal_customer_id','UPDATE'))");
+    assert.deepEqual(grants,{browser:false,targetUpdate:false});
+    await b.query('reset role;set role authenticated');
+    await assert.rejects(()=>b.query(`select public.ks_checkout_services_snapshot('${liveOwner}','native-live@example.invalid',null)`),error=>error.code==='42501');
+    await b.query('reset role;set role service_role');
+  });
   report.passed=true;
   console.log(`${report.tests.length} native PostgreSQL checks passed. Fictional loopback database only; no Supabase, Stripe, email or provider calls.`);
 }catch(error){report.passed=false;report.failure={message:error.message,code:error.code||null};console.error('Native receipt checks failed:',report.failure);process.exitCode=1;

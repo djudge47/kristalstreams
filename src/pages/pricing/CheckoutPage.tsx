@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { checkoutIntentEnabled, createCheckoutSession } from '../../lib/stripe';
+import { checkoutIntentEnabled, checkoutIntentLive, createCheckoutSession } from '../../lib/stripe';
+import CheckoutServiceSelect from '../../components/CheckoutServiceSelect';
 import type { PurchaseKind } from '../../lib/checkoutAttempt';
 import { ArrowLeft, CheckCircle, CreditCard, Loader, Lock, ShieldCheck, Sparkles } from 'lucide-react';
 
@@ -27,6 +28,8 @@ const CheckoutPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [purchaseKind, setPurchaseKind] = useState<PurchaseKind>();
+  const [renewalCustomerId, setRenewalCustomerId] = useState<string>();
+  const needsService = checkoutIntentEnabled && checkoutIntentLive && purchaseKind === 'renewal';
   const state = location.state as LocationState;
 
   const planName = formatPlanName(state?.plan);
@@ -47,7 +50,7 @@ const CheckoutPage: React.FC = () => {
     setError(null);
 
     try {
-      await createCheckoutSession(state.plan, state.price, state.interval, connections, purchaseKind);
+      await createCheckoutSession(state.plan, state.price, state.interval, connections, purchaseKind, needsService ? renewalCustomerId : undefined);
     } catch (err) {
       console.error('Checkout error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to start checkout. Please try again.';
@@ -113,10 +116,11 @@ const CheckoutPage: React.FC = () => {
                   ['renewal', 'Renew or upgrade my service', 'I already have a streaming service or trial.'],
                   ['requires_review', 'Help with my account', 'I need support to review which service to use.'],
                 ] as const).map(([kind, label, description]) => <label key={kind} className="flex cursor-pointer gap-3 rounded-xl border border-white/15 bg-black/15 p-3">
-                  <input type="radio" name="purchaseKind" value={kind} checked={purchaseKind === kind} onChange={() => setPurchaseKind(kind)} className="mt-1 accent-red-600" />
+                  <input type="radio" name="purchaseKind" value={kind} checked={purchaseKind === kind} onChange={() => { setPurchaseKind(kind); setRenewalCustomerId(undefined); }} className="mt-1 accent-red-600" />
                   <span><span className="block font-medium">{label}</span><span className="text-sm text-gray-300">{description}</span></span>
                 </label>)}
               </fieldset>}
+              {needsService && <CheckoutServiceSelect selected={renewalCustomerId} onChange={setRenewalCustomerId} disabled={loading} />}
               {error ? (
                 <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
                   {error}
@@ -125,7 +129,7 @@ const CheckoutPage: React.FC = () => {
 
               <button
                 onClick={handleSecurePayment}
-                disabled={loading || (checkoutIntentEnabled && !purchaseKind)}
+                disabled={loading || (checkoutIntentEnabled && !purchaseKind) || (needsService && !renewalCustomerId)}
                 className="flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-6 py-4 text-base font-semibold text-white shadow-xl shadow-primary/20 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70 sm:text-lg"
               >
                 {loading ? <Loader className="h-5 w-5 animate-spin" /> : <Lock className="h-5 w-5" />}

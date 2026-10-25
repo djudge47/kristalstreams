@@ -1,3 +1,10 @@
+# Explicit renewal-service selection draft — October 24, 2026
+
+- Live renewal checkout now lets the verified owner choose one linked service in a paged mobile-friendly control. The private v2 request freezes that exact CRM customer and provider identity before payment; retries cannot retarget it. Ownership/line changes at paid routing force review instead of selecting another account.
+- Existing Preview/live v1 requests and immutable routes are preserved; uncertain legacy renewal attempts are retained for review rather than silently replaced. The read shares the current account API and exposes no payment history or credentials.
+- Local actual SQL/handler, endpoint, client and mobile/desktop interaction checks passed. Native concurrency and final CI verification precede installation or release. See `docs/checkout-service-selection.md`.
+- Live completion/recovery, credential delivery, execution-time validation and coordinated release remain open. No rollout flag or provider action is enabled.
+
 # Installed checkout-purpose prerequisite — October 24, 2026
 
 - Authenticated live-capable checkout now saves the selected purpose and canonical owner/plan/term/allowance before returning payment. Its separate private ledger preserves the installed Preview v1 protocol and existing attempts.

@@ -1,11 +1,17 @@
 export type PurchaseKind = 'new_service' | 'renewal' | 'requires_review';
 const prefix = 'ks-checkout-v1:';
 const livePrefix = 'ks-checkout-live-v1:';
+const selectionPrefix = 'ks-checkout-live-v2:';
 const uuid = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value);
+const customerUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
 type Attempt = { requestId: string; reference?: string };
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'>;
 
-export function checkoutAttemptKey(userId: string, plan: string, price: number, interval: string, connections: number, kind: PurchaseKind, live = false) {
+export function checkoutAttemptKey(userId: string, plan: string, price: number, interval: string, connections: number, kind: PurchaseKind, live = false, renewalCustomerId?: string) {
+  if (renewalCustomerId !== undefined) {
+    if (!live || kind !== 'renewal' || !customerUuid(renewalCustomerId)) throw Error('Choose a linked service for renewal.');
+    return selectionPrefix + JSON.stringify([userId, plan, price, interval, connections, kind, renewalCustomerId]);
+  }
   return (live ? livePrefix : prefix) + JSON.stringify([userId, plan, price, interval, connections, kind]);
 }
 
@@ -36,7 +42,7 @@ export function saveCheckoutReference(storage: Store, key: string, requestId: st
 export function completeCheckoutAttempt(storage: Store, reference: string) {
   for (let index = storage.length - 1; index >= 0; index--) {
     const key = storage.key(index);
-    if (!key || (!key.startsWith(prefix) && !key.startsWith(livePrefix))) continue;
+    if (!key || (!key.startsWith(prefix) && !key.startsWith(livePrefix) && !key.startsWith(selectionPrefix))) continue;
     try {
       const saved = JSON.parse(storage.getItem(key) || '{}') as Attempt;
       if (saved.reference === reference) storage.removeItem(key);

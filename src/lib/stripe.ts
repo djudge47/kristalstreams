@@ -6,6 +6,7 @@ import type { PurchaseKind } from './checkoutAttempt';
 export const checkoutIntentEnabled = import.meta.env.VITE_KS_CHECKOUT_INTENT_ENABLED === 'true';
 
 const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+export const checkoutIntentLive = typeof STRIPE_KEY === 'string' && STRIPE_KEY.startsWith('pk_live_');
 
 // Validate Stripe key before initialization
 if (!STRIPE_KEY || typeof STRIPE_KEY !== 'string') {
@@ -14,7 +15,7 @@ if (!STRIPE_KEY || typeof STRIPE_KEY !== 'string') {
 
 const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null;
 
-export async function createCheckoutSession(plan: string, price: number, interval: string, connections?: number, purchaseKind?: PurchaseKind) {
+export async function createCheckoutSession(plan: string, price: number, interval: string, connections?: number, purchaseKind?: PurchaseKind, renewalCustomerId?: string) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
 
@@ -27,7 +28,12 @@ export async function createCheckoutSession(plan: string, price: number, interva
       throw new Error('Checkout configuration needs attention. Contact support before paying.');
     }
     const live = typeof STRIPE_KEY === 'string' && STRIPE_KEY.startsWith('pk_live_');
-    const key = checkoutIntentEnabled && purchaseKind ? checkoutAttemptKey(session.user.id, plan, price, interval, connections ?? 1, purchaseKind, live) : null;
+    if (checkoutIntentEnabled && live && purchaseKind === 'renewal') {
+      if (!renewalCustomerId) throw new Error('Choose the linked service you want to renew.');
+      const legacyKey = checkoutAttemptKey(session.user.id, plan, price, interval, connections ?? 1, purchaseKind, true);
+      if (window.sessionStorage.getItem(legacyKey) !== null) throw new Error('An earlier renewal checkout is already saved. Contact support to review it before starting another payment.');
+    }
+    const key = checkoutIntentEnabled && purchaseKind ? checkoutAttemptKey(session.user.id, plan, price, interval, connections ?? 1, purchaseKind, live, renewalCustomerId) : null;
     const attempt = key ? savedCheckoutAttempt(window.sessionStorage, key) : null;
     const response = await fetch('/api/checkout', {
       method: 'POST',
@@ -37,6 +43,7 @@ export async function createCheckoutSession(plan: string, price: number, interva
       },
       body: JSON.stringify({ plan, price, interval, connections,
         ...(attempt ? { checkoutRequestId: attempt.requestId, purchaseKind,
+          ...(renewalCustomerId ? { renewalCustomerId } : {}),
           ...(attempt.reference ? { checkoutReference: attempt.reference } : {}) } : {}) }),
     });
 

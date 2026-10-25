@@ -1,10 +1,11 @@
 import {portalUuid,portalEmail,readPortalLink,readCustomerCrm} from '../_shared/ks-customer-crm.js';
+import {readCheckoutServices} from '../_shared/ks-checkout-services.js';
 const project='https://wftfxerblhlsxiijtfbo.supabase.co';
 const options={auth:{persistSession:false,autoRefreshToken:false}};
 const keys=(v,list)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).sort().join(',')===[...list].sort().join(',');
 const errors={portal_account_unavailable:'No confirmed website account was found for that email.',portal_customer_unavailable:'This service account cannot be linked.',
   portal_link_conflict:'This service account already has a different verified link. Contact support before changing ownership.',portal_review_changed:'The account details changed. Load a new review.'};
-export function createCustomerCrmHandler({createClient,env=process.env,adminLink=false}={}) {
+export function createCustomerCrmHandler({createClient,env=process.env,adminLink=false,checkoutServices=false}={}) {
   return async(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');res.setHeader('Vary','Authorization');res.setHeader('Pragma','no-cache');
     const reply=(status,body)=>res.status(status).json(body);
@@ -25,6 +26,9 @@ export function createCustomerCrmHandler({createClient,env=process.env,adminLink
         if(!keys(b,['action','review','confirmed'])||b.confirmed!==true)return reply(400,{error:'Confirm account ownership before linking.'});
         try{readPortalLink(b.review,b.review?.customerId);}catch{return reply(400,{error:'Load a new account review.'});}
       }else return reply(400,{error:'Choose an account linking action.'});
+    }else if(checkoutServices){
+      if(!keys(req.query,['view'])&&!keys(req.query,['view','afterId']))return reply(400,{error:'Choose your service page.'});
+      if(req.query.afterId!==undefined&&!portalUuid(req.query.afterId))return reply(400,{error:'Load your services again.'});
     }else{
       if(!keys(req.query,['view'])&&!keys(req.query,['view','beforeAt','beforeId']))return reply(400,{error:'Choose your account view.'});
       if(req.query.beforeAt!==undefined){
@@ -50,6 +54,12 @@ export function createCustomerCrmHandler({createClient,env=process.env,adminLink
         const review=readPortalLink(result.data,b.action==='review'?b.customerId:r.customerId);
         if(b.action==='link'&&(!review.linked||review.userId!==r.userId||review.email!==r.email||review.panelId!==r.panelId))throw Error('invalid_link');
         return reply(200,{review});
+      }
+      if(checkoutServices){
+        const {data:snapshot,error:readError}=await admin.rpc('ks_checkout_services_snapshot',{p_user:user.id,p_email:email,p_after:req.query.afterId??null});
+        if(readError)throw Error('storage_unavailable');
+        const result=readCheckoutServices(snapshot,user.id,true),services=result.services.slice(0,50);
+        return reply(200,{...result,services,nextCursor:result.services.length>50?services.at(-1).customerId:null});
       }
       const {data:snapshot,error:readError}=await admin.rpc('ks_client_crm_snapshot',{p_user:user.id,p_email:email,p_before_at:cursor?.paidAt??null,p_before_id:cursor?.id??null});
       if(readError)throw Error('storage_unavailable');

@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     if (error || !profile) throw new PaymentError(409, 'Your account setup needs attention. Contact support before paying.');
     const origin = checkoutOrigin(req);
     if (process.env.KS_CHECKOUT_INTENT_ENABLED === 'true' || req.body?.checkoutRequestId !== undefined
-      || req.body?.purchaseKind !== undefined || req.body?.checkoutReference !== undefined) {
+      || req.body?.purchaseKind !== undefined || req.body?.checkoutReference !== undefined || req.body?.renewalCustomerId !== undefined) {
       const checkout = await createBoundCheckout({ body: req.body, user, order, context, origin });
       return res.status(200).json(checkout);
     }

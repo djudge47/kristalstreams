@@ -8,7 +8,7 @@ import { checkoutAttemptKey } from '../src/lib/checkoutAttempt.ts';
 
 const directory=await mkdtemp(join(process.cwd(),'node_modules','.ks-checkout-client-'));
 const original={window:globalThis.window,fetch:globalThis.fetch,fixture:globalThis.__ksCheckoutClient,log:console.error};
-const owner=randomUUID();let count=0,serial=0;
+const owner=randomUUID(),target=randomUUID();let count=0,serial=0;
 function storage(){const items=new Map();return{get length(){return items.size;},key:n=>[...items.keys()][n]??null,
   getItem:key=>items.get(key)??null,setItem:(key,value)=>items.set(key,value),removeItem:key=>items.delete(key)};}
 async function fixture({enabled=true,live=true,key,session=true}={}){
@@ -33,16 +33,16 @@ async function fixture({enabled=true,live=true,key,session=true}={}){
     }}]});
   const path=join(directory,`client-${++serial}.mjs`);await writeFile(path,result.outputFiles[0].text);
   const api=await import(pathToFileURL(path).href);
-  return{calls,store,state,run:kind=>api.createCheckoutSession('gold',150,'6 months',3,kind)};
+  return{calls,store,state,run:kind=>api.createCheckoutSession('gold',150,'6 months',3,kind,live&&kind==='renewal'?target:undefined),rawRun:(kind,id)=>api.createCheckoutSession('gold',150,'6 months',3,kind,id)};
 }
 const check=async(label,fn)=>{await fn();count++;console.log(`PASS: ${label}`);};
 try{
   console.error=()=>{};
   await check('actual live client sends its selected purpose and reuses the saved request/reference',async()=>{
     const f=await fixture();await f.run('renewal');await f.run('renewal');
-    assert.equal(f.calls.length,2);assert.equal(f.calls[0].purchaseKind,'renewal');assert.equal(f.calls[0].connections,3);
+    assert.equal(f.calls.length,2);assert.equal(f.calls[0].purchaseKind,'renewal');assert.equal(f.calls[0].renewalCustomerId,target);assert.equal(f.calls[0].connections,3);
     assert.equal(f.calls[1].checkoutRequestId,f.calls[0].checkoutRequestId);assert.equal(f.calls[1].checkoutReference,f.state.reference);
-    assert.ok(f.store.getItem(checkoutAttemptKey(owner,'gold',150,'6 months',3,'renewal',true)));
+    assert.ok(f.store.getItem(checkoutAttemptKey(owner,'gold',150,'6 months',3,'renewal',true,target)));
     assert.equal(window.location.href,'https://checkout.stripe.com/c/pay/fixture');
   });
   await check('actual Preview client preserves a pre-existing v1 request instead of replacing it',async()=>{
@@ -73,6 +73,12 @@ try{
     }
     const f=await fixture();window.sessionStorage={...f.store,setItem:()=>{throw Error('fictional storage unavailable');}};
     await assert.rejects(()=>f.run('renewal'),/storage unavailable/);assert.equal(f.calls.length,0);
+  });
+  await check('new live renewal requires a choice and never replaces an earlier v1 checkout',async()=>{
+    const f=await fixture();await assert.rejects(()=>f.rawRun('renewal',undefined),/Choose the linked service/);assert.equal(f.calls.length,0);
+    const legacy=checkoutAttemptKey(owner,'gold',150,'6 months',3,'renewal',true);
+    f.store.setItem(legacy,JSON.stringify({requestId:randomUUID(),reference:'cs_live_Legacy'}));
+    await assert.rejects(()=>f.run('renewal'),/earlier renewal checkout/);assert.equal(f.calls.length,0);assert.ok(f.store.getItem(legacy));
   });
   console.log(`${count} actual checkout-client checks passed with intercepted Auth/HTTP and fictional keys. No external requests.`);
 }finally{
