@@ -19,7 +19,7 @@ await db.exec(`create role anon;create role authenticated;create role service_ro
  grant select on public.iptv_payments,public.ks_crm_renewal_payments to service_role;`);
 await db.exec(await readFile(new URL('./ks-crm-customer-portal-schema.sql',import.meta.url),'utf8'));
 await db.exec(emptyPaidHistorySupportSql);
-await db.exec(await readFile(new URL('../supabase/migrations/20261025133200_add_private_merged_customer_payment_history.sql',import.meta.url),'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261025134303_add_private_merged_customer_payment_history.sql',import.meta.url),'utf8'));
 for(const [uid,email,confirmed] of [[owner,'owner@example.invalid',date],[other,'other@example.invalid',date],[actor,'djudge47@gmail.com',date],[unconfirmed,'unconfirmed@example.invalid',null]])
  await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,$3)',[uid,email,confirmed]);
 for(const [cid,panel,username] of [[customer,1001,'Fictional.One'],[second,1002,'Fictional.Two']])

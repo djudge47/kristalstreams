@@ -656,7 +656,7 @@ try{
     assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
   });
   install(legacyPaymentSupportSql);
-  const historyPath='../supabase/migrations/20261025133200_add_private_merged_customer_payment_history.sql',historySql=await readFile(new URL(historyPath,import.meta.url),'utf8');
+  const historyPath='../supabase/migrations/20261025134303_add_private_merged_customer_payment_history.sql',historySql=await readFile(new URL(historyPath,import.meta.url),'utf8');
   report.sqlSources[historyPath]=createHash('sha256').update(historySql).digest('hex');install(historySql);
   const paymentHistory=(uid=liveOwner,email='native-live@example.invalid',cursor=null)=>`select public.ks_client_crm_snapshot_v2('${uid}',${literal(email)},${cursor?literal(cursor.paidAt):'null'},${cursor?literal(cursor.id):'null'})`;
   await check('merged customer history includes real completed renewal receipts without financial inserts',async()=>{

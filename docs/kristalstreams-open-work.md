@@ -2,6 +2,7 @@
 
 - The existing customer service panel now reads manual receipts and verified completed website renewals together, with recorded amount/term, website recorded date, renewal completion and historical expiry. The current service summary stays separate. No financial rows, balances, billing or entitlements are changed.
 - A private additive v2 snapshot preserves the old UUID-only function. Mixed source IDs, full timestamp precision and 20-row older/newer pages prevent missing receipts and an endlessly extending phone page. Exact matching manual Stripe references suppress duplicate display.
+- Private migration `20261025134303` is installed with the tested invoker body and browser-denied grants; the original snapshot body is unchanged. All six implementation workflows passed at `ffda7bf`: 78 native checks per PostgreSQL version, 39 SQL/adapter cases and eight actual merged-history browser journeys. Customer billing/access, five manual receipts, two website receipts and empty completion/send ledgers are unchanged. See `docs/verification/customer-merged-payment-history-install-20261025.json`.
 - Source is staged in PR #33. See `docs/customer-merged-payment-history.md`. Administrator financial/metric projection, refund/chargeback reconciliation, provider execution/authorization, additional timing policies, credentials, administrative controls and coordinated release remain open. All four execution controls stay off.
 
 # Customer renewal history projection — October 25, 2026

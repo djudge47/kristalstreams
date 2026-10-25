@@ -1,0 +1,96 @@
+{
+  "project": "wftfxerblhlsxiijtfbo",
+  "installed_migration": "20261025134303",
+  "tested_draft_path": "supabase/migrations/20261025133200_add_private_merged_customer_payment_history.sql",
+  "canonical_path": "supabase/migrations/20261025134303_add_private_merged_customer_payment_history.sql",
+  "sql_sha256": "c4b6418927c090dfe91e4f343c333cbc6d806bf4571732b2b2ccae4cb0303a02",
+  "pre_install_tested_commit": "ffda7bf1afae043cef3e2bb3d0dd9004e25700cb",
+  "pre_install_tested_tree": "bfef53e63211534b5f42587071b0889ed357434a",
+  "implementation_workflows": {
+    "application": 40198717223,
+    "native_receipt": 40198717163,
+    "crm_status": 40198717349,
+    "manual_renewal": 40198717210,
+    "paid_recovery": 40198717241,
+    "signed_handoff": 40198717183
+  },
+  "native_jobs": {
+    "17.6": 121185091837,
+    "17.11": 121185092008
+  },
+  "native_cases_per_version": 78,
+  "sql_adapter_cases": 39,
+  "merged_history_browser_journeys": 8,
+  "browser_widths": [
+    390,
+    1280
+  ],
+  "customer_portal_cases_per_environment": 9,
+  "manual_receipts_paged_in_portal_fixture": 205,
+  "page_size": 20,
+  "lookahead": 1,
+  "function_check": {
+    "name": "ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)",
+    "body_md5": "2510506c52a0302b813b16e3cf90a0d3",
+    "stable": true,
+    "invoker": true,
+    "empty_search_path": true,
+    "anon_denied": true,
+    "authenticated_denied": true,
+    "service_role_allowed": true
+  },
+  "original_snapshot_body_md5_before_and_after": "30fcbada38f8c9ffe74c468fac33f542",
+  "fictional_owner_payments": [],
+  "baseline": {
+    "crm_customers": 20,
+    "crm_digest": "0adce2c433d59c54126b71a9c9138fd3",
+    "profile_digest": "eae960883bd1639904bf489ec82b2ea2",
+    "payments_digest": "6009983ab9fd40026cba1203bd2da3d2",
+    "manual_payments": 5,
+    "website_receipts": 2,
+    "completions": 0,
+    "sends": 0,
+    "notifications": 2,
+    "controls": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "after": {
+    "crm_customers": 20,
+    "crm_digest": "0adce2c433d59c54126b71a9c9138fd3",
+    "profile_digest": "eae960883bd1639904bf489ec82b2ea2",
+    "payments_digest": "6009983ab9fd40026cba1203bd2da3d2",
+    "manual_payments": 5,
+    "website_receipts": 2,
+    "completions": 0,
+    "sends": 0,
+    "notifications": 2,
+    "controls": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "advisory_kinds_before_and_after": [
+    "auth_leaked_password_protection:WARN",
+    "rls_enabled_no_policy:INFO"
+  ],
+  "financial_records_inserted": 0,
+  "customer_records_changed": false,
+  "provider_requests": false,
+  "emails_sent": false,
+  "credits_spent": false,
+  "flags_enabled": false,
+  "production_promoted": false,
+  "website_source": "staged draft PR #33",
+  "limits": [
+    "Website time is receipt recorded_at, not an inferred received/settlement time.",
+    "Only verified completed website renewals with a current owner link are projected.",
+    "Refund/chargeback reconciliation and administrator payment/metric projections remain separate.",
+    "No balance/payment-status, profile entitlement or credential changes."
+  ]
+}

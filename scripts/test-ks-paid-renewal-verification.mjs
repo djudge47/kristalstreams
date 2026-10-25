@@ -90,7 +90,7 @@ try{
   await db.exec(await readFile(new URL('../supabase/migrations/20261025091959_add_private_paid_renewal_completion.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../supabase/migrations/20261025130107_add_private_owner_renewal_completion_status.sql',import.meta.url),'utf8'));
   await db.exec('reset role;'+legacyPaymentSupportSql);
-  await db.exec(await readFile(new URL('../supabase/migrations/20261025133200_add_private_merged_customer_payment_history.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261025134303_add_private_merged_customer_payment_history.sql',import.meta.url),'utf8'));
   await db.exec('set role service_role');
   async function sendFixture(options){
     const f=await fixture(options),p=await f.prepare(),review=await f.verify(p.operationId),approval=await f.approve(p.operationId,review.quote);
