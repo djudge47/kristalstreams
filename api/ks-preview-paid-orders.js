@@ -4,6 +4,7 @@ import { createPreviewNewPaidSetupHandler } from '../_server/ks-preview-new-paid
 import { createPaidFoundationHandler } from '../_server/ks-paid-foundation.js';
 import { createPaidActivationReviewHandler } from '../_server/ks-paid-activation-review.js';
 import { createPaidTestControlHandler } from '../_server/ks-paid-test-control.js';
+import { createPaidRenewalReviewHandler } from '../_server/ks-paid-renewal-review-http.js';
 export const maxDuration = 300;
 export default createPreviewPaidOrdersRouter({
   listHandler: createPreviewPaidOrdersHandler({ createClient }),
@@ -11,4 +12,5 @@ export default createPreviewPaidOrdersRouter({
   foundationHandler: createPaidFoundationHandler({ createClient }),
   activationReviewHandler: createPaidActivationReviewHandler({ createClient }),
   paidTestControlHandler: createPaidTestControlHandler({ createClient }),
+  renewalReviewHandler: createPaidRenewalReviewHandler({ createClient }),
 });

@@ -34,7 +34,7 @@ async function fixture(kind = 'new_service', order = getPlan('bronze', 1), { cho
   if(choice){
     for(let n=0;n<links;n++){
       const customer=randomUUID(),panel=sequence*100000+n+1;
-      await db.query("insert into public.iptv_customers(id,external_id,username,source,trial,payment_status) values($1,$2,$3,'roomba',false,'legacy_paid')",[customer,panel,`fixture_choice_${sequence}_${n}`]);
+      await db.query("insert into public.iptv_customers(id,external_id,username,source,trial,payment_status,expiration_at,connections_allowed,package_name,account_status) values($1,$2,$3,'roomba',false,'legacy_paid',date_trunc('second',clock_timestamp())+interval '7 days',4,'6 Months + 4 Connections','active')",[customer,panel,`fixture_choice_${sequence}_${n}`]);
       await db.query('insert into public.ks_crm_portal_links(customer_id,user_id,email_at_link,confirmed_at_link,external_id,linked_by) values($1,$2,$3,$4,$5,$2)',[customer,user.id,user.email,user.email_confirmed_at,panel]);
       customers.push(customer);
     }
@@ -84,6 +84,7 @@ async function fixture(kind = 'new_service', order = getPlan('bronze', 1), { cho
           [args.p_session_id,args.p_payment_intent_id,args.p_user_id,args.p_livemode,args.p_tier,args.p_connections,args.p_duration_days,args.p_amount_cents,args.p_currency]))[0].value;
         return { data, error: null };
       }
+      if (live && name === 'ks_prepare_paid_renewal_review') return { data: (await query('select public.ks_prepare_paid_renewal_review($1,$2) as value',[args.p_session,args.p_user]))[0].value, error: null };
       if (live && name === 'ks_route_paid_order') return { data: (await query('select public.ks_route_paid_order($1) as value',[args.p_session]))[0].value, error: null };
       calls.legacyWrites++; throw new Error('unexpected_receipt_write');
     },
@@ -112,6 +113,7 @@ try {
   await db.exec(await readFile(new URL('../supabase/migrations/20261025033932_add_private_live_checkout_intent_binding.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL(routingMigrationName,new URL('./fixtures/ks-paid-order-routing.mjs',import.meta.url)),'utf8'));
   await db.exec(await readFile(new URL('../supabase/migrations/20261025040332_add_verified_checkout_service_selection.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261025041152_add_private_paid_renewal_review_binding.sql',import.meta.url),'utf8'));
   await check('migration exposes no browser table or function and uses caller privileges', async () => {
     const grants = (await query(`select has_table_privilege('anon','public.${requestTable}','select') as anon,
       has_table_privilege('authenticated','public.${requestTable}','insert') as browser,
@@ -321,6 +323,10 @@ try {
       assert.equal(session.metadata.checkout_binding_version,'2');assert.equal(session.metadata.renewal_customer_id,f.customers[0]);
       const result=await fulfill(session.id,{...f.input.context,receiptOnlyLive:false},f.user.id);
       assert.equal(result.routing.destination,'renewal_review');assert.equal(result.provider_activated,false);
+      assert.equal(result.renewalReview.state,'awaiting_verification');assert.ok(result.renewalReview.operationId);
+      const retry=await fulfill(session.id,{...f.input.context,receiptOnlyLive:false},f.user.id);
+      assert.equal(retry.renewalReview.operationId,result.renewalReview.operationId);assert.equal(retry.renewalReview.replayed,true);
+      assert.equal(retry.renewalReview.mayDispatch,false);
       assert.equal((await query('select customer_id from public.ks_paid_order_routes where checkout_session_id=$1',[session.id]))[0].customer_id,f.customers[0]);
       assert.equal(f.calls.legacyWrites,0);
     });

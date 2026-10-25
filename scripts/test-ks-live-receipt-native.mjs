@@ -378,6 +378,51 @@ try{
     await assert.rejects(()=>b.query(`select public.ks_checkout_services_snapshot('${liveOwner}','native-live@example.invalid',null)`),error=>error.code==='42501');
     await b.query('reset role;set role service_role');
   });
+  const reviewPath='../supabase/migrations/20261025041152_add_private_paid_renewal_review_binding.sql';
+  const reviewMigration=await readFile(new URL(reviewPath,import.meta.url),'utf8');
+  report.sqlSources[reviewPath]=createHash('sha256').update(reviewMigration).digest('hex');install(reviewMigration);
+  // Only disposable customer fixtures are given an active service baseline.
+  install(`update public.iptv_customers set expiration_at=date_trunc('second',clock_timestamp()+interval '7 days'),
+    account_status='active',package_name='1 Month + 1 Connection' where id in('${customerA}','${customerB}');`);
+  const prepareReview=session=>`select public.ks_prepare_paid_renewal_review('${session}','${liveOwner}')`;
+  let savedOperation;
+  await check('simultaneous paid review preparation commits exactly one immutable operation',async()=>{
+    const sql=prepareReview('cs_live_NativeSelected'),result=await race(sql,sql);
+    const first=JSON.parse(result.first),second=JSON.parse(result.second);savedOperation=first.operationId;
+    assert.equal(first.state,'awaiting_verification');assert.equal(first.replayed,false);
+    assert.equal(second.operationId,savedOperation);assert.equal(second.replayed,true);assert.equal(second.mayDispatch,false);
+    assert.equal(await observer.query("select count(*) from public.ks_paid_renewal_review_bindings where checkout_session_id='cs_live_NativeSelected'"),'1');
+  });
+  const rollbackRequest='00000000-0000-4000-8000-000000000034';
+  await a.query(choose(customerA).replace(requestSelected,rollbackRequest));
+  await a.query(bindLive(rollbackRequest,'cs_live_NativeReviewRollback'));
+  await a.query(record('NativeReviewRollback',{owner:liveOwner}));await a.query("select public.ks_route_paid_order('cs_live_NativeReviewRollback')");
+  await check('rolled-back first preparation leaves the waiting retry as the only saved operation',async()=>{
+    const sql=prepareReview('cs_live_NativeReviewRollback'),result=await race(sql,sql,{release:'rollback'});
+    const first=JSON.parse(result.first),second=JSON.parse(result.second);
+    assert.notEqual(first.operationId,second.operationId);assert.equal(second.replayed,false);
+    assert.equal(await observer.query("select operation_id from public.ks_paid_renewal_review_bindings where checkout_session_id='cs_live_NativeReviewRollback'"),second.operationId);
+    assert.equal(await observer.query("select count(*) from public.ks_paid_renewal_review_bindings where checkout_session_id='cs_live_NativeReviewRollback'"),'1');
+  });
+  await check('CRM drift during a waiting retry preserves its operation and marks only that order for review',async()=>{
+    await a.query('begin');await a.query(prepareReview('cs_live_NativeSelected'));
+    const waiting=competing(prepareReview('cs_live_NativeSelected'));await observeBlocked(b.pid,waiting);
+    install(`update public.iptv_customers set connections_allowed=2 where id='${customerA}';`);
+    await a.query('commit');const result=await waiting.result;if(result.error)throw result.error;
+    const value=JSON.parse(result.value);assert.equal(value.operationId,savedOperation);assert.equal(value.state,'review_required');
+    assert.equal(await observer.query("select fulfillment_status from public.ks_setup_order_queue where checkout_session_id='cs_live_NativeSelected'"),'requires_review');
+    assert.equal(await observer.query("select fulfillment_status from public.ks_setup_order_queue where checkout_session_id='cs_live_NativeReviewRollback'"),'awaiting_activation');
+    const privateCheck=JSON.parse(await a.query(`select public.ks_check_paid_renewal_review('cs_live_NativeSelected','${liveOwner}','${savedOperation}')`));
+    assert.equal(privateCheck.binding,null);assert.equal(privateCheck.mayDispatch,false);
+  });
+  await check('paid-review private roles and immutable trigger prohibit rewriting or deleting an attempt',async()=>{
+    const grants=await observer.json("select jsonb_build_object('browserRead',has_table_privilege('authenticated','public.ks_paid_renewal_review_bindings','SELECT'),'browserCall',has_function_privilege('anon','public.ks_prepare_paid_renewal_review(text,uuid)','EXECUTE'),'serviceUpdate',has_table_privilege('service_role','public.ks_paid_renewal_review_bindings','UPDATE'),'serviceInsert',has_table_privilege('service_role','public.ks_paid_renewal_review_bindings','INSERT'))");
+    assert.deepEqual(grants,{browserRead:false,browserCall:false,serviceUpdate:false,serviceInsert:true});
+    await assert.rejects(()=>a.query("delete from public.ks_paid_renewal_review_bindings where checkout_session_id='cs_live_NativeSelected'"),error=>error.code==='42501');
+    await a.query('reset role');await assert.rejects(()=>a.query("delete from public.ks_paid_renewal_review_bindings where checkout_session_id='cs_live_NativeSelected'"),error=>error.code==='P0001');
+    await a.query('set role service_role');
+    assert.deepEqual(await observer.json(`select to_jsonb(p) from public.profiles p where id='${liveOwner}'`),liveProfile);
+  });
   report.passed=true;
   console.log(`${report.tests.length} native PostgreSQL checks passed. Fictional loopback database only; no Supabase, Stripe, email or provider calls.`);
 }catch(error){report.passed=false;report.failure={message:error.message,code:error.code||null};console.error('Native receipt checks failed:',report.failure);process.exitCode=1;

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { FormData } from 'undici';
-import { createLiveRenewalProvider } from '../_server/ks-crm-renewal-live-provider.js';
+import { createLiveRenewalProvider, createPaidRenewalReadProvider } from '../_server/ks-crm-renewal-live-provider.js';
 import { createLiveRenewalHttpHandler } from '../_server/ks-crm-renewal-live-http.js';
 
 globalThis.fetch = () => { throw Error('External transport forbidden'); };
@@ -81,6 +81,19 @@ await check('fresh snapshot uses only the three documented reads and retains no 
   const snapshot = await provider.snapshot({ external_id:line.id }); assert.deepEqual(actions.sort(),['get_line','packages','user_info']);
   assert.equal(snapshot.line.id,line.id); assert.equal(snapshot.packages.length,1); assert.equal(snapshot.account.credits,'100');
   assert.ok(!JSON.stringify(snapshot).includes(line.password)); assert.ok(!JSON.stringify(snapshot).includes(env.ROOMBA_API_KEY));
+});
+await check('paid-review Production transport exposes only fixed GET reads even when every write flag is true', async () => {
+  const config={...env,VERCEL_ENV:'production',KS_CRM_ORDER_RENEWAL_ENABLED:'true'};
+  const actions=[];
+  const provider=createPaidRenewalReadProvider({env:config,readOnly:false,dispatcherFactory:()=>({dispatch(){},async close(){}}),fetchImpl:async(url,options)=>{
+    assert.equal(url.origin+url.pathname,env.ROOMBA_API_URL);assert.equal(options.method,'GET');assert.equal(options.redirect,'manual');
+    assert.ok(options.dispatcher);assert.equal(options.body,undefined);const action=url.searchParams.get('action');actions.push(action);
+    const data=action==='get_line'?line:action==='user_info'?{id:'88',username:'fictional_reseller',credits:'100'}:[];
+    return new Response(JSON.stringify({status:'STATUS_SUCCESS',data}));
+  }});
+  assert.equal(provider.renew,undefined);assert.equal(Object.isFrozen(provider),true);
+  await provider.snapshot({external_id:line.id});assert.deepEqual(actions.sort(),['get_line','packages','user_info']);
+  assert.throws(()=>createLiveRenewalProvider({env:config}),/provider_unavailable/);
 });
 await check('a stale total request budget cannot begin a new provider call', async () => {
   let at = Date.now(), calls = 0;

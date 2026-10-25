@@ -67,6 +67,8 @@ jobs:
             KS_TEST_CHECKOUT_MODE="$checkout_mode" KS_PGLITE_MODULE=/tmp/ks-release-fixtures/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-ks-checkout-intent.mjs
           done
           KS_PGLITE_MODULE=/tmp/ks-release-fixtures/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-ks-paid-order-routing-db.mjs
+          KS_PGLITE_MODULE=/tmp/ks-release-fixtures/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-ks-paid-renewal-verification.mjs
+          node scripts/test-ks-crm-renewal-live-http.mjs
           KS_PGLITE_MODULE=/tmp/ks-release-fixtures/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-ks-pending-order-email-db.mjs
           node scripts/test-ks-support-client.mjs
           node scripts/test-ks-support-ui.mjs

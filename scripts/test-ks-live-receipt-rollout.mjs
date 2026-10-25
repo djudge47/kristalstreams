@@ -14,6 +14,7 @@ function fixture(patch={}){
     from:table=>{assert.equal(table,'ks_setup_order_queue');return{select(){return this;},eq(){return this;},async maybeSingle(){return{data:patch.savedProtocol?{checkout_session_id:session.id}:null,error:patch.protocolError||null};}};},
     rpc:async(name,args)=>{
       calls.rpc.push({name,args});
+      if(name==='ks_prepare_paid_renewal_review')return{data:{reference:session.id,accountId:owner,operationId:'00000000-0000-4000-8000-000000000099',state:'awaiting_verification',reason:'binding_matches',preparedAt:receipt.recorded_at,replayed:false,mayDispatch:false,providerActivated:false},error:null};
       if(name==='ks_route_paid_order')return{data:{ok:true,reference:session.id,account_id:owner,test_mode:false,
         request_kind:null,destination:'manual_review',reason:'missing_intent',routed_at:receipt.recorded_at,replayed:false,...patch.routing},error:patch.routingError||null};
       assert.equal(name,patch.allowLegacy?'ks_apply_paid_checkout':'ks_record_paid_checkout');
