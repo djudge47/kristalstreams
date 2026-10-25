@@ -11,6 +11,9 @@ export async function readActivityProbeJson(response) {
   const stack = [], fields = new Set(), rootKeys = new Set();
   let errorSeen = false;
   let statusString = false;
+  let rootKind = 'unknown', dataKind = 'missing';
+  const kinds = { startObject: 'object', startArray: 'array', startString: 'string', startNumber: 'number', trueValue: 'boolean', falseValue: 'boolean', nullValue: 'null' };
+  const statusCodes = new Set(['STATUS_SUCCESS', 'STATUS_SUCCESS_MULTI', 'STATUS_FAILURE', 'STATUS_INVALID_INPUT', 'STATUS_NO_PERMISSIONS']);
   const allowed = new Set(['line_id', 'username', 'stream_id', 'stream_name', 'stream_display_name']);
   const started = Date.now();
   async function* source() {
@@ -28,6 +31,8 @@ export async function readActivityProbeJson(response) {
     for await (const token of stream) {
       if (++tokens > 100000 || stack.length > 32 || Date.now() - started > 15000) throw new Error('Bound exceeded');
       const parent = stack.at(-1);
+      if (rootKind === 'unknown' && kinds[token.name]) rootKind = kinds[token.name];
+      if (parent?.role === 'root' && parent.key === 'data' && !parent.readingKey && kinds[token.name]) dataKind = kinds[token.name];
       if (token.name === 'startKey') { parent.key = ''; parent.readingKey = true; }
       else if (token.name === 'endKey') {
         parent.readingKey = false;
@@ -62,5 +67,6 @@ export async function readActivityProbeJson(response) {
   });
   return { recognized: dataArray && !errorSeen && !oversized && (!rootKeys.has('status') || statusString)
       && (!rootKeys.has('status') || ['STATUS_SUCCESS', 'STATUS_SUCCESS_MULTI'].includes(status)),
-    samplePresent: rows === 1, fields: [...fields].sort() };
+    samplePresent: rows === 1, fields: [...fields].sort(),
+    format: { rootKind, dataKind, statusCode: !rootKeys.has('status') ? 'absent' : statusString && !oversized && statusCodes.has(status) ? status : 'unrecognized', errorPresent: errorSeen } };
 }

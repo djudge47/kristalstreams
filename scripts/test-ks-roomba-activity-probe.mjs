@@ -6,7 +6,7 @@ import { createRoombaPreviewHandler } from '../_server/ks-roomba-preview.js';
 const secret = 'fictional-secret-must-not-appear';
 const parse = value => readActivityProbeJson(new Response(JSON.stringify(value)));
 assert.deepEqual(await parse({ data: [{ username: secret, password: secret, stream_id: 5, stream_name: secret, ip: secret }] }),
-  { recognized: true, samplePresent: true, fields: ['stream_id', 'stream_name', 'username'] });
+  { recognized: true, samplePresent: true, fields: ['stream_id', 'stream_name', 'username'], format: {rootKind:'object',dataKind:'array',statusCode:'absent',errorPresent:false} });
 assert.equal((await parse({ data: [] })).recognized, true);
 for (const value of [null, { status: 'STATUS_NO_PERMISSIONS' }, { status: null, data: [] }, { error: true, data: [] }, { data: {} }])
   assert.equal((await parse(value)).recognized, false);
@@ -14,6 +14,18 @@ for (const value of [{ data: [null] }, { data: [{}, {}] }]) await assert.rejects
 for (const text of ['{"data":[]}garbage', '{"data":[],"data":[]}', '<html>login</html>', ' '.repeat(1048577)])
   await assert.rejects(() => readActivityProbeJson(new Response(text)));
 console.log('PASS: bounded streaming diagnostic discards customer values and rejects invalid/error responses');
+for(const statusCode of ['STATUS_FAILURE','STATUS_INVALID_INPUT','STATUS_NO_PERMISSIONS']) {
+  const parsed=await parse({status:statusCode,password:secret});
+  assert.equal(parsed.recognized,false);
+  assert.deepEqual(parsed.format,{rootKind:'object',dataKind:'missing',statusCode,errorPresent:false});
+  assert.ok(!JSON.stringify(parsed).includes(secret));
+}
+for(const [value,rootKind,dataKind] of [[[], 'array','missing'],[false,'boolean','missing'],[{data:{}},'object','object'],[{data:null},'object','null']]) {
+  const parsed=await parse(value);assert.equal(parsed.recognized,false);
+  assert.equal(parsed.format.rootKind,rootKind);assert.equal(parsed.format.dataKind,dataKind);
+}
+assert.equal((await parse({status:secret,error:secret})).format.statusCode,'unrecognized');
+console.log('PASS: status diagnostics retain only documented enum values and structural kinds, never arbitrary provider text');
 
 const env = { VERCEL_ENV: 'preview', ROOMBA_PREVIEW_SECRET: secret, ROOMBA_API_KEY: 'fictional-key',
   ROOMBA_API_URL: 'https://cdn.rooomba.tv/WDXTMHmN/', FIXIE_URL: 'https://fiction:fiction@test-proxy.usefixie.com:443' };
@@ -62,6 +74,10 @@ for(const VERCEL_ENV of ['production','development',undefined]) {
 console.log('PASS: admin preflight, query/method restrictions, reauthorization before cache, shared request and Preview gates');
 
 const diagnosticCases = [
+  [200, {status:'activity_probe_complete',probe:{recognized:false,format:{statusCode:'STATUS_NO_PERMISSIONS'}}}, 'provider_permission_denied'],
+  [200, {status:'activity_probe_complete',probe:{recognized:false,format:{statusCode:'STATUS_INVALID_INPUT'}}}, 'provider_invalid_input'],
+  [200, {status:'activity_probe_complete',probe:{recognized:false,format:{statusCode:'STATUS_FAILURE'}}}, 'provider_reported_failure'],
+  [200, {status:'activity_probe_complete',probe:{recognized:false,format:{rootKind:secret,dataKind:secret,statusCode:secret,password:secret}}}, 'response_unrecognized'],
   [200, {status:'activity_probe_complete',probe:{recognized:false}}, 'response_unrecognized'],
   [502, {status:'connection_failed',upstreamStatus:401}, 'provider_denied'],
   [502, {status:'connection_failed',upstreamStatus:403}, 'provider_denied'],

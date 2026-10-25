@@ -11,6 +11,9 @@ type AccountResult = {
 };
 
 const activityMessages: Readonly<Record<string, string>> = {
+  provider_permission_denied: 'Roomba returned STATUS_NO_PERMISSIONS for activity. The reseller account check passed, but this activity request was not permitted.',
+  provider_invalid_input: 'Roomba returned STATUS_INVALID_INPUT for activity. The activity request parameters or compatibility need verification.',
+  provider_reported_failure: 'Roomba returned STATUS_FAILURE for activity. That status does not identify the cause; activity access remains unverified.',
   provider_denied: 'Roomba rejected the activity request. The reseller account check passed, but activity permission or compatibility is not established.',
   provider_rate_limited: 'Roomba limited the activity request. Wait one minute before checking again.',
   provider_redirect: 'Roomba redirected the activity request. The redirect was blocked to protect the connection.',
@@ -23,9 +26,19 @@ const activityMessages: Readonly<Record<string, string>> = {
   diagnostic_failed: 'The activity check could not verify a result.',
 };
 
+function activityFormatDetails(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null;
+  const format = value as Record<string, unknown>;
+  const kinds: Readonly<Record<string, string>> = { object: 'object', array: 'list', string: 'text', number: 'number', boolean: 'boolean', null: 'null', missing: 'missing' };
+  const kind = (input: unknown) => typeof input === 'string' && Object.prototype.hasOwnProperty.call(kinds, input) ? kinds[input] : 'unrecognized';
+  const statuses = ['STATUS_SUCCESS', 'STATUS_SUCCESS_MULTI', 'STATUS_FAILURE', 'STATUS_INVALID_INPUT', 'STATUS_NO_PERMISSIONS'];
+  const status = typeof format.statusCode === 'string' && statuses.includes(format.statusCode) ? format.statusCode : format.statusCode === 'absent' ? 'not supplied' : 'unrecognized';
+  return `Response: ${kind(format.rootKind)}. Activity data: ${kind(format.dataKind)}. Provider status: ${status}.`;
+}
+
 const RoombaConnection: React.FC = () => {
   const [result, setResult] = useState<AccountResult | null>(null);
-  const [activity, setActivity] = useState<{ message: string; checkedAt: string } | null>(null);
+  const [activity, setActivity] = useState<{ message: string; checkedAt: string; details: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -77,7 +90,7 @@ const RoombaConnection: React.FC = () => {
           throw new Error('The activity check response could not be verified.');
         setActivity({ message: payload.status === 'activity_response_received'
           ? 'Roomba returned an activity list. Customer matching and live counts still need verification.'
-          : `${typeof payload.diagnostic === 'string' && Object.prototype.hasOwnProperty.call(activityMessages, payload.diagnostic) ? activityMessages[payload.diagnostic] : 'Activity support is still unverified.'} This does not mean your customers are offline.`, checkedAt: payload.checkedAt });
+          : `${typeof payload.diagnostic === 'string' && Object.prototype.hasOwnProperty.call(activityMessages, payload.diagnostic) ? activityMessages[payload.diagnostic] : 'Activity support is still unverified.'} This does not mean your customers are offline.`, checkedAt: payload.checkedAt, details: activityFormatDetails(payload.format) });
         setCooldown(60);
         return;
       }
@@ -144,6 +157,7 @@ const RoombaConnection: React.FC = () => {
           {loading ? 'Checking...' : cooldown ? `Available in ${cooldown}s` : 'Check activity connection'}
         </button>
         {activity && <p role="status" className="mt-4 text-sm leading-6 text-gray-300">{activity.message} Checked {new Date(activity.checkedAt).toLocaleString()}.</p>}
+        {activity?.details && <p className="mt-2 text-sm leading-6 text-gray-400">{activity.details}</p>}
       </section>
 
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">

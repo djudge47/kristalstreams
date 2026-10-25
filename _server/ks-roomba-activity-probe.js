@@ -3,8 +3,14 @@ import { createRoombaPreviewHandler } from './ks-roomba-preview.js';
 
 // All labels are chosen locally. Never forward provider bodies or raw errors.
 function diagnosticFor(result) {
-  if (result.code === 200 && result.body?.status === 'activity_probe_complete')
-    return result.body?.probe?.recognized === true ? 'activity_list_received' : 'response_unrecognized';
+  if (result.code === 200 && result.body?.status === 'activity_probe_complete') {
+    if (result.body?.probe?.recognized === true) return 'activity_list_received';
+    const reported = result.body?.probe?.format?.statusCode;
+    if (reported === 'STATUS_NO_PERMISSIONS') return 'provider_permission_denied';
+    if (reported === 'STATUS_INVALID_INPUT') return 'provider_invalid_input';
+    if (reported === 'STATUS_FAILURE') return 'provider_reported_failure';
+    return 'response_unrecognized';
+  }
   if (result.code === 503) return 'configuration_unavailable';
   if (result.body?.status !== 'connection_failed') return 'diagnostic_failed';
   const { upstreamStatus, stage, reason } = result.body;
@@ -14,6 +20,20 @@ function diagnosticFor(result) {
   if (Number.isInteger(upstreamStatus) && upstreamStatus >= 400 && upstreamStatus <= 599) return 'provider_http_error';
   if (['TIMEOUT', 'ETIMEDOUT', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'KS_RESPONSE_TIMEOUT'].includes(reason)) return 'request_timeout';
   return stage === 'response_body' ? 'response_unreadable' : 'transport_failed';
+}
+
+// Closed structural vocabulary only; no row values or arbitrary provider text.
+function safeFormat(result) {
+  if (result.code !== 200 || result.body?.status !== 'activity_probe_complete') return null;
+  const input = result.body?.probe?.format;
+  const kinds = ['object', 'array', 'string', 'number', 'boolean', 'null'];
+  const statuses = ['absent', 'STATUS_SUCCESS', 'STATUS_SUCCESS_MULTI', 'STATUS_FAILURE', 'STATUS_INVALID_INPUT', 'STATUS_NO_PERMISSIONS'];
+  return {
+    rootKind: kinds.includes(input?.rootKind) ? input.rootKind : 'unknown',
+    dataKind: [...kinds, 'missing'].includes(input?.dataKind) ? input.dataKind : 'unknown',
+    statusCode: statuses.includes(input?.statusCode) ? input.statusCode : 'unrecognized',
+    errorPresent: input?.errorPresent === true,
+  };
 }
 
 // Existing administrator verification and reseller-account preflight precede
@@ -52,11 +72,14 @@ export function createActivityProbeHandler(settings = {}) {
           const result = await capture(probe, { method: 'GET', headers: { authorization: `Bearer ${env.ROOMBA_PREVIEW_SECRET}` } });
           const diagnostic = diagnosticFor(result);
           const recognized = diagnostic === 'activity_list_received';
+          const format = safeFormat(result);
           const body = { status: recognized ? 'activity_response_received' : 'activity_unverified',
-            diagnostic,
+            diagnostic, format,
             checkedAt: new Date(now()).toISOString(), mode: 'read-only', databaseWrites: false,
             message: recognized ? 'Roomba returned an activity list. Customer matching and live counts still need verification.'
               : 'This request did not establish activity support. No online or offline result can be inferred.' };
+          // Only these fixed labels are logged; no caller/provider identities.
+          console.info('ks_roomba_activity_diagnostic', { diagnostic, format });
           cached = { at: now(), body }; return body;
         })().finally(() => { pending = null; });
       }

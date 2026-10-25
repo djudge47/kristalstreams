@@ -87,7 +87,8 @@ try {
         assert.match(request.headers().authorization, /^Bearer /); activityReads++;
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
           status: activityReads === 1 ? 'activity_response_received' : 'activity_unverified', checkedAt: new Date().toISOString(),
-          diagnostic: activityReads === 1 ? 'activity_list_received' : activityReads === 2 ? 'provider_denied' : 'PRIVATE-UNTRUSTED-MESSAGE',
+          diagnostic: activityReads === 1 ? 'activity_list_received' : activityReads === 2 ? 'provider_denied' : activityReads === 3 ? 'PRIVATE-UNTRUSTED-MESSAGE' : 'provider_permission_denied',
+          format: activityReads < 4 ? {rootKind:'PRIVATE-UNTRUSTED-MESSAGE',dataKind:'PRIVATE-UNTRUSTED-MESSAGE',statusCode:'PRIVATE-UNTRUSTED-MESSAGE'} : {rootKind:'object',dataKind:'missing',statusCode:'STATUS_NO_PERMISSIONS'},
           message: 'PRIVATE-UNTRUSTED-MESSAGE', mode: 'read-only', databaseWrites: false }) });
       }
       if (url.origin === origin) return route.continue();
@@ -375,6 +376,11 @@ try {
   await activityPage.reload(); await activityButton.waitFor(); assert.equal(activityReads, 2);
   await activityButton.click(); await activityPage.getByText(/Activity support is still unverified/).waitFor();
   assert.equal(activityReads, 3); assert.equal(await activityPage.getByText('PRIVATE-UNTRUSTED-MESSAGE').count(), 0);
+  await activityPage.clock.fastForward(60_001); assert.equal(activityReads, 3);
+  await activityPage.reload(); await activityButton.waitFor(); await activityButton.click();
+  await activityPage.getByText(/Roomba returned STATUS_NO_PERMISSIONS/).waitFor();
+  await activityPage.getByText('Response: object. Activity data: missing. Provider status: STATUS_NO_PERMISSIONS.', {exact:true}).waitFor();
+  assert.equal(activityReads, 4); assert.equal(await activityPage.getByText('PRIVATE-UNTRUSTED-MESSAGE').count(), 0);
   await activityContext.close();
   const ordinary = await contextFor('ordinary@example.invalid');
   const denied = await ordinary.newPage(); denied.on('pageerror', error => pageErrors.push(error.message));
