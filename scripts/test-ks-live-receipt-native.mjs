@@ -378,7 +378,7 @@ try{
     await assert.rejects(()=>b.query(`select public.ks_checkout_services_snapshot('${liveOwner}','native-live@example.invalid',null)`),error=>error.code==='42501');
     await b.query('reset role;set role service_role');
   });
-  const reviewPath='../supabase/migrations/20261025041152_add_private_paid_renewal_review_binding.sql';
+  const reviewPath='../supabase/migrations/20261025042823_add_private_paid_renewal_review_binding.sql';
   const reviewMigration=await readFile(new URL(reviewPath,import.meta.url),'utf8');
   report.sqlSources[reviewPath]=createHash('sha256').update(reviewMigration).digest('hex');install(reviewMigration);
   // Only disposable customer fixtures are given an active service baseline.

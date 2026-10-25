@@ -113,7 +113,7 @@ try {
   await db.exec(await readFile(new URL('../supabase/migrations/20261025033932_add_private_live_checkout_intent_binding.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL(routingMigrationName,new URL('./fixtures/ks-paid-order-routing.mjs',import.meta.url)),'utf8'));
   await db.exec(await readFile(new URL('../supabase/migrations/20261025040332_add_verified_checkout_service_selection.sql',import.meta.url),'utf8'));
-  await db.exec(await readFile(new URL('../supabase/migrations/20261025041152_add_private_paid_renewal_review_binding.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261025042823_add_private_paid_renewal_review_binding.sql',import.meta.url),'utf8'));
   await check('migration exposes no browser table or function and uses caller privileges', async () => {
     const grants = (await query(`select has_table_privilege('anon','public.${requestTable}','select') as anon,
       has_table_privilege('authenticated','public.${requestTable}','insert') as browser,

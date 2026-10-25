@@ -1,8 +1,8 @@
-# Paid-renewal verification work — October 25, 2026
+# Installed paid-renewal review prerequisite — October 25, 2026
 
 - The receipt path now gives an explicitly selected live renewal one immutable review identity, with same-operation retry after lost acknowledgements. Current Auth/link/service drift blocks the review without retargeting or repeating the old completed manual purchase.
 - A confirmed-administrator endpoint rechecks current facts before and after documented XUI GET reads. It exposes no write method, payment credentials or provider target. Its result is a short-lived review only and always denies dispatch authority.
-- Source is staged in PR #33; connected installation and final native test evidence are not yet recorded for this batch. See `docs/paid-renewal-verification.md`.
+- Migration `20261025042823` is installed with tested function bodies, private invoker permissions, RLS and immutability guard verified. Customer service/billing and website access digests, receipts and queues are unchanged. The review table is empty and all three renewal controls remain off. Six workflows passed at `4a6a888`, including 48 native cases on each PostgreSQL version. Source remains staged in PR #33. See `docs/paid-renewal-verification.md` and its installation report.
 - Durable execution/credit consent, execution-time claims and revalidation, completion/recovery, credential delivery and coordinated release remain open. No flag, real payment, provider write or credit spend is enabled.
 
 # Installed explicit renewal-service prerequisite — October 25, 2026
