@@ -8,10 +8,20 @@ export function paymentConfirmationView(payload,reference){
     ||(payload.receipt_reference!==undefined&&payload.receipt_reference!==reference)
     ||payload.test_mode!==reference.startsWith('cs_test_')
     ||(payload.provider_activated!==undefined&&typeof payload.provider_activated!=='boolean')
-    ||!['awaiting_activation','setup_complete','setup_expired','requires_review',undefined].includes(payload.order_status))throw unavailable();
+    ||!['awaiting_activation','setup_complete','setup_expired','requires_review','renewal_complete',undefined].includes(payload.order_status))throw unavailable();
   const test=payload.test_mode,provider=payload.provider_activated===true;
   if((test&&payload.activated)||(provider&&payload.order_status!=='setup_complete')
     ||(payload.order_status==='setup_complete'&&!provider))throw unavailable();
+  if(payload.order_status==='renewal_complete'){
+    const completed=typeof payload.renewal_completed_at==='string'?Date.parse(payload.renewal_completed_at):NaN;
+    const expires=typeof payload.setup_expires_at==='string'?Date.parse(payload.setup_expires_at):NaN;
+    const checked=typeof payload.setup_checked_at==='string'?Date.parse(payload.setup_checked_at):NaN;
+    if(test||payload.activated!==false||payload.provider_activated!==false||payload.renewal_completed!==true
+      ||payload.payment_recorded!==true||!Number.isFinite(completed)||!Number.isFinite(expires)||!Number.isFinite(checked)
+      ||completed>checked+60000||expires<=completed)throw unavailable();
+    return {kind:'renewed',title:'Renewal completed',message:'Your payment is saved and this renewal was completed. Your dashboard shows the term recorded for this order and your current saved service details. This is not a live playback check. Please do not pay again for this order.'};
+  }
+  if(payload.renewal_completed!==undefined||payload.renewal_completed_at!==undefined)throw unavailable();
   if(payload.order_status==='setup_complete'||payload.order_status==='setup_expired'){
     const expires=typeof payload.setup_expires_at==='string'?Date.parse(payload.setup_expires_at):NaN;
     const checked=typeof payload.setup_checked_at==='string'?Date.parse(payload.setup_checked_at):NaN;

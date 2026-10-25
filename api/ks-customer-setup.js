@@ -5,6 +5,7 @@ import { createCustomerCrmHandler } from '../_server/ks-customer-crm.js';
 
 export default createCustomerSetupRouter({ statusHandler: createCustomerSetupHandler({ createClient }),
   crmHandler: createCustomerCrmHandler({ createClient }),
+  checkoutServicesHandler: createCustomerCrmHandler({ createClient, checkoutServices: true }),
   availabilityHandler: createStreamingLoginHandler({ createClient }),
   revealHandler: createStreamingLoginHandler({ createClient, reveal: true }),
 });

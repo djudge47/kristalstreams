@@ -10,10 +10,10 @@ const id = value => typeof value === 'string' && /^[1-9]\d{0,14}$/.test(value);
 // changed-order bridge must explicitly select its separate server release gate.
 // Neither transport option is authorization, and clients cannot select one.
 export function createLiveRenewalProvider({ env = process.env, fetchImpl = fetch,
-  dispatcherFactory = createFixieDispatcher, now = Date.now, writePolicy = 'same-package' } = {}) {
+  dispatcherFactory = createFixieDispatcher, now = Date.now, writePolicy = 'same-package', readOnly = false } = {}) {
   if (!['same-package','changed-order'].includes(writePolicy)) throw Error('renewal_write_policy_required');
   const releaseGate = writePolicy === 'changed-order' ? 'KS_CRM_ORDER_RENEWAL_ENABLED' : 'KS_CRM_LIVE_RENEWAL_ENABLED';
-  if (env.VERCEL_ENV !== 'preview' || env.ROOMBA_API_URL !== endpoint
+  if (!(readOnly ? ['preview','production'].includes(env.VERCEL_ENV) : env.VERCEL_ENV === 'preview') || env.ROOMBA_API_URL !== endpoint
     || typeof env.ROOMBA_API_KEY !== 'string' || !env.ROOMBA_API_KEY || /\s/.test(env.ROOMBA_API_KEY)) throw Error('live_renewal_provider_unavailable');
   const proxy = fixieProxyUrl(env.FIXIE_URL);
   const secrets = [env.ROOMBA_API_KEY, env.FIXIE_URL, decodeURIComponent(proxy.password)];
@@ -22,7 +22,7 @@ export function createLiveRenewalProvider({ env = process.env, fetchImpl = fetch
     const writing = action === 'edit_line';
     if (!['user_info','packages','get_line','edit_line'].includes(action)
       || (['get_line','edit_line'].includes(action) && !id(lineId))) throw Error('live_renewal_request_invalid');
-    if (writing && env[releaseGate] !== 'true') throw Error('live_renewal_sending_disabled');
+    if (writing && (readOnly || env[releaseGate] !== 'true')) throw Error('live_renewal_sending_disabled');
     const remaining = deadline - now();
     if (!Number.isSafeInteger(remaining) || remaining <= 0) throw Error('live_renewal_request_expired');
     let dispatcher;
@@ -58,7 +58,7 @@ export function createLiveRenewalProvider({ env = process.env, fetchImpl = fetch
     } catch { throw Error(writing ? 'live_renewal_result_uncertain' : 'live_renewal_read_unavailable'); }
     finally { if (dispatcher?.close) void Promise.resolve(dispatcher.close()).catch(() => {}); }
   };
-  return Object.freeze({
+  const adapter = {
     async snapshot(customer) {
       if (!id(String(customer?.external_id))) throw Error('saved_renewal_customer_required');
       const started = now();
@@ -81,5 +81,11 @@ export function createLiveRenewalProvider({ env = process.env, fetchImpl = fetch
       const copy = new FormData(); for (const [name,value] of entries) copy.append(name,value);
       return request('edit_line', lineId, copy);
     },
-  });
+  };
+  if (readOnly) delete adapter.renew;
+  return Object.freeze(adapter);
 }
+
+// A separate constructor exposes GET-only operations in either website
+// environment. HTTP callers cannot choose transport or enable writing.
+export const createPaidRenewalReadProvider = settings => createLiveRenewalProvider({ ...settings, readOnly: true });

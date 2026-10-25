@@ -1,0 +1,91 @@
+{
+  "project": "wftfxerblhlsxiijtfbo",
+  "installed_migration": "20261025130107",
+  "tested_draft_path": "supabase/migrations/20261025124926_add_private_owner_renewal_completion_status.sql",
+  "canonical_path": "supabase/migrations/20261025130107_add_private_owner_renewal_completion_status.sql",
+  "sql_sha256": "cfef7556ab8cee43c5de98fdd6f6bb5fcade1f6ac1f0b9d78e0ebb2efb8b6876",
+  "pre_install_tested_commit": "32cdaab40e03d32c6195982885c5df83050166a2",
+  "pre_install_tested_tree": "d52ce6110872599807e536d57444d26187897c37",
+  "implementation_workflows": {
+    "application": 40195492473,
+    "native_receipt": 40195492415,
+    "crm_status": 40195492389,
+    "manual_renewal": 40195492423,
+    "paid_recovery": 40195492466,
+    "signed_handoff": 40195492500
+  },
+  "native_jobs": {
+    "17.6": 121175315617,
+    "17.11": 121175315795
+  },
+  "native_cases_per_version": 74,
+  "sql_adapter_cases": 35,
+  "browser_renewal_journeys": 8,
+  "browser_widths": [
+    390,
+    1280
+  ],
+  "live_receipt_rollout_cases": 16,
+  "customer_setup_cases": 13,
+  "initial_component_render_cases": 7,
+  "function_check": {
+    "name": "ks_owner_paid_renewal_completions(uuid,text[])",
+    "body_md5": "83629556ddbadd83617e27c6b382bdb7",
+    "stable": true,
+    "invoker": true,
+    "empty_search_path": true,
+    "anon_denied": true,
+    "authenticated_denied": true,
+    "service_role_allowed": true
+  },
+  "fictional_owner_result": [],
+  "baseline": {
+    "crm_customers": 20,
+    "crm_digest": "0adce2c433d59c54126b71a9c9138fd3",
+    "profile_digest": "eae960883bd1639904bf489ec82b2ea2",
+    "receipts": 2,
+    "completions": 0,
+    "live_orders": 0,
+    "sends": 0,
+    "notifications": 2,
+    "controls": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "after": {
+    "crm_customers": 20,
+    "crm_digest": "0adce2c433d59c54126b71a9c9138fd3",
+    "profile_digest": "eae960883bd1639904bf489ec82b2ea2",
+    "receipts": 2,
+    "completions": 0,
+    "live_orders": 0,
+    "sends": 0,
+    "notifications": 2,
+    "controls": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "advisory_kinds_before_and_after": [
+    "auth_leaked_password_protection:WARN",
+    "rls_enabled_no_policy:INFO"
+  ],
+  "changes_customer_records": false,
+  "provider_calls": false,
+  "emails_sent": false,
+  "credits_spent": false,
+  "flags_enabled": false,
+  "production_promoted": false,
+  "website_code": "staged draft PR #33",
+  "limits": [
+    "Historical renewal completion does not assert current playback or online status.",
+    "No financial payment-history or profile-entitlement projection added.",
+    "Executable provider bridge and additional reviewed timing policies remain open.",
+    "Only the private additive read function was installed; no customer backfill or new dispatch authority."
+  ]
+}

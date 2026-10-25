@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {emptyPaidHistorySupportSql} from './fixtures/ks-customer-payment-history.mjs';
 import {readFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {createClient as realClient} from '@supabase/supabase-js';
@@ -17,12 +18,14 @@ await db.exec(`create role anon;create role authenticated;create role service_ro
  grant select,update on public.iptv_customers to service_role;
  grant select on public.iptv_payments,public.ks_crm_renewal_payments to service_role;`);
 await db.exec(await readFile(new URL('./ks-crm-customer-portal-schema.sql',import.meta.url),'utf8'));
+await db.exec(emptyPaidHistorySupportSql);
+await db.exec(await readFile(new URL('../supabase/migrations/20261025134303_add_private_merged_customer_payment_history.sql',import.meta.url),'utf8'));
 for(const [uid,email,confirmed] of [[owner,'owner@example.invalid',date],[other,'other@example.invalid',date],[actor,'djudge47@gmail.com',date],[unconfirmed,'unconfirmed@example.invalid',null]])
  await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,$3)',[uid,email,confirmed]);
 for(const [cid,panel,username] of [[customer,1001,'Fictional.One'],[second,1002,'Fictional.Two']])
  await db.query("insert into public.iptv_customers values($1,$2,$3,null,'panel_screenshot_import','legacy_paid','12 Months + 1 Connection',1,'2027-08-04','active',now())",[cid,panel,username]);
-for(let n=0;n<205;n++)await db.query("insert into public.iptv_payments values($1,$2,95,'manual_paypal','paid',$3)",[id(100+n),customer,new Date(Date.parse('2026-08-03T20:17:00Z')+n*1000).toISOString()]);
-await db.query("insert into public.iptv_payments values($1,$2,12345,'cash','paid',$3),($4,$5,0,'manual','paid',$3),($6,$5,25,'cash','refunded',$3)",[id(500),second,date,id(501),customer,id(502)]);
+for(let n=0;n<205;n++)await db.query("insert into public.iptv_payments(id,customer_id,amount,payment_method,payment_status,paid_at) values($1,$2,95,'manual_paypal','paid',$3)",[id(100+n),customer,new Date(Date.parse('2026-08-03T20:17:00Z')+n*1000).toISOString()]);
+await db.query("insert into public.iptv_payments(id,customer_id,amount,payment_method,payment_status,paid_at) values($1,$2,12345,'cash','paid',$3),($4,$5,0,'manual','paid',$3),($6,$5,25,'cash','refunded',$3)",[id(500),second,date,id(501),customer,id(502)]);
 await db.query('insert into public.ks_crm_renewal_payments values($1,$2,9500,$3,12,1)',[id(304),customer,'2026-08-03T20:20:24Z']);
 const before=(await db.query('select row_to_json(c) v from public.iptv_customers c order by id')).rows;
 const paymentsBefore=(await db.query('select count(*)::int n,sum(amount) total from public.iptv_payments')).rows;
@@ -75,7 +78,7 @@ const env={VERCEL_ENV:deploymentEnv,VITE_SUPABASE_URL:'https://wftfxerblhlsxiijt
 const calls=[];let identity={id:owner,email:review.email,email_confirmed_at:date,is_anonymous:false},rpcFailure=false,badPayload=false;
 const admin=realClient(env.VITE_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:async(input,options)=>{
  const url=new URL(input);const name=url.pathname.split('/').at(-1);const args=JSON.parse(options.body);calls.push({url,args,method:options.method});
- const order={ks_client_crm_snapshot:['p_user','p_email','p_before_at','p_before_id'],ks_crm_portal_link_review:['p_customer','p_email','p_actor'],ks_crm_portal_link_save:['p_customer','p_user','p_email','p_confirmed_at','p_panel','p_actor']}[name];assert.ok(order);assert.equal(options.method,'POST');
+ const order={ks_client_crm_snapshot_v2:['p_user','p_email','p_before_at','p_before_id'],ks_client_crm_snapshot:['p_user','p_email','p_before_at','p_before_id'],ks_crm_portal_link_review:['p_customer','p_email','p_actor'],ks_crm_portal_link_save:['p_customer','p_user','p_email','p_confirmed_at','p_panel','p_actor']}[name];assert.ok(order);assert.equal(options.method,'POST');
  if(rpcFailure)return Response.json({message:'fictional-private-db-error'},{status:500});
  try{let result=await rpc(name,order.map(k=>args[k]));if(badPayload)result.payments[0].customerId=second;return Response.json(result);}catch(error){return Response.json({message:error.message},{status:409});}
 }}});
@@ -86,9 +89,11 @@ async function request(patch={},adminLink=false,envPatch={}){
 }
 await check('real SDK serializes only server-verified owner inputs and all 205 receipts remain accessible in explicit pages',async()=>{
  const first=await request();assert.equal(first.code,200);assert.equal(first.headers['Cache-Control'],'private, no-store');assert.equal(first.headers.Vary,'Authorization');
- assert.equal(first.body.payments.length,200);assert.ok(first.body.nextCursor);
- const secondPage=await request({query:{view:'crm-service',beforeAt:first.body.nextCursor.paidAt,beforeId:first.body.nextCursor.id}});assert.equal(secondPage.code,200);assert.equal(secondPage.body.payments.length,5);assert.equal(secondPage.body.nextCursor,null);
- assert.equal(new Set([...first.body.payments,...secondPage.body.payments].map(p=>p.id)).size,205);
+ assert.equal(first.body.payments.length,20);assert.ok(first.body.nextCursor);
+ const secondPage=await request({query:{view:'crm-service',beforeAt:first.body.nextCursor.paidAt,beforeId:first.body.nextCursor.id}});assert.equal(secondPage.code,200);assert.equal(secondPage.body.payments.length,20);assert.equal(Boolean(secondPage.body.nextCursor),true);
+ const all=[...first.body.payments,...secondPage.body.payments];let cursor=secondPage.body.nextCursor;
+ while(cursor){const page=await request({query:{view:'crm-service',beforeAt:cursor.paidAt,beforeId:cursor.id}});assert.equal(page.code,200);all.push(...page.body.payments);cursor=page.body.nextCursor;}
+ assert.equal(all.length,205);assert.equal(new Set(all.map(p=>p.id)).size,205);
  assert.equal(calls[0].args.p_user,owner);assert.equal(calls[0].args.p_email,review.email);
  assert.equal((await request({query:{view:'crm-service',customerId:second}})).code,400);
  assert.equal((await request({query:{view:'crm-service',beforeAt:'bad',beforeId:other}})).code,400);

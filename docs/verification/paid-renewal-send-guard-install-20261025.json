@@ -1,0 +1,97 @@
+{
+  "kind": "connected-disabled-paid-renewal-send-guard",
+  "project": "wftfxerblhlsxiijtfbo",
+  "migration": {
+    "version": "20261025084505",
+    "name": "add_disabled_paid_renewal_send_guard",
+    "sourcePath": "supabase/migrations/20261025084505_add_disabled_paid_renewal_send_guard.sql",
+    "sha256": "a7cd446d1e5a6e8d5f0722846a0fab88c78fad34d9bb2686da7231d18a980a3d",
+    "testedDraftPath": "supabase/migrations/20261025083228_add_disabled_paid_renewal_send_guard.sql",
+    "sqlBytesChangedAfterNativeTest": false
+  },
+  "testedCommit": "b40f031bcd7841c6fd1e29ecb9852de4ac671bea",
+  "successfulWorkflowRuns": {
+    "Native signed review handoff checks": 40177679464,
+    "Native paid worker recovery checks": 40177679413,
+    "CRM XUI status checks": 40177679415,
+    "Native CRM renewal rehearsal": 40177679451,
+    "Native receipt-only database checks": 40177679416,
+    "Application quality": 40177679414
+  },
+  "nativeJobs": [
+    {
+      "postgres": "17.6",
+      "jobId": 121121804802,
+      "checksPassed": 63
+    },
+    {
+      "postgres": "17.11",
+      "jobId": 121121804969,
+      "checksPassed": 63
+    }
+  ],
+  "connectedFunctionBodyMd5": {
+    "ks_paid_renewal_send_enabled": "73dea8c15c4dc22f0d26907c973ec453",
+    "ks_stop_paid_renewal_send_guard": "578eb7f99d1d2efe41b90235d8e201f6",
+    "ks_begin_paid_renewal_send_guard": "20dbfbf1e20330ccbd73db31c4f7d3f5",
+    "ks_assert_paid_renewal_send_facts": "7ff6735f1e8334a3a74e53a6afad02bd",
+    "ks_lookup_paid_renewal_send_guard": "c95fb7184c80076062b75249bdf1901a",
+    "ks_paid_renewal_send_fresh_commit": "7816c75ef88804762ad8a22f08ca70c3",
+    "ks_reserve_paid_renewal_send_guard": "a694e714810bc7cba9ef51e51409f9e3",
+    "ks_guard_paid_renewal_send_operation": "6758fc2f03c87a9ac162e95dba9973c4",
+    "ks_guard_paid_renewal_send_reservation": "6d75ad13d82ab4e81b12ae4e377847c3",
+    "ks_guard_reseller_reservation_exclusion": "897f56fb9493a3da44edd2d2686e4ec3",
+    "ks_paid_renewal_send_reservation_immutable": "186cc182a8e1d9b5b6124f107668ae89"
+  },
+  "connectedChecks": {
+    "controls": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "guardEnabled": false,
+    "newOperations": 0,
+    "newLineVersions": 0,
+    "allSixResellerSlotsEmpty": true,
+    "privateFunctions": true,
+    "privateTables": true,
+    "serviceCannotRewrite": true,
+    "deferredCommitGuard": true,
+    "sharedTriggers": 6,
+    "newSecurityWarningKinds": 0
+  },
+  "unchangedBeforeAndAfter": {
+    "routes": 0,
+    "crmCustomers": 20,
+    "pendingAlerts": 0,
+    "quoteApprovals": 0,
+    "reviewBindings": 0,
+    "paymentReceipts": 2,
+    "previewRequests": 1,
+    "purchaseIntents": 1,
+    "liveQueuedOrders": 0,
+    "resellerGuardAcl": "{postgres=X/postgres,service_role=X/postgres}",
+    "liveCheckoutRequests": 0,
+    "crmServiceBillingDigest": "0adce2c433d59c54126b71a9c9138fd3",
+    "oldManualOperationDigest": "2521cc5fe434ad62266b56ba0c18dc07",
+    "websiteEntitlementDigest": "eae960883bd1639904bf489ec82b2ea2",
+    "existingNotificationRecords": 2
+  },
+  "scope": {
+    "productionRelease": false,
+    "existingControlEnablement": false,
+    "newControlEnabled": false,
+    "realPaymentOrEmail": false,
+    "providerWriteOrCreditSpend": false,
+    "customerMutation": false,
+    "httpExecutionOrConsentIssuanceRoute": false,
+    "providerPolicyOrCompletionClaim": false
+  },
+  "remaining": [
+    "Reviewed provider timing policy and transport execution bridge",
+    "Completion, reconciliation and verified reservation release",
+    "Credential delivery and administrative UI",
+    "Coordinated release and separately authorized real provider execution"
+  ]
+}

@@ -1,3 +1,19 @@
+# Installed receipt and pending-notification foundation — October 24, 2026
+
+The missing private receipt rollback guard and pending-alert objects are now installed in the active Kristal Stream project as migration `20261025024637`. The exact previously reviewed SQL was applied, with its original preparation comment preserved. The file was renamed from the earlier CLI-generated draft timestamp to the server-recorded version; its SQL bytes are unchanged. Historical native reports retain their original source filename and tested commit.
+
+`ks-order-notification` is now ACTIVE version 3 with JWT verification retained. All four deployed files exactly match the repository. The prior `handler.js` is byte-for-byte unchanged; requests without a protocol still use that handler. The new receipt-only protocol dispatches to the already-tested pending handler after the same backend authorization. No customer email or caller-selected recipient was sent or tested against a real mail provider.
+
+Connected SELECT checks confirm RLS and no browser table/function access, service-only invoker functions with empty search paths, the enabled receipt guard and an empty pending-alert table. The same 20 CRM customers, service/billing digest, website-entitlement digest, two payment receipts, zero live queued orders and two historical notification records were preserved. All three renewal execution controls remain off. Security advisories have no new warning; the existing leaked-password-protection warning remains.
+
+85 focused local checks passed across the actual receipt/queue SQL, pending-alert SQL and notification routing, fulfillment rollout, owner status and response-recovery fixtures. The deployed function rejects an unsigned GET with HTTP 401. Existing native checks previously tested these exact SQL bytes on PostgreSQL 17.6 and 17.11; CI now follows the installed migration filename.
+
+**This closes the missing private database/notification deployment prerequisites. It does not enable the live receipt-only rollout, Checkout intent, checkout, XUI execution, automatic activation, or general renewal.** The receipt-only release flag remains absent. Owner-completion/credential delivery, new-service versus renewal binding, broader renewal scope and a coordinated release still require completion. The saved successful 6-month/3-connection changed-order renewal is preserved; it spent 15 credits on October 22, not during this work. No replay, charge or provider request was performed.
+
+The preparation history below describes earlier states and is retained as history.
+
+---
+
 # Live payment receipt-only rollout — prepared, disabled
 
 A paid order must not grant website access or announce working streaming
@@ -135,7 +151,7 @@ dependencies without applying DDL; broader release prerequisites remain open.
 ## CLI-generated migration and connected compatibility follow-up
 
 The reviewed file is
-[`20261020044005_add_live_receipt_pending_alerts_and_rollback_guard.sql`](../supabase/migrations/20261020044005_add_live_receipt_pending_alerts_and_rollback_guard.sql).
+[`20261020044005_add_live_receipt_pending_alerts_and_rollback_guard.sql`](../supabase/migrations/20261025024637_add_live_receipt_pending_alerts_and_rollback_guard.sql).
 Supabase CLI 2.121.0 generated its empty filename with `migration new`; the
 reviewed SQL was then filled locally. Automatic approval review blocked the
 CLI's unrelated telemetry request after file creation; no telemetry retry was

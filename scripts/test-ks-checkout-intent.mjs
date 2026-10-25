@@ -5,31 +5,49 @@ import { bootstrap, literal } from './fixtures/ks-reviewed-handoff/fixtures.mjs'
 import { createBoundCheckout, verifiedCheckoutIntent } from '../_server/ks-checkout-intent.js';
 import { getPlan, validateOrder } from '../_server/ks-payment-validation.js';
 import { fulfill } from '../_server/ks-payments.js';
+import { routingMigrationName, routingSupportSql } from './fixtures/ks-paid-order-routing.mjs';
 
 const { PGlite } = await import(process.env.KS_PGLITE_MODULE || '@electric-sql/pglite');
 const db = new PGlite();
-const env = { VERCEL_ENV: 'preview', KS_CHECKOUT_INTENT_ENABLED: 'true' };
-const origin = 'https://ks-fixture.vercel.app';
+const environment = process.env.KS_TEST_CHECKOUT_MODE || 'preview';
+assert.ok(['preview','production'].includes(environment));
+const live = environment === 'production';
+const env = { VERCEL_ENV: environment, KS_CHECKOUT_INTENT_ENABLED: 'true' };
+const origin = live ? 'https://kristalstream.com' : 'https://ks-fixture.vercel.app';
+const requestTable = live ? 'ks_live_checkout_requests' : 'ks_checkout_requests';
+const reserveRpc = live ? 'ks_reserve_live_checkout_request' : 'ks_reserve_checkout_request';
+const bindRpc = live ? 'ks_bind_live_checkout_request' : 'ks_bind_checkout_request';
+const prefix = live ? 'cs_live_' : 'cs_test_';
 const migration = await readFile(new URL('../supabase/migrations/20261020003225_add_private_checkout_intent_binding.sql', import.meta.url), 'utf8');
 const adminSql = { request: sql => db.exec(sql) };
 let passed = 0, sequence = 0;
 const check = async (label, fn) => { await fn(); passed++; console.log(`PASS: ${label}`); };
 const query = async (sql, args = []) => (await db.query(sql, args)).rows;
 
-async function fixture(kind = 'new_service', order = getPlan('bronze', 1)) {
+async function fixture(kind = 'new_service', order = getPlan('bronze', 1), { choice = false, links = 2 } = {}) {
   const user = { id: randomUUID(), email: `fixture-${++sequence}@example.invalid`, is_anonymous: false, email_confirmed_at: new Date().toISOString() };
-  await db.exec(`reset role; insert into auth.users values(${literal(user.id)});
+  await db.exec(`reset role; insert into auth.users(id,email,email_confirmed_at,is_anonymous) values(${literal(user.id)},${literal(user.email)},${literal(user.email_confirmed_at)},false);
     insert into public.profiles(id,email) values(${literal(user.id)},${literal(user.email)}); set role service_role;`);
   const calls = { creates: 0, retrieves: 0, rpcs: 0, sessions: new Map(), requests: new Map(), fault: '', legacyWrites: 0 };
   const body = { checkoutRequestId: randomUUID(), purchaseKind: kind };
+  const customers=[];
+  if(choice){
+    for(let n=0;n<links;n++){
+      const customer=randomUUID(),panel=sequence*100000+n+1;
+      await db.query("insert into public.iptv_customers(id,external_id,username,source,trial,payment_status,expiration_at,connections_allowed,package_name,account_status) values($1,$2,$3,'roomba',false,'legacy_paid',date_trunc('second',clock_timestamp())+interval '7 days',4,'6 Months + 4 Connections','active')",[customer,panel,`fixture_choice_${sequence}_${n}`]);
+      await db.query('insert into public.ks_crm_portal_links(customer_id,user_id,email_at_link,confirmed_at_link,external_id,linked_by) values($1,$2,$3,$4,$5,$2)',[customer,user.id,user.email,user.email_confirmed_at,panel]);
+      customers.push(customer);
+    }
+    body.renewalCustomerId=customers[0];
+  }
   const stripe = { checkout: { sessions: {
     async create(params, options) {
       calls.creates++;
       const previous = calls.requests.get(options.idempotencyKey);
       if (previous) { assert.deepEqual(previous.params, params); return calls.sessions.get(previous.id); }
-      const id = `cs_test_Local${sequence}x${calls.sessions.size}`;
+      const id = `${prefix}Local${sequence}x${calls.sessions.size}`;
       calls.requests.set(options.idempotencyKey, { params: structuredClone(params), id });
-      const result = { id, livemode: false, mode: params.mode, metadata: params.metadata, client_reference_id: params.client_reference_id,
+      const result = { id, livemode: live, mode: params.mode, metadata: params.metadata, client_reference_id: params.client_reference_id,
         customer_email: params.customer_email, expires_at: params.expires_at, currency: 'usd', status: 'open', payment_status: 'unpaid',
         amount_total: params.line_items[0].price_data.unit_amount, amount_subtotal: params.line_items[0].price_data.unit_amount,
         url: `https://checkout.stripe.com/c/pay/${id}`, payment_intent: `pi_Local${sequence}` };
@@ -42,28 +60,36 @@ async function fixture(kind = 'new_service', order = getPlan('bronze', 1)) {
   const admin = {
     async rpc(name, args) {
       calls.rpcs++;
-      if (name === 'ks_reserve_checkout_request') {
+      if (name === reserveRpc || name === 'ks_reserve_live_service_checkout_request') {
         if (calls.fault === 'reserve_failure') return { data: null, error: {} };
         try {
-          const data = (await query('select public.ks_reserve_checkout_request($1,$2,$3,$4,$5,$6,$7) as value',
-            [args.p_user_id,args.p_request_id,args.p_tier,args.p_connections,args.p_kind,args.p_origin,args.p_email]))[0].value;
+          const selected=name==='ks_reserve_live_service_checkout_request';
+          const data = (await query(`select public.${name}($1,$2,$3,$4,$5,$6,$7${selected?',$8':''}) as value`,
+            [args.p_user_id,args.p_request_id,args.p_tier,args.p_connections,args.p_kind,args.p_origin,args.p_email,...(selected?[args.p_customer]:[])]))[0].value;
           if (calls.fault === 'lost_reserve') { calls.fault=''; return {data:null,error:{}}; }
           return { data, error: null };
         } catch (error) { return { data: null, error }; }
       }
-      if (name === 'ks_bind_checkout_request') {
+      if (name === bindRpc) {
         if (calls.fault === 'bind_failure') return { data: null, error: {} };
         try {
-          const data = (await query('select public.ks_bind_checkout_request($1,$2,$3) as value',
+          const data = (await query(`select public.${bindRpc}($1,$2,$3) as value`,
             [args.p_user_id,args.p_request_id,args.p_session_id]))[0].value;
           if (calls.fault === 'lost_bind') { calls.fault = ''; return { data: null, error: {} }; }
           return { data, error: null };
         } catch (error) { return { data: null, error }; }
       }
+      if (live && name === 'ks_record_paid_checkout') {
+        const data = (await query('select public.ks_record_paid_checkout($1,$2,$3,$4,$5,$6,$7,$8,$9) as value',
+          [args.p_session_id,args.p_payment_intent_id,args.p_user_id,args.p_livemode,args.p_tier,args.p_connections,args.p_duration_days,args.p_amount_cents,args.p_currency]))[0].value;
+        return { data, error: null };
+      }
+      if (live && name === 'ks_prepare_paid_renewal_review') return { data: (await query('select public.ks_prepare_paid_renewal_review($1,$2) as value',[args.p_session,args.p_user]))[0].value, error: null };
+      if (live && name === 'ks_route_paid_order') return { data: (await query('select public.ks_route_paid_order($1) as value',[args.p_session]))[0].value, error: null };
       calls.legacyWrites++; throw new Error('unexpected_receipt_write');
     },
     from(table) {
-      assert.ok(['ks_checkout_requests','ks_setup_purchase_intents'].includes(table));
+      assert.ok([requestTable,'ks_setup_purchase_intents'].includes(table));
       const filters = [];
       const builder = { select(columns) { assert.equal(columns, '*'); return this; },
         eq(column, value) { assert.ok(['user_id','request_id','checkout_session_id'].includes(column)); filters.push([column,value]); return this; },
@@ -71,24 +97,31 @@ async function fixture(kind = 'new_service', order = getPlan('bronze', 1)) {
       }; return builder;
     },
   };
-  const context = { live: false, environment: 'preview', stripe, admin };
+  const context = { live, environment, receiptOnlyLive: live, stripe, admin };
+  calls.notifications = 0;
+  admin.functions = { invoke: async () => { calls.notifications++; return { data: { success: true }, error: null }; } };
   const input = { body, user, order, context, origin, env };
-  const row = async () => (await query('select to_jsonb(r) as row from public.ks_checkout_requests r where user_id=$1 and request_id=$2', [user.id,body.checkoutRequestId]))[0]?.row;
+  const row = async () => (await query(`select to_jsonb(r) as row from public.${requestTable} r where user_id=$1 and request_id=$2`, [user.id,body.checkoutRequestId]))[0]?.row;
   const paid = () => { const session = [...calls.sessions.values()][0]; session.status = 'complete'; session.payment_status = 'paid'; return session; };
-  return { input, calls, user, body, row, paid, run: patch => createBoundCheckout({ ...input, ...patch }) };
+  return { input, calls, user, body, row, paid, customers, run: patch => createBoundCheckout({ ...input, ...patch }) };
 }
 
 try {
   await bootstrap(adminSql, { pglitePreflight: true });
   await db.exec(migration);
+  await db.exec(await routingSupportSql());
+  await db.exec(await readFile(new URL('../supabase/migrations/20261025033932_add_private_live_checkout_intent_binding.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL(routingMigrationName,new URL('./fixtures/ks-paid-order-routing.mjs',import.meta.url)),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261025040332_add_verified_checkout_service_selection.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261025042823_add_private_paid_renewal_review_binding.sql',import.meta.url),'utf8'));
   await check('migration exposes no browser table or function and uses caller privileges', async () => {
-    const grants = (await query(`select has_table_privilege('anon','public.ks_checkout_requests','select') as anon,
-      has_table_privilege('authenticated','public.ks_checkout_requests','insert') as browser,
-      has_function_privilege('authenticated','public.ks_bind_checkout_request(uuid,uuid,text)','execute') as bind,
-      has_function_privilege('anon','public.ks_reserve_checkout_request(uuid,uuid,text,integer,text,text,text)','execute') as reserve,
-      (select relrowsecurity from pg_class where oid='public.ks_checkout_requests'::regclass) as rls`))[0];
+    const grants = (await query(`select has_table_privilege('anon','public.${requestTable}','select') as anon,
+      has_table_privilege('authenticated','public.${requestTable}','insert') as browser,
+      has_function_privilege('authenticated','public.${bindRpc}(uuid,uuid,text)','execute') as bind,
+      has_function_privilege('anon','public.${reserveRpc}(uuid,uuid,text,integer,text,text,text)','execute') as reserve,
+      (select relrowsecurity from pg_class where oid='public.${requestTable}'::regclass) as rls`))[0];
     assert.deepEqual(grants, { anon: false, browser: false, bind: false, reserve: false, rls: true });
-    const functions = await query("select prosecdef,proconfig from pg_proc where proname in ('ks_bind_checkout_request','ks_reserve_checkout_request','ks_guard_checkout_request')");
+    const functions = await query(`select prosecdef,proconfig from pg_proc where proname in ('${bindRpc}','${reserveRpc}','${live ? 'ks_guard_live_checkout_request' : 'ks_guard_checkout_request'}')`);
     assert.equal(functions.length, 3); assert.ok(functions.every(fn => !fn.prosecdef && fn.proconfig.includes('search_path=""')));
   });
   await check('new-service, renewal and review intent are captured before returning a payment URL', async () => {
@@ -121,8 +154,8 @@ try {
       assert.equal(f.calls.rpcs, 0); assert.equal(f.calls.creates, 0);
     }
   });
-  await check('disabled, production, live-mode and mismatched environments cannot use the new path', async () => {
-    for (const patch of [{env:{}},{env:{...env,VERCEL_ENV:'production'}},{context:{environment:'preview',live:true}}, {context:{environment:'production',live:false}}]) {
+  await check('disabled, non-receipt live admission and mismatched environments stop before writes', async () => {
+    for (const patch of [{env:{}},{env:{...env,VERCEL_ENV:live?'preview':'production'}},{context:{environment:'preview',live:true}}, {context:{environment:'production',live:false}}, ...(live?[{context:{environment:'production',live:true,receiptOnlyLive:false}}]:[])]) {
       const f = await fixture(); await assert.rejects(() => f.run(patch)); assert.equal(f.calls.rpcs, 0);
     }
   });
@@ -175,30 +208,30 @@ try {
     }
   });
   await check('changed Stripe owner, plan, amount, purpose, environment or hostile URL fails closed', async () => {
-    for(const patch of [{client_reference_id:randomUUID()},{livemode:true},{amount_total:1},{currency:'eur'},
+    for(const patch of [{client_reference_id:randomUUID()},{livemode:!live},{amount_total:1},{currency:'eur'},
       {url:'https://evil.example/pay'},{url:'http://checkout.stripe.com/pay'},{metadata:{user_id:randomUUID()}}]) {
       const f=await fixture(); await f.run(); Object.assign([...f.calls.sessions.values()][0],patch); await assert.rejects(()=>f.run());
     }
   });
   await check('request history and saved intent cannot be rewritten or removed', async () => {
     const f=await fixture(); await f.run(); const row=await f.row();
-    await assert.rejects(()=>db.query('update public.ks_checkout_requests set tier=$1 where user_id=$2',['gold',f.user.id]),/permission denied/);
-    await assert.rejects(()=>db.query('delete from public.ks_checkout_requests where user_id=$1',[f.user.id]),/permission denied/);
-    await assert.rejects(()=>db.query('select public.ks_bind_checkout_request($1,$2,$3)',[f.user.id,f.body.checkoutRequestId,'cs_test_Changed']),/checkout_session_binding_changed/);
+    await assert.rejects(()=>db.query(`update public.${requestTable} set tier=$1 where user_id=$2`,['gold',f.user.id]),/permission denied/);
+    await assert.rejects(()=>db.query(`delete from public.${requestTable} where user_id=$1`,[f.user.id]),/permission denied/);
+    await assert.rejects(()=>db.query(`select public.${bindRpc}($1,$2,$3)`,[f.user.id,f.body.checkoutRequestId,`${prefix}Changed`]),/checkout_session_binding_changed/);
     await assert.rejects(()=>db.query('delete from public.ks_setup_purchase_intents where checkout_session_id=$1',[row.checkout_session_id]),/permission denied/);
     await db.exec('reset role');
-    await assert.rejects(()=>db.query('update public.ks_checkout_requests set amount_cents=1 where user_id=$1',[f.user.id]),/checkout_request_is_immutable/);
+    await assert.rejects(()=>db.query(`update public.${requestTable} set amount_cents=1 where user_id=$1`,[f.user.id]),/checkout_request_is_immutable/);
     await db.exec('set role service_role');
   });
   await check('a database binding failure rolls back the intent insert before retrying the same session', async () => {
     const f=await fixture(); f.calls.fault='lost_create'; await assert.rejects(()=>f.run());
     await db.exec(`reset role; create function public.ks_fixture_bind_failure() returns trigger language plpgsql as $$
       begin if new.user_id=${literal(f.user.id)}::uuid then raise exception 'synthetic_binding_failure'; end if; return new; end; $$;
-      create trigger ks_fixture_bind_failure before update on public.ks_checkout_requests for each row execute function public.ks_fixture_bind_failure(); set role service_role;`);
+      create trigger ks_fixture_bind_failure before update on public.${requestTable} for each row execute function public.ks_fixture_bind_failure(); set role service_role;`);
     try {
       await assert.rejects(()=>f.run()); assert.equal((await f.row()).checkout_session_id,null);
       assert.equal((await query('select count(*)::int as n from public.ks_setup_purchase_intents where user_id=$1',[f.user.id]))[0].n,0);
-    } finally { await db.exec('reset role; drop trigger ks_fixture_bind_failure on public.ks_checkout_requests; drop function public.ks_fixture_bind_failure(); set role service_role'); }
+    } finally { await db.exec(`reset role; drop trigger ks_fixture_bind_failure on public.${requestTable}; drop function public.ks_fixture_bind_failure(); set role service_role`); }
     await f.run(); assert.equal(f.calls.sessions.size,1);
   });
   await check('overlapping application retries return one saved checkout', async () => {
@@ -208,7 +241,7 @@ try {
   });
   await check('capture conflict rolls back both the request binding and any new intent', async () => {
     const a=await fixture(),b=await fixture(); const first=await a.run(); b.calls.fault='lost_create'; await assert.rejects(()=>b.run());
-    await assert.rejects(()=>db.query('select public.ks_bind_checkout_request($1,$2,$3)',[b.user.id,b.body.checkoutRequestId,first.reference]));
+    await assert.rejects(()=>db.query(`select public.${bindRpc}($1,$2,$3)`,[b.user.id,b.body.checkoutRequestId,first.reference]));
     assert.equal((await b.row()).checkout_session_id,null); assert.equal((await a.row()).checkout_session_id,first.reference);
   });
   await check('paid verification reads the saved owner/plan/purpose and rejects another purchaser', async () => {
@@ -227,5 +260,113 @@ try {
       assert.equal((await query(`select count(*)::int as n from public.${table}`))[0].n,0);
     }
   });
-  console.log(`${passed} checkout intent checks passed using isolated SQL and simulated Stripe. No payment, provider operation or connected migration.`);
+  await check('a saved browser reference must match the bound request before any new Stripe create', async () => {
+    const f=await fixture(); const first=await f.run();
+    assert.deepEqual(await f.run({body:{...f.body,checkoutReference:first.reference}}),first);
+    await assert.rejects(()=>f.run({body:{...f.body,checkoutReference:`${prefix}Other`}}));
+    await assert.rejects(()=>f.run({body:{...f.body,checkoutReference:live?'cs_test_WrongMode':'cs_live_WrongMode'}}));
+    assert.equal(f.calls.creates,1);
+  });
+  await check('existing Preview v1 keys and parameters remain identical; live requests use their own namespace', async () => {
+    const f=await fixture();await f.run();
+    const [key]=f.calls.requests.keys();
+    const {createHash}=await import('node:crypto');
+    const protocol=live?'ks_checkout_live_v1':'ks_checkout_v1';
+    const hash=createHash('sha256').update(`${protocol}:${f.user.id}:${f.body.checkoutRequestId}`).digest('hex');
+    assert.equal(key,`${protocol}_${hash}`);
+    const params=f.calls.requests.get(key).params;
+    assert.equal(params.metadata.checkout_binding_version,'1');assert.equal(params.success_url,`${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`);
+  });
+  if(live){
+    await check('live admission requires actual confirmed Auth identity, not merely a matching profile',async()=>{
+      const f=await fixture();
+      await db.exec(`reset role; update auth.users set email_confirmed_at=null where id=${literal(f.user.id)}; set role service_role;`);
+      await assert.rejects(()=>f.run());assert.equal(f.calls.creates,0);
+    });
+    await check('paid new service keeps its saved purpose after admission pauses before the first queue entry',async()=>{
+      const f=await fixture();await f.run();const session=f.paid();
+      const context={...f.input.context,receiptOnlyLive:false};
+      const before=(await query('select to_jsonb(p) as value from public.profiles p where id=$1',[f.user.id]))[0].value;
+      const first=await fulfill(session.id,context,f.user.id);
+      const second=await fulfill(session.id,context,f.user.id);
+      assert.equal(first.routing.request_kind,'new_service');assert.equal(first.routing.destination,'new_service_review');
+      assert.equal(second.routing.replayed,true);assert.equal(second.replayed,true);
+      assert.equal(first.provider_activated,false);assert.equal(first.activated,false);assert.equal(f.calls.legacyWrites,0);
+      for(const table of ['ks_payment_receipts','ks_setup_order_queue','ks_paid_order_routes']){
+        assert.equal((await query(`select count(*)::int as n from public.${table} where checkout_session_id=$1`,[session.id]))[0].n,1);
+      }
+      assert.deepEqual((await query('select to_jsonb(p) as value from public.profiles p where id=$1',[f.user.id]))[0].value,before);
+    });
+    await check('paid renewal reaches only its approved CRM service and cannot replace the selected order terms',async()=>{
+      const f=await fixture('renewal',getPlan('gold',3));const customer=randomUUID();
+      await db.query("insert into public.iptv_customers(id,external_id,username,source,trial,payment_status) values($1,880001,'fictional_checkout_renewal','roomba',false,'legacy_paid')",[customer]);
+      await db.query('insert into public.ks_crm_portal_links(customer_id,user_id,email_at_link,confirmed_at_link,external_id,linked_by) values($1,$2,$3,$4,880001,$2)',[customer,f.user.id,f.user.email,f.user.email_confirmed_at]);
+      await f.run();const session=f.paid();const result=await fulfill(session.id,{...f.input.context,receiptOnlyLive:false},f.user.id);
+      assert.equal(result.routing.request_kind,'renewal');assert.equal(result.routing.destination,'renewal_review');
+      const row=(await query('select customer_id from public.ks_paid_order_routes where checkout_session_id=$1',[session.id]))[0];assert.equal(row.customer_id,customer);
+      assert.equal(result.tier,'gold');assert.equal(result.connections_allowed,3);assert.equal(result.provider_activated,false);assert.equal(f.calls.legacyWrites,0);
+      const changed=structuredClone(session);changed.metadata.purchase_kind='new_service';
+      await assert.rejects(()=>verifiedCheckoutIntent(changed,f.input.context,f.user.id));
+    });
+    await check('uncertain intent reads cannot fall back to legacy activation or send a notification',async()=>{
+      const f=await fixture();await f.run();const session=f.paid();
+      const admin={...f.input.context.admin,from:()=>({select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null,error:{message:'fictional outage'}})})};
+      await assert.rejects(()=>fulfill(session.id,{...f.input.context,admin,receiptOnlyLive:false},f.user.id));
+      assert.equal(f.calls.legacyWrites,0);assert.equal(f.calls.notifications,0);
+      assert.equal((await query('select count(*)::int as n from public.ks_payment_receipts where user_id=$1',[f.user.id]))[0].n,0);
+    });
+  }
+  if(live){
+    await check('explicit selection routes a renewal to the chosen account among multiple owned services',async()=>{
+      const f=await fixture('renewal',getPlan('gold',3),{choice:true});await f.run();const session=f.paid();
+      const row=await f.row();assert.equal(row.binding_version,2);assert.equal(row.renewal_customer_id,f.customers[0]);
+      assert.equal(session.metadata.checkout_binding_version,'2');assert.equal(session.metadata.renewal_customer_id,f.customers[0]);
+      const result=await fulfill(session.id,{...f.input.context,receiptOnlyLive:false},f.user.id);
+      assert.equal(result.routing.destination,'renewal_review');assert.equal(result.provider_activated,false);
+      assert.equal(result.renewalReview.state,'awaiting_verification');assert.ok(result.renewalReview.operationId);
+      const retry=await fulfill(session.id,{...f.input.context,receiptOnlyLive:false},f.user.id);
+      assert.equal(retry.renewalReview.operationId,result.renewalReview.operationId);assert.equal(retry.renewalReview.replayed,true);
+      assert.equal(retry.renewalReview.mayDispatch,false);
+      assert.equal((await query('select customer_id from public.ks_paid_order_routes where checkout_session_id=$1',[session.id]))[0].customer_id,f.customers[0]);
+      assert.equal(f.calls.legacyWrites,0);
+    });
+    await check('a saved selected-service checkout cannot change target, plan or protocol on retry',async()=>{
+      const f=await fixture('renewal',getPlan('bronze',1),{choice:true});const first=await f.run();
+      assert.deepEqual(await f.run(),first);
+      for(const patch of [{body:{...f.body,renewalCustomerId:f.customers[1]}},{body:{...f.body,renewalCustomerId:undefined}},{order:getPlan('gold',3)}])await assert.rejects(()=>f.run(patch));
+      assert.equal(f.calls.creates,1);
+      const session=f.paid();session.metadata.renewal_customer_id=f.customers[1];
+      await assert.rejects(()=>verifiedCheckoutIntent(session,f.input.context,f.user.id));
+    });
+    await check('foreign, stale or trial selections fail before a payment link can be created',async()=>{
+      const foreign=await fixture('renewal',getPlan('bronze',1),{choice:true});
+      const f=await fixture('renewal',getPlan('bronze',1),{choice:true});
+      await assert.rejects(()=>f.run({body:{...f.body,renewalCustomerId:foreign.customers[0]}}));assert.equal(f.calls.creates,0);
+      await db.exec(`reset role; update public.iptv_customers set trial=true where id=${literal(f.customers[0])}; set role service_role;`);
+      await assert.rejects(()=>f.run());assert.equal(f.calls.creates,0);
+    });
+    await check('lost selected-service binding acknowledgement recovers one session and original target',async()=>{
+      const f=await fixture('renewal',getPlan('bronze',1),{choice:true});f.calls.fault='lost_bind';await assert.rejects(()=>f.run());
+      const before=await f.row();await f.run();assert.deepEqual(await f.row(),before);assert.equal(f.calls.creates,1);
+    });
+    await check('ownership or external-line changes after payment force review without choosing another service',async()=>{
+      const f=await fixture('renewal',getPlan('bronze',1),{choice:true});await f.run();const session=f.paid();
+      await db.exec(`reset role; update public.iptv_customers set external_id=external_id+100 where id=${literal(f.customers[0])}; set role service_role;`);
+      const result=await fulfill(session.id,f.input.context,f.user.id);assert.equal(result.routing.destination,'manual_review');
+      assert.equal((await query('select customer_id from public.ks_paid_order_routes where checkout_session_id=$1',[session.id]))[0].customer_id,null);
+    });
+    await check('an old v1 request cannot be silently upgraded to a selected-service v2 checkout',async()=>{
+      const f=await fixture('renewal',getPlan('bronze',1),{choice:true});
+      const legacy={...f.body};delete legacy.renewalCustomerId;await f.run({body:legacy});
+      await assert.rejects(()=>f.run());assert.equal(f.calls.creates,1);assert.equal((await f.row()).binding_version,1);
+    });
+    await check('selected-service renewals preserve all twenty requested term and connection combinations',async()=>{
+      for(const tier of ['bronze','silver','gold','platinum'])for(let connections=1;connections<=5;connections++){
+        const order=getPlan(tier,connections),f=await fixture('renewal',order,{choice:true});await f.run();const row=await f.row();
+        assert.equal(row.binding_version,2);assert.equal(row.amount_cents,order.cents);assert.equal(row.duration_days,order.days);
+        assert.equal(row.connections,connections);assert.equal(row.renewal_customer_id,f.customers[0]);
+      }
+    });
+  }
+  console.log(`${passed} ${environment} checkout intent checks passed using isolated SQL and simulated Stripe. No payment, provider operation or connected migration.`);
 } finally { await db.close(); }

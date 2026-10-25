@@ -34,7 +34,7 @@ const client = createClient('https://fictional.supabase.co', 'fictional-publisha
         source: 'panel_screenshot_import', trial: false, expiration_at: '2027-08-01T12:00:00Z' }]);
     }
     assert.equal(url.pathname, '/rest/v1/iptv_payments');
-    assert.equal(url.searchParams.get('select'), 'id,customer_id,amount,payment_method,payment_status,paid_at');
+    assert.equal(url.searchParams.get('select'), 'id,customer_id,amount,payment_method,payment_status,paid_at,period_end');
     assert.equal(url.searchParams.get('order'), 'paid_at.desc,id.desc');
     const offset = Number(url.searchParams.get('offset'));
     const size = Number(url.searchParams.get('limit'));
@@ -46,6 +46,9 @@ const client = createClient('https://fictional.supabase.co', 'fictional-publisha
   } },
 });
 
+const originalFetch=globalThis.fetch;let websiteRows=[];
+client.auth.getSession=async()=>({data:{session:{access_token:'fictional-admin',user:{id:id(900)}}},error:null});
+globalThis.fetch=async(url,options)=>{assert.ok(url.startsWith('/api/ks-preview-paid-orders?view=admin-website-payments'));assert.equal(options.method,'GET');return Response.json({accountId:id(900),checkedAt:new Date().toISOString(),payments:websiteRows,nextCursor:null});};
 const directory = await mkdtemp(join(process.cwd(), 'node_modules', '.ks-overview-payments-'));
 const reactPath = import.meta.resolve('react');
 let hooks;
@@ -143,8 +146,12 @@ try {
   assert.ok(!markup().includes('Payment details could not be loaded'));
   assert.deepEqual(rows, originalRows);
   console.log('PASS: Refresh recovers the same saved receipts after a read failure without inserting or resending anything');
-  console.log('6 overview payment scenarios passed. Only fictional GET requests were handled.');
+  rows=[];websiteRows=[{id:'cs_live_OverviewWebsite',customer_id:id(1),amount_cents:12500,payment_method:'stripe_checkout',payment_status:'recorded',source:'website_checkout',paid_at:'2026-08-03T20:17:00Z',months:6,connections:3,renewal_completed_at:'2026-08-03T20:18:00Z',renewal_expires_at:'2027-02-03T20:18:00Z'}];
+  await refresh();render();assert.ok(markup().includes('$125.00'));assert.ok(markup().includes('Website checkout'));assert.ok(markup().includes('Recorded'));assert.ok(!markup().includes('Received <time'));assert.ok(!markup().includes('>Paid</span>'));
+  console.log('PASS: actual overview shows verified website money with its historical amount and recorded label, without changing recurring revenue');
+  console.log('7 overview payment scenarios passed. Only fictional GET requests were handled.');
 } finally {
+  globalThis.fetch=originalFetch;
   delete globalThis.__overviewClient;
   delete globalThis.__overviewHooks;
   await rm(directory, { recursive: true, force: true });

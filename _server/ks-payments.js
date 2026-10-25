@@ -4,6 +4,8 @@ import { PaymentError, applyPaidSession, validatePaidSession } from './ks-paymen
 import { queuePreviewPaidOrder } from './ks-preview-paid-orders.js';
 import { verifiedCheckoutIntent } from './ks-checkout-intent.js';
 import { recordPaymentReceipt } from './ks-receipt-only.js';
+import { routePaidOrder } from './ks-paid-order-routing.js';
+import { preparePaidRenewalReview } from './ks-paid-renewal-verification.js';
 import { loadPreviewCompletions } from './ks-preview-completion-status.js';
 
 export { PaymentError } from './ks-payment-validation.js';
@@ -77,8 +79,11 @@ export async function fulfill(sessionId, context, ownerId) {
     throw new PaymentError(503, 'The receipt-only payment rollout is not configured for this environment.');
   }
   const session = await context.stripe.checkout.sessions.retrieve(sessionId);
-  if (session.metadata?.checkout_binding_version !== undefined) await verifiedCheckoutIntent(session, context, ownerId);
-  let receiptOnly = context.receiptOnlyLive === true;
+  const boundIntent = session.metadata?.checkout_binding_version !== undefined
+    ? await verifiedCheckoutIntent(session, context, ownerId) : null;
+  // A previously accepted live checkout retains receipt-only fulfillment even
+  // if admission is paused before its webhook/confirmation saves the queue.
+  let receiptOnly = context.receiptOnlyLive === true || boundIntent?.receiptOnly === true;
   if (!receiptOnly && context.environment === 'production' && context.live === true) {
     // An accepted receipt-only order stays in that protocol even if the flag
     // is later disabled. A lookup failure must never fall back to activation.
@@ -93,14 +98,18 @@ export async function fulfill(sessionId, context, ownerId) {
     const receipt = await recordPaymentReceipt(session, true, ownerId, context.admin);
     // Preserve legacy delivery identities. Review-blocked receipts are not
     // eligible for a new pending alert or another activation attempt.
-    if (receipt.order_status === 'requires_review') return receipt;
+    if (['requires_review', 'renewal_complete'].includes(receipt.order_status)) return receipt;
+    const routing = await routePaidOrder(session, true, ownerId, context.admin);
+    const renewalReview = routing.destination === 'renewal_review'
+      ? await preparePaidRenewalReview(session, ownerId, context.admin) : null;
+    if (renewalReview?.state === 'review_required') return { ...receipt, routing, renewalReview, order_status: 'requires_review' };
     const { data: alert, error: alertError } = await context.admin.functions.invoke('ks-order-notification', {
       body: { sessionId: session.id, protocol: 'receipt-only-v1' },
     });
     if (alertError || alert?.success !== true) {
       throw new PaymentError(503, 'Your payment is recorded, but the setup notification needs attention. Please contact support; do not pay again.');
     }
-    return receipt;
+    return { ...receipt, routing, ...(renewalReview ? { renewalReview } : {}) };
   }
   const receipt = await applyPaidSession(session, context.live, ownerId, context.admin);
   const queued = await queuePreviewPaidOrder(session, context, ownerId);

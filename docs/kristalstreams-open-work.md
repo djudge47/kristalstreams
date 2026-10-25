@@ -1,3 +1,90 @@
+# Administrator receipt projection — October 25, 2026
+
+- The command center, latest-payment cards and selected customer's History now combine existing manual records with independently verified completed website-renewal receipts. Website amounts retain their original recorded date and historical expiry; credit debits and imported activation do not become payments.
+- A private administrator-only GET view pages the new SQL read in the existing API function. Failed or changed-account reads discard partial data. History retains zero/pending/refunded manual entries, uses bounded 20-entry pages and guards late activity responses. Recorded monthly totals use New York month boundaries; MRR and all billing/access fields are unchanged.
+- Migration `20261025141107` is installed in active Kristal Stream only, with exact tested function body/private grants and an authenticated administrator empty read verified. All six implementation workflows passed at `b31c242`: 82 native checks per PostgreSQL version, 43 SQL/adapter cases and eight administrator History browser journeys. Customer/access/financial digests, five manual receipts, two website receipts and empty completion/send ledgers are unchanged. See `docs/verification/admin-website-payment-history-install-20261025.json`.
+- Source is staged in PR #33. See `docs/admin-website-payment-history.md`. Refund/chargeback/accounting reconciliation, executable provider transport/authorization, additional timing policies, credential delivery, administrative execution controls and coordinated release remain open. All four controls stay off.
+
+# Merged customer receipt history — October 25, 2026
+
+- The existing customer service panel now reads manual receipts and verified completed website renewals together, with recorded amount/term, website recorded date, renewal completion and historical expiry. The current service summary stays separate. No financial rows, balances, billing or entitlements are changed.
+- A private additive v2 snapshot preserves the old UUID-only function. Mixed source IDs, full timestamp precision and 20-row older/newer pages prevent missing receipts and an endlessly extending phone page. Exact matching manual Stripe references suppress duplicate display.
+- Private migration `20261025134303` is installed with the tested invoker body and browser-denied grants; the original snapshot body is unchanged. All six implementation workflows passed at `ffda7bf`: 78 native checks per PostgreSQL version, 39 SQL/adapter cases and eight actual merged-history browser journeys. Customer billing/access, five manual receipts, two website receipts and empty completion/send ledgers are unchanged. See `docs/verification/customer-merged-payment-history-install-20261025.json`.
+- Source is staged in PR #33. See `docs/customer-merged-payment-history.md`. Administrator financial/metric projection, refund/chargeback reconciliation, provider execution/authorization, additional timing policies, credentials, administrative controls and coordinated release remain open. All four execution controls stay off.
+
+# Customer renewal history projection — October 25, 2026
+
+- Verified live renewals now have a separate `renewal_complete` owner status. The dashboard, payment recheck and support context show the recorded completion and term without claiming current playback, delivering credentials or changing financial records.
+- A bounded private SELECT-only RPC checks the immutable completion, provider proof, final operation, receipt, queue and current confirmed owner/service link in one database snapshot. Later service terms do not invalidate old renewal history; missing proof stays review and failed reads stay unavailable.
+- Completed payment rechecks skip routing, review preparation and pending email. All existing Preview setup/expiry semantics remain separate. No new endpoint or function-budget slot is added.
+- Migration `20261025130107` is installed in active Kristal Stream only; its read-only body and private grants match tested source. All customer service/billing and website-access digests, two receipts and empty completion/send ledgers are unchanged. All six implementation workflows passed at `32cdaab`, including 74 native cases per PostgreSQL version, 35 SQL/adapter cases and eight actual mobile/desktop renewal-status browser journeys. See `docs/paid-renewal-owner-status.md` and its installation report.
+- Source is staged in PR #33. Provider execution/authorization, additional timing policies, financial reconciliation/payment-history projection, credential delivery, administrative UI and coordinated release remain open. All live controls remain off.
+
+# Installed private paid-renewal completion — October 25, 2026
+
+- A frozen pre-send expectation, matching provider/independent line proof and exact credit debit now precede local CRM completion. Only the owner-reviewed 6-month/4 → 6-month/3 reset policy is accepted, with explicit policy/lost-time confirmation. Unsupported cases remain for review.
+- The local completion transaction changes only the selected service's expiry/allowance/package and its queue/ledger, preserving billing, profiles and credentials. Deferred checks and immutable proof guard against partial completion or ownership drift; lost replies and gate/consent expiry recover locally without resending XUI.
+- Migration `20261025091959` is installed with tested function bodies, private invoker roles, deferred completion check and conditional release verified. All four controls remain off; new tables are empty. Customer billing/access and completed manual-operation digests are unchanged. Six workflows passed at `9042282`, including 70 native cases per PostgreSQL version and 31 actual SQL/adapter cases. See `docs/paid-renewal-completion.md` and its installation report. Source remains staged in PR #33.
+- Provider transport/authorization, additional timing policies, customer-facing live completion and financial/account projection, credentials, administrative UI and coordinated release remain open. No real provider action, email or credit spend is enabled.
+
+# Installed disabled paid-renewal send guard — October 25, 2026
+
+- A separate consent and durable send-claim guard now protects the existing paid-renewal identity. Lost replies and retries cannot reacquire a claim; uncertainty retains physical reseller and line-version reservations without automatic release.
+- The migration extends the existing five-protocol reseller exclusion to this sixth protocol with exact-source preflight, existing-work rejection and unchanged legacy triggers/grants. A new private control defaults off; no HTTP execution or consent issuance route is added.
+- Migration `20261025084505` is installed disabled, with tested function bodies, six shared triggers, private grants and deferred commit guard verified. Customer billing/access and completed manual-operation digests are unchanged. All four controls are off and all six reseller slots/new send tables are empty. All six workflows passed at `b40f031`, including 63 native cases per PostgreSQL version and 24 actual SQL/handler cases. Source remains staged in PR #33. See `docs/paid-renewal-send-guard.md` and its installation report.
+- A claim always denies dispatch authority. Reviewed provider timing policy, executable transport bridge, completion/reconciliation/release, credential delivery, administrative UI and coordinated release remain open. No real payment, provider operation, email or credit spend is enabled.
+
+# Installed paid-renewal quote approval prerequisite — October 25, 2026
+
+- The administrator verification endpoint now returns an exact package/credit quote and can save one immutable quote approval for the existing paid-renewal operation. Fresh independent provider reads and current SQL ownership checks reject changed facts before saving.
+- Matching retry and lost-save recovery keep the same approval ID; conflicting, expired or changed-service cases cannot widen or replace it. Approval always denies dispatch authority and cannot spend credits.
+- Private migration `20261025082051` is installed with matching function bodies, private invoker permissions, RLS and immutable guard. Customer billing/service and website access digests are unchanged; receipts remain two and live requests/queues/reviews/approvals remain empty. All six workflows passed at `258ed615`, including 53 native cases on each PostgreSQL version. Source remains staged in PR #33. See `docs/paid-renewal-quote-approval.md` and its installation report.
+- Execution consent, provider timing policy, dispatch/credit reservations, completion/reconciliation, credential delivery, administrative UI and coordinated release remain open. All live controls remain off.
+
+# Installed paid-renewal review prerequisite — October 25, 2026
+
+- The receipt path now gives an explicitly selected live renewal one immutable review identity, with same-operation retry after lost acknowledgements. Current Auth/link/service drift blocks the review without retargeting or repeating the old completed manual purchase.
+- A confirmed-administrator endpoint rechecks current facts before and after documented XUI GET reads. It exposes no write method, payment credentials or provider target. Its result is a short-lived review only and always denies dispatch authority.
+- Migration `20261025042823` is installed with tested function bodies, private invoker permissions, RLS and immutability guard verified. Customer service/billing and website access digests, receipts and queues are unchanged. The review table is empty and all three renewal controls remain off. Six workflows passed at `4a6a888`, including 48 native cases on each PostgreSQL version. Source remains staged in PR #33. See `docs/paid-renewal-verification.md` and its installation report.
+- Durable execution/credit consent, execution-time claims and revalidation, completion/recovery, credential delivery and coordinated release remain open. No flag, real payment, provider write or credit spend is enabled.
+
+# Installed explicit renewal-service prerequisite — October 25, 2026
+
+- Live renewal checkout now lets the verified owner choose one linked service in a paged mobile-friendly control. The private v2 request freezes that exact CRM customer and provider identity before payment; retries cannot retarget it. Ownership/line changes at paid routing force review instead of selecting another account.
+- Existing Preview/live v1 requests and immutable routes are preserved; uncertain legacy renewal attempts are retained for review rather than silently replaced. The read shares the current account API and exposes no payment history or credentials.
+- Migration `20261025040332` is installed in the active Kristal Stream project. All three changed/new function bodies match tested source, while six Preview/live v1 binding bodies remain unchanged. Customer billing/access digests, one Preview request/intent, two receipts and zero live requests/queued orders/routes/alerts are preserved; all renewal controls remain off.
+- All five workflows passed at `392d3a5`, including 44 native cases on each PostgreSQL version. Actual SQL/handler, endpoint, compiled-client and eight mobile/desktop interaction journeys passed. Website changes remain staged in PR #33, with no Production release or flag change. See `docs/checkout-service-selection.md` and its connected installation report.
+- Live completion/recovery, credential delivery, execution-time validation and coordinated release remain open. No rollout flag or provider action is enabled.
+
+# Installed checkout-purpose prerequisite — October 24, 2026
+
+- Authenticated live-capable checkout now saves the selected purpose and canonical owner/plan/term/allowance before returning payment. Its separate private ledger preserves the installed Preview v1 protocol and existing attempts.
+- Verified live bound sessions retain receipt-only fulfillment after admission is paused, including before their first receipt/queue exists. Actual fulfillment tests connect saved new-service and approved-renewal choices to the immutable review route without granting provider access.
+- The additive live ledger is installed as migration `20261025033932` in the active Kristal Stream project. Its function-body hashes, private grants and RLS match the tested source. Existing Preview function hashes, one request/intent, customer billing/access digests and receipt/queue/routing/alert counts stayed unchanged; no live request was created.
+- Local Preview/Production SQL, compiled browser-adapter and retry tests passed. Native PostgreSQL 17.6/17.11 each passed 40 cases at `1af8633`. Website code remains staged in PR #33; no Production deployment or flag enablement occurred. See `docs/live-checkout-intent.md` and `docs/verification/live-checkout-intent-install-20261024.json`.
+- Explicit multiple-service selection, execution-time revalidation, live completion/recovery/credential delivery and coordinated release remain open. No live flag or provider execution is enabled.
+
+# Installed purchase-routing foundation — October 24, 2026
+
+- The receipt-only path now saves an immutable review destination from the verified receipt, saved authenticated purchase intent and approved CRM ownership link. Missing/ambiguous/stale evidence goes to manual review; no name/email matching grants ownership.
+- Migration `20261025031536` is installed in the active Kristal Stream project. Its three function bodies match the tested source, RLS/private privileges and immutability guard are verified, and no route was seeded. Existing customer billing/access digests and receipt/queue/notification counts stayed unchanged. All renewal execution controls remain off.
+- All four automated workflows passed at `6523e7e`, including 34 checks on each native PostgreSQL version (17.6 and 17.11). Local checks also cover actual fulfillment and receipt/routing/notification SQL recovery. The repository migration filename now matches the server-recorded version; SQL bytes are unchanged. See `docs/paid-order-routing.md` and `docs/verification/paid-order-routing-install-20261024.json`.
+- Website integration remains in draft PR #33; Production was not redeployed or promoted. Live receipt-only admission remains off. Installed database prerequisites are not a completed live customer workflow.
+- Live authenticated checkout-intent capture, an explicit selector for multiple services, current ownership revalidation at execution, live completion/credential delivery and coordinated rollout remain open. This draft does not enable payment-to-XUI automation.
+
+# Installed paid-workflow checkpoint — October 24, 2026
+
+- Installed the private pending-notification and payment-activation rollback foundation as migration `20261025024637` in the active Kristal Stream project only.
+- Deployed `ks-order-notification` version 3, retaining JWT checks and the exact legacy handler. No message was sent.
+- Verified unchanged customer service/billing and website access, two receipts and notification records, no live queued orders or new pending alerts, and all renewal controls off.
+- A saved completed 6-month/3-connection purchase at 15 credits already exists. Preserve it and its customer data; do not repeat that test.
+- Live receipt-only admission remains disabled. Its flag is absent. Completing the foundation does not complete customer payment-to-XUI automation.
+- Next: bind new purchases and existing-service renewals to their verified owner and intended fulfillment; complete live owner/completion/recovery and credential delivery before coordinated release or any separately scoped credit operation.
+
+The older recovery inventory below is historical; later release and completion notes take precedence.
+
+---
+
 # Kristal Streams — unfinished work
 
 Recovered October 19, 2026 (America/New_York). This list distinguishes prior

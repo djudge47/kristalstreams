@@ -15,9 +15,11 @@ try {
     const result = await build({ entryPoints: ['src/pages/pricing/CheckoutPage.tsx'], bundle: true, write: false,
       format: 'esm', platform: 'node', jsx: 'automatic', external: ['react','react-dom','react-router-dom','lucide-react'],
       plugins: [{ name: 'payment-fixture', setup(builder) {
+        builder.onResolve({ filter: /\/components\/CheckoutServiceSelect$/ }, () => ({ path: 'selection-fixture', namespace: 'selection' }));
+        builder.onLoad({ filter: /.*/, namespace: 'selection' }, () => ({ contents: `export default function Selection(){throw Error('Selection must not mount in the Preview initial-render fixture');}`, loader: 'js' }));
         builder.onResolve({ filter: /\/lib\/stripe$/ }, () => ({ path: 'payment-fixture', namespace: 'fixture' }));
         builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents:
-          `export const checkoutIntentEnabled=${enabled};export const createCheckoutSession=()=>{throw Error('No payment request permitted');};`, loader: 'js' }));
+          `export const checkoutIntentEnabled=${enabled};export const checkoutIntentLive=false;export const createCheckoutSession=()=>{throw Error('No payment request permitted');};`, loader: 'js' }));
       } }],
     });
     const filename=join(directory,`checkout-${enabled}.mjs`);await writeFile(filename,result.outputFiles[0].text);

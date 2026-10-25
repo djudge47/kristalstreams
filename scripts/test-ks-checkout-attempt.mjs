@@ -43,4 +43,23 @@ check('a changed attempt ID or a non-test reference cannot replace a saved bindi
   assert.throws(()=>saveCheckoutReference(storage,key,id,'cs_live_Wrong'));assert.equal(savedCheckoutAttempt(storage,key).requestId,id);
   saveCheckoutReference(storage,key,id,'cs_test_Saved');assert.throws(()=>saveCheckoutReference(storage,key,id,'cs_test_Changed'));
 });
+check('live attempts retain their binding separately from existing Preview v1 storage',()=>{
+  const storage=store(),id=randomUUID();
+  const liveKey=checkoutAttemptKey('owner','bronze',20,'monthly',1,'new_service',true);
+  assert.notEqual(liveKey,key);assert.ok(key.startsWith('ks-checkout-v1:'));
+  savedCheckoutAttempt(storage,key,()=>id);saveCheckoutReference(storage,key,id,'cs_test_Saved');
+  savedCheckoutAttempt(storage,liveKey,()=>id);saveCheckoutReference(storage,liveKey,id,'cs_live_Saved',true);
+  assert.throws(()=>saveCheckoutReference(storage,liveKey,id,'cs_test_Saved',true));
+  completeCheckoutAttempt(storage,'cs_live_Saved');assert.equal(storage.getItem(liveKey),null);
+  assert.equal(savedCheckoutAttempt(storage,key).reference,'cs_test_Saved');
+});
+check('selected services have separate v2 requests and confirmation clears only its own binding',()=>{
+  const storage=store(),one=randomUUID(),two=randomUUID(),id=randomUUID();
+  const a=checkoutAttemptKey('owner','gold',150,'6 months',3,'renewal',true,one);
+  const b=checkoutAttemptKey('owner','gold',150,'6 months',3,'renewal',true,two);assert.notEqual(a,b);
+  assert.notEqual(a,checkoutAttemptKey('owner','gold',150,'6 months',3,'renewal',true));
+  savedCheckoutAttempt(storage,a,()=>id);savedCheckoutAttempt(storage,b,()=>randomUUID());
+  saveCheckoutReference(storage,a,id,'cs_live_Chosen',true);completeCheckoutAttempt(storage,'cs_live_Chosen');
+  assert.equal(storage.getItem(a),null);assert.ok(storage.getItem(b));
+});
 console.log(`${passed} browser retry checks passed without a browser session or payment request.`);

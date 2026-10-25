@@ -1,0 +1,88 @@
+{
+  "kind": "connected-private-live-checkout-purpose-prerequisite",
+  "project": "wftfxerblhlsxiijtfbo",
+  "migration": {
+    "version": "20261025033932",
+    "name": "add_private_live_checkout_intent_binding",
+    "sourcePath": "supabase/migrations/20261025033932_add_private_live_checkout_intent_binding.sql",
+    "sha256": "590a32d536a2b4b5be083a560e82361481ead6f014620b6df64eb00d856fafdf",
+    "testedDraftPath": "supabase/migrations/20261025032724_add_private_live_checkout_intent_binding.sql",
+    "sqlBytesChangedAfterNativeTest": false
+  },
+  "testedCommit": "1af8633695cd72c5aa4189192f31ec675e25ddf7",
+  "nativeWorkflowRun": 40158941780,
+  "nativeJobs": [
+    {
+      "postgres": "17.6",
+      "jobId": 121066201164,
+      "checksPassed": 40
+    },
+    {
+      "postgres": "17.11",
+      "jobId": 121066200970,
+      "checksPassed": 40
+    }
+  ],
+  "localChecks": {
+    "previewCheckoutSqlAndHandler": 27,
+    "productionCheckoutSqlAndHandler": 31,
+    "storageRetry": 7,
+    "compiledActualClient": 6,
+    "origins": 10,
+    "initialRender": 2,
+    "receiptRollout": 15,
+    "applicationQuality": 9,
+    "strictTypesLintAndBuild": true
+  },
+  "connectedFunctionBodyMd5": {
+    "ks_guard_live_checkout_request": "8186a6aafdd8598efdd5a83e8f5c4a34",
+    "ks_reserve_live_checkout_request": "dea3951b54e90aa72e0218fcda86bb88",
+    "ks_bind_live_checkout_request": "bd806e8d8aafee79bc9b576952453fcb"
+  },
+  "unchangedPreviewFunctionBodyMd5": {
+    "ks_guard_checkout_request": "8186a6aafdd8598efdd5a83e8f5c4a34",
+    "ks_reserve_checkout_request": "5960f6c635a6e91ec9405514ef2af8ef",
+    "ks_bind_checkout_request": "4e15bae0dd0d0c230126084f53bad769"
+  },
+  "connectedChecks": {
+    "newLiveRequests": 0,
+    "rls": true,
+    "guardEnabled": true,
+    "browserTableAccess": false,
+    "browserReserveExecute": false,
+    "browserBindExecute": false,
+    "allThreeFunctionsInvokerAndEmptySearchPath": true,
+    "allThreeRenewalExecutionControls": false,
+    "newSecurityWarnings": 0
+  },
+  "unchangedBeforeAndAfter": {
+    "previewRequests": 1,
+    "purchaseIntents": 1,
+    "crmCustomers": 20,
+    "crmServiceBillingDigest": "0adce2c433d59c54126b71a9c9138fd3",
+    "websiteEntitlementDigest": "eae960883bd1639904bf489ec82b2ea2",
+    "paymentReceipts": 2,
+    "liveQueuedOrders": 0,
+    "routes": 0,
+    "pendingAlerts": 0
+  },
+  "scope": {
+    "websiteProductionRelease": false,
+    "flagChanges": false,
+    "realCheckoutPaymentReplayOrEmail": false,
+    "providerOperationOrCreditSpend": false,
+    "customerDataBackfill": false
+  },
+  "remaining": [
+    "Explicit authenticated selection for owners with multiple services",
+    "Execution-time ownership, package and spend revalidation",
+    "Live completion, recovery and credential delivery",
+    "Coordinated website release and separately authorized provider execution"
+  ],
+  "successfulWorkflowRuns": {
+    "applicationQuality": 40158941772,
+    "nativeReceiptAndBinding": 40158941780,
+    "nativePaidRecovery": 40158941743,
+    "nativeSignedHandoff": 40158941761
+  }
+}

@@ -1,9 +1,10 @@
 export type PortalLink = {customerId:string;panelId:number;username:string;customerName:string|null;userId:string;email:string;emailConfirmedAt:string;linked:boolean};
 export type CustomerCrmService = {customerId:string;username:string;name:string|null;packageName:string|null;connections:number;expiresAt:string|null;savedStatus:string|null;legacyPaid:boolean;updatedAt:string};
-export type CustomerCrmPayment = {id:string;customerId:string;amountCents:number;method:string|null;paidAt:string;months:number|null;connections:number|null};
+export type CustomerCrmPayment = {id:string;customerId:string;amountCents:number;method:string|null;paidAt:string;months:number|null;connections:number|null;source?:'website_checkout';renewalCompletedAt?:string;renewalExpiresAt?:string};
 export type PaymentCursor = {paidAt:string;id:string};
 export type CustomerCrmSnapshot = {accountId:string;checkedAt:string;services:CustomerCrmService[];payments:CustomerCrmPayment[];nextCursor:PaymentCursor|null};
 export function portalUuid(value:unknown):boolean;
+export function portalPaymentId(value:unknown):boolean;
 export function portalEmail(value:unknown):boolean;
 export function readPortalLink(value:unknown,customerId:string):PortalLink;
 export function readCustomerCrm(value:unknown,accountId:string,allowLookahead?:boolean):CustomerCrmSnapshot;

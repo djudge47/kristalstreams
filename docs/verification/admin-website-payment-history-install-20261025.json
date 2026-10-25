@@ -1,0 +1,99 @@
+{
+  "project": "wftfxerblhlsxiijtfbo",
+  "installed_migration": "20261025141107",
+  "tested_draft_path": "supabase/migrations/20261025135609_add_private_admin_website_payment_history.sql",
+  "canonical_path": "supabase/migrations/20261025141107_add_private_admin_website_payment_history.sql",
+  "sql_sha256": "7c4b8112011ee0e7090cf2771a4a9acb39ff5252eca4b742d337f37843cedaaf",
+  "pre_install_tested_commit": "b31c242822cd5bdfff64a6ced071f14c84bc7a34",
+  "pre_install_tested_tree": "6a2112b406b34105200d3e9a053c02a34677f391",
+  "implementation_workflows": {
+    "application": 40200855314,
+    "native_receipt": 40200855460,
+    "crm_status": 40200855337,
+    "manual_renewal": 40200855409,
+    "paid_recovery": 40200855365,
+    "signed_handoff": 40200855352
+  },
+  "native_jobs": {
+    "17.6": 121191535930,
+    "17.11": 121191536014
+  },
+  "native_cases_per_version": 82,
+  "sql_adapter_cases": 43,
+  "admin_history_browser_journeys": 8,
+  "browser_widths": [
+    390,
+    1280
+  ],
+  "command_center_card_scenarios": 6,
+  "overview_scenarios": 7,
+  "all_website_loader_fixture_records": 401,
+  "website_page_size": 200,
+  "website_lookahead": 1,
+  "displayed_history_page_size": 20,
+  "function_check": {
+    "name": "ks_admin_website_payment_history(uuid,timestamptz,text)",
+    "body_md5": "73370cf49724ce493943330ada585047",
+    "stable": true,
+    "invoker": true,
+    "empty_search_path": true,
+    "anon_denied": true,
+    "authenticated_denied": true,
+    "service_role_allowed": true
+  },
+  "verified_admin_count": 1,
+  "verified_admin_payments": [],
+  "baseline": {
+    "customers": 20,
+    "crm_digest": "0adce2c433d59c54126b71a9c9138fd3",
+    "profile_digest": "eae960883bd1639904bf489ec82b2ea2",
+    "payments_digest": "6009983ab9fd40026cba1203bd2da3d2",
+    "manual_payments": 5,
+    "website_receipts": 2,
+    "completions": 0,
+    "sends": 0,
+    "notifications": 2,
+    "controls": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "after": {
+    "customers": 20,
+    "crm_digest": "0adce2c433d59c54126b71a9c9138fd3",
+    "profile_digest": "eae960883bd1639904bf489ec82b2ea2",
+    "payments_digest": "6009983ab9fd40026cba1203bd2da3d2",
+    "manual_payments": 5,
+    "website_receipts": 2,
+    "completions": 0,
+    "sends": 0,
+    "notifications": 2,
+    "controls": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "advisory_kinds_before_and_after": [
+    "auth_leaked_password_protection:WARN",
+    "rls_enabled_no_policy:INFO"
+  ],
+  "financial_records_inserted": 0,
+  "customer_records_changed": false,
+  "provider_calls": false,
+  "emails_sent": false,
+  "credits_spent": false,
+  "flags_enabled": false,
+  "production_promoted": false,
+  "website_source": "staged draft PR #33",
+  "limits": [
+    "Recorded-payment totals are not net balances, settlements or recurring revenue.",
+    "Refund/chargeback reconciliation remains separate; MRR and billing fields are unchanged.",
+    "Combined manual and website reads do not constitute one atomic accounting ledger.",
+    "Historical admin audit survives subsequent customer ownership/service edits; customer views still require a current confirmed owner link.",
+    "No live execution or provider bridge is enabled."
+  ]
+}

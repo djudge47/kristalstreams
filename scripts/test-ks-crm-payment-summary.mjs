@@ -7,7 +7,7 @@ import React from 'react';
 import { StaticRouter } from 'react-router-dom';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createClient } from '@supabase/supabase-js';
-import { isReceivedPayment, latestReceivedPayments, loadCrmPayments, receivedPaymentDate, receivedPaymentDateTime } from '../_shared/ks-crm-payment-summary.js';
+import { isReceivedPayment, latestReceivedPayments, loadCrmPayments, receivedPaymentDate, receivedPaymentDateTime,recordedPaymentMonthTotal } from '../_shared/ks-crm-payment-summary.js';
 
 const id = n => `33333333-3333-4333-8333-${String(n).padStart(12, '0')}`;
 const payment = (n, customer, amount, date, status = 'paid') => ({
@@ -32,7 +32,7 @@ const client = createClient('https://fictional.supabase.co', 'fictional-publisha
     assert.equal(url.origin, 'https://fictional.supabase.co');
     assert.equal(url.pathname, '/rest/v1/iptv_payments');
     assert.equal(options.method, 'GET');
-    assert.equal(url.searchParams.get('select'), 'id,customer_id,amount,payment_method,payment_status,paid_at');
+    assert.equal(url.searchParams.get('select'), 'id,customer_id,amount,payment_method,payment_status,paid_at,period_end');
     assert.equal(url.searchParams.get('order'), 'paid_at.desc,id.desc');
     const offset = Number(url.searchParams.get('offset'));
     const size = Number(url.searchParams.get('limit'));
@@ -133,9 +133,12 @@ try {
   console.log('PASS: two legitimate payments from one customer remain separate and a zero-only history gets an accurate empty received-payments message');
   const thisMonth = new Date(); thisMonth.setUTCDate(15); thisMonth.setUTCHours(12,0,0,0);
   const monthly = recent([payment(705,1,42.37,thisMonth.toISOString()),payment(706,1,100,thisMonth.toISOString(),'pending'),payment(707,1,50,thisMonth.toISOString(),'refunded'),...zeros]);
-  const metric = nodes(monthly.tree).find(n => n.type==='div' && n.props.className?.includes('bg-gray-800/90 p-4') && text(n).includes('Paid This Month'));
+  const metric = nodes(monthly.tree).find(n => n.type==='div' && n.props.className?.includes('bg-gray-800/90 p-4') && text(n).includes('Payments This Month'));
   assert.ok(metric); assert.ok(text(metric).includes('$42.37')); assert.ok(!text(metric).includes('$192.37'));
-  console.log('PASS: Paid This Month uses the same positive received-payment rule and excludes pending/refunded amounts');
+  const website={...target,id:'cs_live_AdminCard',amount:150,amount_cents:15000,payment_method:'stripe_checkout',payment_status:'recorded',source:'website_checkout',paid_at:thisMonth.toISOString(),months:6,connections:3,renewal_completed_at:thisMonth.toISOString(),renewal_expires_at:'2027-10-25T00:00:00Z'};
+  globalThis.__cardIndex=0;globalThis.__cardPayments=[website];const websiteHtml=renderToStaticMarkup(React.createElement(StaticRouter,{location:'/admin/crm'},React.createElement(CRM)));assert.ok(websiteHtml.includes('Website checkout'));assert.ok(websiteHtml.includes('Recorded <time'));assert.ok(websiteHtml.includes('$150.00'));
+  const nov=Date.parse('2026-11-01T05:00:00Z');assert.equal(recordedPaymentMonthTotal([{...website,paid_at:'2026-11-01T04:00:00Z'},{...target,paid_at:'2026-11-01T02:00:00Z'}],nov),150);
+  console.log('PASS: Payments This Month uses the same positive received-payment rule and excludes pending/refunded amounts');
 } finally {
   delete globalThis.__cardIndex;
   delete globalThis.__cardCustomers;

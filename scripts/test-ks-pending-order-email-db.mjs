@@ -4,6 +4,7 @@ import { handlePendingOrderNotification } from '../supabase/functions/ks-order-n
 import { routeOrderNotification } from '../supabase/functions/ks-order-notification/router.js';
 import { fulfill } from '../_server/ks-payments.js';
 import { customerSetupSnapshot } from '../_server/ks-customer-setup.js';
+import { routingMigrationName, routingSupportSql } from './fixtures/ks-paid-order-routing.mjs';
 // Same temporary @electric-sql/pglite@0.5.10 used by receipt/queue tests. No
 // connection string, Supabase credentials, SMTP or email-provider access.
 const { PGlite } = await import(process.env.KS_PGLITE_MODULE || '@electric-sql/pglite');
@@ -48,6 +49,15 @@ try {
   await db.exec(original.slice(original.indexOf('CREATE OR REPLACE FUNCTION'))
     .replace('$function$\n\nrevoke', '$function$;\n\nrevoke'));
   await db.exec(await readFile(new URL('./ks-live-receipt-rollback-guard.sql',import.meta.url),'utf8'));
+  // Install the actual private intent/link/route definitions into this fixture.
+  // No historical CRM seed, provider credentials or external transport.
+  const intentSource=await readFile(new URL('../supabase/migrations/20261018102102_add_private_review_only_setup_claims.sql',import.meta.url),'utf8');
+  await db.exec(intentSource.slice(intentSource.indexOf('create table public.ks_setup_purchase_intents'),intentSource.indexOf('create table public.ks_setup_review_budgets')));
+  await db.exec(`grant select on public.ks_setup_purchase_intents to service_role;
+    create table public.iptv_customers(id uuid primary key,external_id bigint,source text,payment_status text,trial boolean);
+    grant select on public.iptv_customers to service_role;`);
+  await db.exec(await routingSupportSql());
+  await db.exec(await readFile(new URL(routingMigrationName,new URL('./fixtures/ks-paid-order-routing.mjs',import.meta.url)),'utf8'));
   await db.exec('set role service_role');
   await check('live pending receipt prepares a support alert without activating any service', async () => {
     const id = await record('LivePendingAlert', true); const alert = await prepare(id);
@@ -153,6 +163,7 @@ try {
       auth:{admin:{getUserById:async user=>({data:{user:{id:user,email:'fictional@example.invalid'}},error:null})}},
       async rpc(name,args){
         if(name==='ks_record_paid_checkout')return{data:(await db.query('select public.ks_record_paid_checkout($1,$2,$3,$4,$5,$6,$7,$8,$9) as receipt',[args.p_session_id,args.p_payment_intent_id,args.p_user_id,args.p_livemode,args.p_tier,args.p_connections,args.p_duration_days,args.p_amount_cents,args.p_currency])).rows[0].receipt,error:null};
+        if(name==='ks_route_paid_order')return{data:(await db.query('select public.ks_route_paid_order($1) as routing',[args.p_session])).rows[0].routing,error:null};
         if(name==='ks_prepare_pending_order_alert')return{data:await prepare(args.p_session_id,args.p_customer_email,args.p_user_id),error:null};
         assert.equal(name,'ks_complete_pending_order_alert');
         if(loseAcknowledgement){loseAcknowledgement=false;return{data:null,error:{code:'fictional_acknowledgement_loss'}};}
@@ -169,7 +180,8 @@ try {
     await assert.rejects(()=>fulfill(id,context,owner),/payment is recorded.*do not pay again/);
     const replay=await fulfill(id,context,owner);assert.equal(replay.replayed,true);assert.equal(replay.queue_replayed,true);assert.equal(replay.activated,false);assert.equal(replay.provider_activated,false);
     await fulfill(id,context,owner);assert.equal(deliveries.size,1);assert.equal(requests,2);
-    for(const table of['ks_payment_receipts','ks_setup_order_queue','ks_pending_order_alerts'])assert.equal((await db.query(`select count(*)::int as n from public.${table} where checkout_session_id=$1`,[id])).rows[0].n,1);
+    for(const table of['ks_payment_receipts','ks_setup_order_queue','ks_paid_order_routes','ks_pending_order_alerts'])assert.equal((await db.query(`select count(*)::int as n from public.${table} where checkout_session_id=$1`,[id])).rows[0].n,1);
+    assert.equal(replay.routing.destination,'manual_review');assert.equal(replay.routing.replayed,true);
     assert.deepEqual((await db.query('select to_jsonb(p) as p from public.profiles p where id=$1',[owner])).rows[0].p,profileBefore);
     const row=(await db.query('select q.checkout_session_id,q.fulfillment_status,q.queued_at,to_jsonb(r) as receipt from public.ks_setup_order_queue q join public.ks_payment_receipts r using(checkout_session_id) where q.checkout_session_id=$1',[id])).rows[0];
     row.queued_at=new Date(row.queued_at).toISOString();row.receipt.recorded_at=new Date(row.receipt.recorded_at).toISOString();
