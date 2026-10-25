@@ -17,6 +17,7 @@ assert.ok(executablePath, 'Supply an isolated Chromium executable');
 const directory = await mkdtemp(resolve(tmpdir(), 'ks-framework-browser-app-'));
 let server, browser;
 let serviceMode = 'linked', profileMode = 'normal', dashboardTicketMode = 'normal';
+let activityReads = 0;
 const id = n => `55555555-5555-4555-8555-${String(n).padStart(12, '0')}`;
 const rows = Array.from({ length: 12 }, (_, i) => ({
   id: id(i + 1), external_id: i + 1, username: `user_${i + 1}`,
@@ -81,6 +82,15 @@ try {
     }, { user, recovery });
     await context.route('**/*', async route => {
       const request = route.request(), url = new URL(request.url());
+      if (url.origin === origin && url.pathname === '/api/ks-roomba-account') {
+        assert.equal(request.method(), 'GET'); assert.equal(url.search, '?view=activity-support');
+        assert.match(request.headers().authorization, /^Bearer /); activityReads++;
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+          status: activityReads === 1 ? 'activity_response_received' : 'activity_unverified', checkedAt: new Date().toISOString(),
+          diagnostic: activityReads === 1 ? 'activity_list_received' : activityReads === 2 ? 'provider_denied' : activityReads === 3 ? 'PRIVATE-UNTRUSTED-MESSAGE' : 'provider_permission_denied',
+          format: activityReads < 4 ? {rootKind:'PRIVATE-UNTRUSTED-MESSAGE',dataKind:'PRIVATE-UNTRUSTED-MESSAGE',statusCode:'PRIVATE-UNTRUSTED-MESSAGE'} : {rootKind:'object',dataKind:'missing',statusCode:'STATUS_NO_PERMISSIONS'},
+          message: 'PRIVATE-UNTRUSTED-MESSAGE', mode: 'read-only', databaseWrites: false }) });
+      }
       if (url.origin === origin) return route.continue();
       if (url.origin !== 'https://fictional.supabase.co') { blocked.push(url.origin); return route.abort(); }
       const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-supabase-api-version', 'access-control-allow-methods': 'GET, HEAD, PATCH, POST, PUT, OPTIONS', 'content-type': 'application/json' };
@@ -346,6 +356,32 @@ try {
   await createButton.click(); await page.waitForURL('**/client/support');
   await page.getByText('Fictional new support request', { exact: true }).waitFor(); assert.equal(ticketWrites.length, 1);
   await context.close();
+  const activityContext = await contextFor('djudge47@gmail.com');
+  const activityPage = await activityContext.newPage(); activityPage.on('pageerror', error => pageErrors.push(error.message));
+  await activityPage.setViewportSize({ width: 320, height: 760 }); await activityPage.clock.install();
+  await activityPage.goto(origin + '/admin/roomba');
+  const activityButton = activityPage.getByRole('button', { name: 'Check activity connection', exact: true });
+  await activityButton.waitFor(); assert.equal(activityReads, 0);
+  assert.ok((await activityButton.boundingBox()).height >= 48);
+  await activityButton.click();
+  await activityPage.getByText(/Roomba returned an activity list/).waitFor();
+  assert.equal(activityReads, 1); assert.equal(await activityPage.getByText('PRIVATE-UNTRUSTED-MESSAGE').count(), 0);
+  assert.equal(await activityPage.getByRole('button', { name: 'Available in 60s', exact: true }).isDisabled(), true);
+  await activityPage.clock.fastForward(60_001); assert.equal(activityReads, 1);
+  await activityPage.reload(); await activityButton.waitFor(); assert.equal(activityReads, 1);
+  await activityButton.click(); await activityPage.getByText(/Roomba rejected the activity request/).waitFor();
+  assert.equal(activityReads, 2); assert.equal(await activityPage.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  assert.equal(await activityPage.getByText('PRIVATE-UNTRUSTED-MESSAGE').count(), 0);
+  await activityPage.clock.fastForward(60_001); assert.equal(activityReads, 2);
+  await activityPage.reload(); await activityButton.waitFor(); assert.equal(activityReads, 2);
+  await activityButton.click(); await activityPage.getByText(/Activity support is still unverified/).waitFor();
+  assert.equal(activityReads, 3); assert.equal(await activityPage.getByText('PRIVATE-UNTRUSTED-MESSAGE').count(), 0);
+  await activityPage.clock.fastForward(60_001); assert.equal(activityReads, 3);
+  await activityPage.reload(); await activityButton.waitFor(); await activityButton.click();
+  await activityPage.getByText(/Roomba returned STATUS_NO_PERMISSIONS/).waitFor();
+  await activityPage.getByText('Response: object. Activity data: missing. Provider status: STATUS_NO_PERMISSIONS.', {exact:true}).waitFor();
+  assert.equal(activityReads, 4); assert.equal(await activityPage.getByText('PRIVATE-UNTRUSTED-MESSAGE').count(), 0);
+  await activityContext.close();
   const ordinary = await contextFor('ordinary@example.invalid');
   const denied = await ordinary.newPage(); denied.on('pageerror', error => pageErrors.push(error.message));
   await denied.goto(origin + '/admin/crm'); await denied.waitForURL('**/login');

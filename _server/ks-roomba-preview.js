@@ -4,6 +4,7 @@ import { createFixieDispatcher, fixieProxyUrl } from './ks-fixie-proxy.js';
 import { readAccountJson, readPackageJson, readLineJson } from './ks-roomba-account-reader.js';
 import { normalizeProviderLine } from './ks-roomba-line-snapshot.js';
 import { normalizePackages } from '../_shared/ks-roomba-setup.js';
+import { readActivityProbeJson } from './ks-roomba-activity-probe-reader.js';
 
 // HTTPS hostname supplied by Roomba support; access-code case copied from
 // the reseller panel's API URL tooltip. Connectivity still requires a test.
@@ -42,7 +43,7 @@ function failureReason(error, stage) {
 
 // Dependencies are injectable so tests never contact the provider.
 export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetch, dispatcherFactory = createFixieDispatcher, readAction = 'user_info', lineId } = {}) {
-  if (!['user_info', 'packages', 'get_line'].includes(readAction)) throw new Error('Unsupported read action');
+  if (!['user_info', 'packages', 'get_line', 'live_connections'].includes(readAction)) throw new Error('Unsupported read action');
   // The line is selected by server code after ownership checks, never by URL query/body.
   if (readAction === 'get_line' && (typeof lineId !== 'string' || !/^[1-9]\d{0,14}$/.test(lineId))) throw new Error('Invalid line reference');
   let dispatcher;
@@ -57,7 +58,7 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
       return reply(405, 'method_not_allowed');
     }
     if (env.VERCEL_ENV === 'production') return reply(404, 'preview_only');
-    if (readAction === 'get_line' && env.VERCEL_ENV !== 'preview') return reply(404, 'preview_only');
+    if (['get_line', 'live_connections'].includes(readAction) && env.VERCEL_ENV !== 'preview') return reply(404, 'preview_only');
     if (!authorized(req.headers?.authorization, env.ROOMBA_PREVIEW_SECRET)) return reply(401, 'unauthorized');
     const missing = ['ROOMBA_API_URL', 'ROOMBA_API_KEY', 'FIXIE_URL'].filter(name => typeof env[name] !== 'string' || !env[name].trim());
     if (missing.length) return reply(503, 'not_configured', { missing });
@@ -91,6 +92,7 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
     url.searchParams.set('api_key', apiKey);
     url.searchParams.set('action', readAction);
     if (readAction === 'get_line') url.searchParams.set('id', lineId);
+    if (readAction === 'live_connections') { url.searchParams.set('start', '0'); url.searchParams.set('limit', '1'); }
     let stage = 'proxy_request';
     let upstreamStatus;
     let responseType;
@@ -111,6 +113,10 @@ export function createRoombaPreviewHandler({ env = process.env, fetchImpl = fetc
         });
       }
       stage = 'response_body';
+      if (readAction === 'live_connections') {
+        const probe = await readActivityProbeJson(response);
+        return reply(200, 'activity_probe_complete', { transport: 'fixie', probe });
+      }
       const payload = await (readAction === 'packages' ? readPackageJson(response) : readAction === 'get_line' ? readLineJson(response) : readAccountJson(response));
       const secrets = [apiKey, env.FIXIE_URL, proxyUrl.password, decodeURIComponent(proxyUrl.password)];
       if (readAction === 'get_line') {

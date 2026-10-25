@@ -10,8 +10,35 @@ type AccountResult = {
   account: { id: string | number | null; username: string | number | null; credits: string | number | null };
 };
 
+const activityMessages: Readonly<Record<string, string>> = {
+  provider_permission_denied: 'Roomba returned STATUS_NO_PERMISSIONS for activity. The reseller account check passed, but this activity request was not permitted.',
+  provider_invalid_input: 'Roomba returned STATUS_INVALID_INPUT for activity. The activity request parameters or compatibility need verification.',
+  provider_reported_failure: 'Roomba returned STATUS_FAILURE for activity. That status does not identify the cause; activity access remains unverified.',
+  provider_denied: 'Roomba rejected the activity request. The reseller account check passed, but activity permission or compatibility is not established.',
+  provider_rate_limited: 'Roomba limited the activity request. Wait one minute before checking again.',
+  provider_redirect: 'Roomba redirected the activity request. The redirect was blocked to protect the connection.',
+  provider_http_error: 'Roomba returned an HTTP error for activity. The reseller account check passed, but no activity result was verified.',
+  request_timeout: 'The activity request timed out. The reseller account check passed, but no activity result was verified.',
+  response_unreadable: 'Roomba responded, but its activity response could not be read safely. No activity result was verified.',
+  response_unrecognized: 'Roomba responded, but it did not return the expected activity-list format. Activity compatibility remains unverified.',
+  transport_failed: 'The activity connection failed before a readable response was received. No activity result was verified.',
+  configuration_unavailable: 'The activity connection configuration could not be verified. No activity result was verified.',
+  diagnostic_failed: 'The activity check could not verify a result.',
+};
+
+function activityFormatDetails(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null;
+  const format = value as Record<string, unknown>;
+  const kinds: Readonly<Record<string, string>> = { object: 'object', array: 'list', string: 'text', number: 'number', boolean: 'boolean', null: 'null', missing: 'missing' };
+  const kind = (input: unknown) => typeof input === 'string' && Object.prototype.hasOwnProperty.call(kinds, input) ? kinds[input] : 'unrecognized';
+  const statuses = ['STATUS_SUCCESS', 'STATUS_SUCCESS_MULTI', 'STATUS_FAILURE', 'STATUS_INVALID_INPUT', 'STATUS_NO_PERMISSIONS'];
+  const status = typeof format.statusCode === 'string' && statuses.includes(format.statusCode) ? format.statusCode : format.statusCode === 'absent' ? 'not supplied' : 'unrecognized';
+  return `Response: ${kind(format.rootKind)}. Activity data: ${kind(format.dataKind)}. Provider status: ${status}.`;
+}
+
 const RoombaConnection: React.FC = () => {
   const [result, setResult] = useState<AccountResult | null>(null);
+  const [activity, setActivity] = useState<{ message: string; checkedAt: string; details: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -29,19 +56,21 @@ const RoombaConnection: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [cooldown]);
 
-  const checkConnection = async () => {
+  const checkConnection = async (activityCheck = false) => {
     if (busy.current || cooldown) return;
     busy.current = true;
     const request = new AbortController();
     controller.current = request;
-    const timeout = window.setTimeout(() => request.abort(), 25000);
+    const timeout = window.setTimeout(() => request.abort(), activityCheck ? 45000 : 25000);
     setLoading(true);
     setError(null);
-    setResult(null);
+    if (activityCheck) setActivity(null);
+    else setResult(null);
     try {
       const { data, error: sessionError } = await supabase.auth.getSession();
+      if (request.signal.aborted || controller.current !== request) return;
       if (sessionError || !data.session?.access_token) throw new Error('Please sign in again to your admin account.');
-      const response = await fetch('/api/ks-roomba-account', {
+      const response = await fetch(activityCheck ? '/api/ks-roomba-account?view=activity-support' : '/api/ks-roomba-account', {
         method: 'GET', cache: 'no-store', signal: request.signal,
         headers: { Accept: 'application/json', Authorization: `Bearer ${data.session.access_token}` },
       });
@@ -49,7 +78,21 @@ const RoombaConnection: React.FC = () => {
       if (request.signal.aborted || controller.current !== request) return;
       if (!response.ok) {
         setCooldown(Math.min(60, Math.max(0, Number(payload?.retryAfterSeconds) || 0)));
+        if (activityCheck) throw new Error(response.status === 429
+          ? 'Please wait one minute before checking activity again.'
+          : response.status === 401 ? 'Please sign in again to your admin account.'
+          : response.status === 403 ? 'Activity checks require the confirmed Kristal Streams administrator.'
+          : 'The administrator or reseller account check could not be completed. No activity result was verified.');
         throw new Error(payload?.error || 'The connection could not be checked. Please try again.');
+      }
+      if (activityCheck) {
+        if (!['activity_response_received', 'activity_unverified'].includes(payload?.status) || !Number.isFinite(Date.parse(payload.checkedAt)))
+          throw new Error('The activity check response could not be verified.');
+        setActivity({ message: payload.status === 'activity_response_received'
+          ? 'Roomba returned an activity list. Customer matching and live counts still need verification.'
+          : `${typeof payload.diagnostic === 'string' && Object.prototype.hasOwnProperty.call(activityMessages, payload.diagnostic) ? activityMessages[payload.diagnostic] : 'Activity support is still unverified.'} This does not mean your customers are offline.`, checkedAt: payload.checkedAt, details: activityFormatDetails(payload.format) });
+        setCooldown(60);
+        return;
       }
       if (payload?.status !== 'connected' || !payload.account || !Number.isFinite(Date.parse(payload.checkedAt))) {
         throw new Error('The connection response could not be verified. Please try again.');
@@ -98,12 +141,23 @@ const RoombaConnection: React.FC = () => {
         </div>
         <div className="mt-7 flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-xl text-sm leading-6 text-gray-400">Check when you need an update. Results can be reused for up to one minute.</p>
-          <button type="button" onClick={checkConnection} disabled={loading || cooldown > 0}
+          <button type="button" onClick={() => checkConnection()} disabled={loading || cooldown > 0}
             className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-red-950/40 transition hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-400 disabled:cursor-not-allowed disabled:opacity-60">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
             {loading ? 'Checking connection...' : cooldown ? `Check again in ${cooldown}s` : result ? 'Refresh connection' : 'Check connection'}
           </button>
         </div>
+      </section>
+
+      <section aria-label="Activity connection check" className="rounded-2xl border border-gray-700 bg-gray-800/30 p-5">
+        <h2 className="text-lg font-semibold text-white">Online activity connection</h2>
+        <p className="mt-2 text-sm leading-6 text-gray-400">Check whether Roomba returns activity data. This diagnostic does not yet populate Online now.</p>
+        <button type="button" onClick={() => checkConnection(true)} disabled={loading || cooldown > 0}
+          className="mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-60">
+          {loading ? 'Checking...' : cooldown ? `Available in ${cooldown}s` : 'Check activity connection'}
+        </button>
+        {activity && <p role="status" className="mt-4 text-sm leading-6 text-gray-300">{activity.message} Checked {new Date(activity.checkedAt).toLocaleString()}.</p>}
+        {activity?.details && <p className="mt-2 text-sm leading-6 text-gray-400">{activity.details}</p>}
       </section>
 
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
