@@ -1,8 +1,8 @@
-# Disabled paid-renewal send guard work — October 25, 2026
+# Installed disabled paid-renewal send guard — October 25, 2026
 
 - A separate consent and durable send-claim guard now protects the existing paid-renewal identity. Lost replies and retries cannot reacquire a claim; uncertainty retains physical reseller and line-version reservations without automatic release.
-- The proposed migration extends the existing five-protocol reseller exclusion to this sixth protocol with exact-source preflight, existing-work rejection and unchanged legacy triggers/grants. A new private control defaults off; no HTTP execution or consent issuance route is added.
-- Local actual SQL/handler cases passed. Native cross-protocol/concurrency checks and connected installation are pending. Source remains staged in PR #33. See `docs/paid-renewal-send-guard.md`.
+- The migration extends the existing five-protocol reseller exclusion to this sixth protocol with exact-source preflight, existing-work rejection and unchanged legacy triggers/grants. A new private control defaults off; no HTTP execution or consent issuance route is added.
+- Migration `20261025084505` is installed disabled, with tested function bodies, six shared triggers, private grants and deferred commit guard verified. Customer billing/access and completed manual-operation digests are unchanged. All four controls are off and all six reseller slots/new send tables are empty. All six workflows passed at `b40f031`, including 63 native cases per PostgreSQL version and 24 actual SQL/handler cases. Source remains staged in PR #33. See `docs/paid-renewal-send-guard.md` and its installation report.
 - A claim always denies dispatch authority. Reviewed provider timing policy, executable transport bridge, completion/reconciliation/release, credential delivery, administrative UI and coordinated release remain open. No real payment, provider operation, email or credit spend is enabled.
 
 # Installed paid-renewal quote approval prerequisite — October 25, 2026

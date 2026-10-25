@@ -474,7 +474,7 @@ try{
   for(const name of ['ks-crm-renewal-installation-schema.sql','ks-crm-live-renewal-installation-schema.sql','ks-crm-order-renewal-installation-schema.sql']){
     const sql=await readFile(new URL(name,import.meta.url),'utf8');report.sqlSources[name]=createHash('sha256').update(sql).digest('hex');install(sql);
   }
-  const sendPath='../supabase/migrations/20261025083228_add_disabled_paid_renewal_send_guard.sql';
+  const sendPath='../supabase/migrations/20261025084505_add_disabled_paid_renewal_send_guard.sql';
   const sendMigration=await readFile(new URL(sendPath,import.meta.url),'utf8');report.sqlSources[sendPath]=createHash('sha256').update(sendMigration).digest('hex');install(sendMigration);
   let sendSequence=0;
   async function sendFixture({reseller,shared}={}){
