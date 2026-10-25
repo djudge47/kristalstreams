@@ -1,4 +1,10 @@
-# Current paid-workflow checkpoint — October 24, 2026
+# Purchase-routing draft — October 24, 2026
+
+- The receipt-only path now saves an immutable review destination from the verified receipt, saved authenticated purchase intent and approved CRM ownership link. Missing/ambiguous/stale evidence goes to manual review; no name/email matching grants ownership.
+- Routing and retry/recovery tests are being verified before installation or release. See `docs/paid-order-routing.md` for the exact behavior and remaining boundaries.
+- Live authenticated checkout-intent capture, an explicit selector for multiple services, current ownership revalidation at execution, live completion/credential delivery and coordinated rollout remain open. This draft does not enable payment-to-XUI automation.
+
+# Installed paid-workflow checkpoint — October 24, 2026
 
 - Installed the private pending-notification and payment-activation rollback foundation as migration `20261025024637` in the active Kristal Stream project only.
 - Deployed `ks-order-notification` version 3, retaining JWT checks and the exact legacy handler. No message was sent.

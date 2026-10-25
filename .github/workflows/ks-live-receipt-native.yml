@@ -8,9 +8,11 @@ on:
       - 'scripts/**/*.sql'
       - 'scripts/test-ks-live-receipt-native.mjs'
       - 'scripts/fixtures/ks-reviewed-handoff/**'
+      - 'scripts/fixtures/ks-paid-order-routing.mjs'
       - 'supabase/migrations/**'
       - '_server/ks-payments.js'
       - '_server/ks-receipt-only.js'
+      - '_server/ks-paid-order-routing.js'
       - 'supabase/functions/ks-order-notification/**'
 
 permissions:

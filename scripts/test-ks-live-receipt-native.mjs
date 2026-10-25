@@ -4,6 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { bootstrap, literal } from './fixtures/ks-reviewed-handoff/fixtures.mjs';
+import { routingCases, routingMigrationName, routingSupportSql } from './fixtures/ks-paid-order-routing.mjs';
 
 // Only a disposable loopback database is accepted. Never use DATABASE_URL,
 // Supabase, a production secret, provider transport or an application endpoint.
@@ -261,6 +262,35 @@ try{
   });
   await check('all customer profiles remain byte-equivalent after native races and recovery',async()=>{
     assert.deepEqual(await observer.json('select jsonb_agg(to_jsonb(p) order by id) from public.profiles p'),before);
+  });
+  install(await routingSupportSql());
+  const routingPath=new URL(routingMigrationName,new URL('./fixtures/ks-paid-order-routing.mjs',import.meta.url));
+  const routingMigration=await readFile(routingPath,'utf8');
+  report.sqlSources['supabase/migrations/20261025030719_add_private_paid_order_routing.sql']=createHash('sha256').update(routingMigration).digest('hex');
+  install(routingMigration);
+  const routingDb={
+    exec:sql=>a.query(sql),
+    query:async(sql,args=[])=>{
+      // Only disposable fixture values reach this adapter, quoted as SQL
+      // literals. No application/customer text or production connection.
+      const bound=sql.replace(/\$(\d+)\b/g,(_,index)=>args[Number(index)-1]===null?'null':literal(args[Number(index)-1]));
+      if(!/^\s*select\b/i.test(bound)){await a.query(bound);return{rows:[]};}
+      return{rows:await a.json(`select coalesce(jsonb_agg(to_jsonb(fixture_rows)),'[]'::jsonb) from (${bound}) fixture_rows`)};
+    },
+  };
+  await routingCases(routingDb,check);
+  await check('simultaneous routing waits on a native lock and returns one saved destination',async()=>{
+    const sql="select public.ks_route_paid_order('cs_live_DuplicateNative')";
+    const result=await race(sql,sql);
+    const first=JSON.parse(result.first),second=JSON.parse(result.second);
+    assert.deepEqual(second,{...first,replayed:true});assert.equal(first.replayed,false);
+    assert.equal(await observer.query("select count(*) from public.ks_paid_order_routes where checkout_session_id='cs_live_DuplicateNative'"),'1');
+  });
+  await check('routing rollback lets a waiting confirmation save the destination once',async()=>{
+    const sql="select public.ks_route_paid_order('cs_live_RollbackNative')";
+    const result=await race(sql,sql,{release:'rollback'});
+    assert.equal(JSON.parse(result.second).replayed,false);
+    assert.equal(await observer.query("select count(*) from public.ks_paid_order_routes where checkout_session_id='cs_live_RollbackNative'"),'1');
   });
   report.passed=true;
   console.log(`${report.tests.length} native PostgreSQL checks passed. Fictional loopback database only; no Supabase, Stripe, email or provider calls.`);

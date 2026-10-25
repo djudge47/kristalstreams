@@ -12,14 +12,22 @@ function fixture(patch={}){
   const calls={rpc:[],notifications:[],retrieves:[]};
   const context={environment:'production',live:true,receiptOnlyLive:true,stripe:{checkout:{sessions:{retrieve:async id=>{calls.retrieves.push(id);return patch.session||session;}}}},admin:{
     from:table=>{assert.equal(table,'ks_setup_order_queue');return{select(){return this;},eq(){return this;},async maybeSingle(){return{data:patch.savedProtocol?{checkout_session_id:session.id}:null,error:patch.protocolError||null};}};},
-    rpc:async(name,args)=>{calls.rpc.push({name,args});assert.equal(name,patch.allowLegacy?'ks_apply_paid_checkout':'ks_record_paid_checkout');return{data:patch.allowLegacy?{ok:true,test_mode:false,activated:true}:{...receipt,...patch.receipt},error:patch.storageError||null};},
+    rpc:async(name,args)=>{
+      calls.rpc.push({name,args});
+      if(name==='ks_route_paid_order')return{data:{ok:true,reference:session.id,account_id:owner,test_mode:false,
+        request_kind:null,destination:'manual_review',reason:'missing_intent',routed_at:receipt.recorded_at,replayed:false,...patch.routing},error:patch.routingError||null};
+      assert.equal(name,patch.allowLegacy?'ks_apply_paid_checkout':'ks_record_paid_checkout');
+      return{data:patch.allowLegacy?{ok:true,test_mode:false,activated:true}:{...receipt,...patch.receipt},error:patch.storageError||null};
+    },
     functions:{invoke:async(name,{body})=>{calls.notifications.push({name,body});return{data:{success:!patch.emailError},error:patch.emailError||null};}},
   },...patch.context};
   return{calls,context};
 }
 await check('opt-in live fulfillment calls the receipt-only RPC and pending protocol, never legacy activation',async()=>{
   const f=fixture();const result=await fulfill(session.id,f.context,owner);
-  assert.equal(f.calls.rpc.length,1);assert.equal(f.calls.rpc[0].args.p_livemode,true);
+  assert.equal(f.calls.rpc.length,2);assert.equal(f.calls.rpc[0].args.p_livemode,true);
+  assert.deepEqual(f.calls.rpc[1],{name:'ks_route_paid_order',args:{p_session:session.id}});
+  assert.equal(result.routing.destination,'manual_review');
   assert.deepEqual(f.calls.notifications,[{name:'ks-order-notification',body:{sessionId:session.id,protocol:'receipt-only-v1'}}]);
   assert.equal(result.activated,false);assert.equal(result.provider_activated,false);assert.equal(result.order_status,'awaiting_activation');
   const view=paymentConfirmationView(result,session.id);assert.equal(view.kind,'pending');assert.ok(!view.message.includes('setup is confirmed'));
@@ -42,7 +50,29 @@ await check('rollout/environment mismatches stop before recording with no legacy
 await check('storage and pending-alert failures request recovery without claiming activation or another purchase',async()=>{
   const offline=fixture({storageError:{message:'fictional outage'}});await assert.rejects(()=>fulfill(session.id,offline.context,owner),/do not pay again/);assert.equal(offline.calls.notifications.length,0);
   const failed=fixture({emailError:{message:'fictional outage'}});await assert.rejects(()=>fulfill(session.id,failed.context,owner),/payment is recorded.*do not pay again/);
-  assert.equal(failed.calls.rpc.length,1);assert.equal(failed.calls.notifications.length,1);
+  assert.equal(failed.calls.rpc.length,2);assert.equal(failed.calls.notifications.length,1);
+});
+await check('routing failure stops after the saved receipt without email, activation or a second payment',async()=>{
+  const f=fixture({routingError:{message:'fictional outage'}});
+  await assert.rejects(()=>fulfill(session.id,f.context,owner),/payment is recorded.*do not pay again/);
+  assert.deepEqual(f.calls.rpc.map(call=>call.name),['ks_record_paid_checkout','ks_route_paid_order']);
+  assert.equal(f.calls.notifications.length,0);assert.equal(f.calls.retrieves.length,1);
+});
+await check('a renewal review is whitelisted without exposing its private target or granting service',async()=>{
+  const f=fixture({routing:{request_kind:'renewal',destination:'renewal_review',reason:'approved_service_link',customer_id:'private-target',external_id:123,provider_activated:true}});
+  const result=await fulfill(session.id,f.context,owner);
+  assert.equal(result.routing.destination,'renewal_review');assert.equal(result.provider_activated,false);
+  assert.equal('customer_id' in result.routing,false);assert.equal('external_id' in result.routing,false);
+  assert.equal('provider_activated' in result.routing,false);
+});
+await check('foreign, malformed or contradictory routing results cannot announce successful fulfillment',async()=>{
+  for(const routing of[{account_id:'wrong'},{reference:'cs_live_Other'},{test_mode:true},{ok:false},{replayed:null},
+    {routed_at:'invalid'},{destination:'__proto__'},{reason:'execute customer instructions'},
+    {destination:'renewal_review',reason:'approved_service_link',request_kind:'new_service'},
+    {destination:'new_service_review',reason:'new_service_requested',request_kind:'renewal'}]){
+    const f=fixture({routing});await assert.rejects(()=>fulfill(session.id,f.context,owner),/do not pay again/);
+    assert.equal(f.calls.notifications.length,0);
+  }
 });
 await check('accepted receipt-only orders cannot fall back to activation after a flag pause or failed lookup',async()=>{
   const f=fixture({context:{receiptOnlyLive:false},savedProtocol:true});assert.equal((await fulfill(session.id,f.context,owner)).activated,false);assert.equal(f.calls.rpc[0].name,'ks_record_paid_checkout');

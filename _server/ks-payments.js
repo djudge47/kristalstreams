@@ -4,6 +4,7 @@ import { PaymentError, applyPaidSession, validatePaidSession } from './ks-paymen
 import { queuePreviewPaidOrder } from './ks-preview-paid-orders.js';
 import { verifiedCheckoutIntent } from './ks-checkout-intent.js';
 import { recordPaymentReceipt } from './ks-receipt-only.js';
+import { routePaidOrder } from './ks-paid-order-routing.js';
 import { loadPreviewCompletions } from './ks-preview-completion-status.js';
 
 export { PaymentError } from './ks-payment-validation.js';
@@ -94,13 +95,14 @@ export async function fulfill(sessionId, context, ownerId) {
     // Preserve legacy delivery identities. Review-blocked receipts are not
     // eligible for a new pending alert or another activation attempt.
     if (receipt.order_status === 'requires_review') return receipt;
+    const routing = await routePaidOrder(session, true, ownerId, context.admin);
     const { data: alert, error: alertError } = await context.admin.functions.invoke('ks-order-notification', {
       body: { sessionId: session.id, protocol: 'receipt-only-v1' },
     });
     if (alertError || alert?.success !== true) {
       throw new PaymentError(503, 'Your payment is recorded, but the setup notification needs attention. Please contact support; do not pay again.');
     }
-    return receipt;
+    return { ...receipt, routing };
   }
   const receipt = await applyPaidSession(session, context.live, ownerId, context.admin);
   const queued = await queuePreviewPaidOrder(session, context, ownerId);
