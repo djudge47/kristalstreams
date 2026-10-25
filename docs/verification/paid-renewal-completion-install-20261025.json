@@ -1,0 +1,105 @@
+{
+  "kind": "connected-private-paid-renewal-completion",
+  "project": "wftfxerblhlsxiijtfbo",
+  "migration": {
+    "version": "20261025091959",
+    "name": "add_private_paid_renewal_completion",
+    "sourcePath": "supabase/migrations/20261025091959_add_private_paid_renewal_completion.sql",
+    "sha256": "f34aa5570807cc6b42229eff4262c04315ec82b28d532d34bb7833a7703c37ed",
+    "testedDraftPath": "supabase/migrations/20261025085917_add_private_paid_renewal_completion.sql",
+    "sqlBytesChangedAfterNativeTest": false
+  },
+  "testedCommit": "9042282341e13cae5521628b65b5f83635780858",
+  "successfulWorkflowRuns": {
+    "Native signed review handoff checks": 40179973364,
+    "Native CRM renewal rehearsal": 40179973361,
+    "CRM XUI status checks": 40179973333,
+    "Native paid worker recovery checks": 40179973360,
+    "Application quality": 40179973387,
+    "Native receipt-only database checks": 40179973393
+  },
+  "nativeJobs": [
+    {
+      "postgres": "17.11",
+      "jobId": 121128753921,
+      "checksPassed": 70
+    },
+    {
+      "postgres": "17.6",
+      "jobId": 121128754059,
+      "checksPassed": 70
+    }
+  ],
+  "connectedFunctionBodyMd5": {
+    "ks_complete_paid_renewal": "1c0d029d8181a25d33a38e6df42dd45a",
+    "ks_guard_setup_order_queue": "135952c3cafd6fc7549dab6bf3f02dea",
+    "ks_paid_renewal_complete_commit": "e4324b7b6e0a7ec403a1e2a134bceee3",
+    "ks_paid_renewal_completion_owner": "a8326b13244d90acc6eb6ab480f32241",
+    "ks_verify_paid_renewal_completion": "2c1e19c3e77cdfcb3f87280d104ca9ca",
+    "ks_paid_renewal_completion_context": "2f32b5c16e48286dd5ed3ee8aabfc9e7",
+    "ks_prepare_paid_renewal_completion": "caf74d527ed648129cb47a238fe4f060",
+    "ks_guard_paid_renewal_send_operation": "1dc079965f02fd3a36657d6e593d1e83",
+    "ks_assert_paid_renewal_complete_state": "a5252f54a88f5d18e7cdabb671f226be",
+    "ks_assert_paid_renewal_provider_result": "74e61ad52e5b3237203f9c5eef20d965",
+    "ks_paid_renewal_release_completed_slot": "f93ec3fa37bb2d691c39e83c31c81ee8",
+    "ks_guard_paid_renewal_completion_evidence": "41f8779f4e5f2c4b80d484460b993d85"
+  },
+  "connectedChecks": {
+    "controls": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "newExpectationProofCompletionRecords": [
+      0,
+      0,
+      0
+    ],
+    "allSixResellerSlotsEmpty": true,
+    "privateFunctions": true,
+    "privateTables": true,
+    "conditionalSlotRelease": true,
+    "deferredCompleteGuard": true,
+    "sharedTriggers": 6,
+    "newSecurityWarningKinds": 0
+  },
+  "unchangedBeforeAndAfter": {
+    "routes": 0,
+    "crmCustomers": 20,
+    "lineVersions": 0,
+    "pendingAlerts": 0,
+    "queueGuardAcl": "{postgres=X/postgres,service_role=X/postgres}",
+    "quoteApprovals": 0,
+    "reviewBindings": 0,
+    "sendOperations": 0,
+    "paymentReceipts": 2,
+    "previewRequests": 1,
+    "purchaseIntents": 1,
+    "liveQueuedOrders": 0,
+    "resellerGuardAcl": "{postgres=X/postgres,service_role=X/postgres}",
+    "operationGuardAcl": "{postgres=X/postgres,service_role=X/postgres}",
+    "resellerGuardBody": "897f56fb9493a3da44edd2d2686e4ec3",
+    "liveCheckoutRequests": 0,
+    "crmServiceBillingDigest": "0adce2c433d59c54126b71a9c9138fd3",
+    "oldManualOperationDigest": "2521cc5fe434ad62266b56ba0c18dc07",
+    "websiteEntitlementDigest": "eae960883bd1639904bf489ec82b2ea2",
+    "existingNotificationRecords": 2
+  },
+  "scope": {
+    "productionRelease": false,
+    "liveControlEnablement": false,
+    "realPaymentOrEmail": false,
+    "providerWriteOrCreditSpend": false,
+    "customerMutation": false,
+    "profileOrBillingProjection": false,
+    "httpExecutionRoute": false,
+    "currentStreamingAvailabilityClaim": false
+  },
+  "supportedTimingPolicy": "controlled_6m4_to_6m3_reset_ny/v1",
+  "remaining": [
+    "Additional reviewed timing policies and provider execution bridge",
+    "Customer-facing verified live completion and financial/account projection",
+    "Credential delivery, administrative UI and coordinated release"
+  ]
+}

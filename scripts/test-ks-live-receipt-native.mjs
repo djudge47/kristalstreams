@@ -476,7 +476,7 @@ try{
   }
   const sendPath='../supabase/migrations/20261025084505_add_disabled_paid_renewal_send_guard.sql';
   const sendMigration=await readFile(new URL(sendPath,import.meta.url),'utf8');report.sqlSources[sendPath]=createHash('sha256').update(sendMigration).digest('hex');install(sendMigration);
-  const completionPath='../supabase/migrations/20261025085917_add_private_paid_renewal_completion.sql';
+  const completionPath='../supabase/migrations/20261025091959_add_private_paid_renewal_completion.sql';
   const completionMigration=await readFile(new URL(completionPath,import.meta.url),'utf8');report.sqlSources[completionPath]=createHash('sha256').update(completionMigration).digest('hex');install(completionMigration);
   let sendSequence=0;
   async function sendFixture({reseller,shared}={}){

@@ -1,8 +1,8 @@
-# Paid-renewal completion work — October 25, 2026
+# Installed private paid-renewal completion — October 25, 2026
 
 - A frozen pre-send expectation, matching provider/independent line proof and exact credit debit now precede local CRM completion. Only the owner-reviewed 6-month/4 → 6-month/3 reset policy is accepted, with explicit policy/lost-time confirmation. Unsupported cases remain for review.
 - The local completion transaction changes only the selected service's expiry/allowance/package and its queue/ledger, preserving billing, profiles and credentials. Deferred checks and immutable proof guard against partial completion or ownership drift; lost replies and gate/consent expiry recover locally without resending XUI.
-- Local actual SQL/adapter cases passed. Native concurrency/rollback/failure tests and connected installation are pending. See `docs/paid-renewal-completion.md`. Source remains staged in PR #33.
+- Migration `20261025091959` is installed with tested function bodies, private invoker roles, deferred completion check and conditional release verified. All four controls remain off; new tables are empty. Customer billing/access and completed manual-operation digests are unchanged. Six workflows passed at `9042282`, including 70 native cases per PostgreSQL version and 31 actual SQL/adapter cases. See `docs/paid-renewal-completion.md` and its installation report. Source remains staged in PR #33.
 - Provider transport/authorization, additional timing policies, customer-facing live completion and financial/account projection, credentials, administrative UI and coordinated release remain open. No real provider action, email or credit spend is enabled.
 
 # Installed disabled paid-renewal send guard — October 25, 2026

@@ -81,7 +81,7 @@ try{
   for(const name of ['20261025033932_add_private_live_checkout_intent_binding.sql','20261025031536_add_private_paid_order_routing.sql','20261025040332_add_verified_checkout_service_selection.sql','20261025042823_add_private_paid_renewal_review_binding.sql','20261025082051_add_private_paid_renewal_quote_approval.sql'])await db.exec(await readFile(new URL(`../supabase/migrations/${name}`,import.meta.url),'utf8'));
   for(const name of ['ks-crm-renewal-installation-schema.sql','ks-crm-live-renewal-installation-schema.sql','ks-crm-order-renewal-installation-schema.sql'])await db.exec(await readFile(new URL(name,import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../supabase/migrations/20261025084505_add_disabled_paid_renewal_send_guard.sql',import.meta.url),'utf8'));
-  await db.exec(await readFile(new URL('../supabase/migrations/20261025085917_add_private_paid_renewal_completion.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261025091959_add_private_paid_renewal_completion.sql',import.meta.url),'utf8'));
   async function sendFixture(options){
     const f=await fixture(options),p=await f.prepare(),review=await f.verify(p.operationId),approval=await f.approve(p.operationId,review.quote);
     const consent=createPaidRenewalSendConsent({key:randomBytes(32),now:()=>f.state.now});
