@@ -1,7 +1,9 @@
-# Purchase-routing draft — October 24, 2026
+# Installed purchase-routing foundation — October 24, 2026
 
 - The receipt-only path now saves an immutable review destination from the verified receipt, saved authenticated purchase intent and approved CRM ownership link. Missing/ambiguous/stale evidence goes to manual review; no name/email matching grants ownership.
-- Routing and retry/recovery tests are being verified before installation or release. See `docs/paid-order-routing.md` for the exact behavior and remaining boundaries.
+- Migration `20261025031536` is installed in the active Kristal Stream project. Its three function bodies match the tested source, RLS/private privileges and immutability guard are verified, and no route was seeded. Existing customer billing/access digests and receipt/queue/notification counts stayed unchanged. All renewal execution controls remain off.
+- All four automated workflows passed at `6523e7e`, including 34 checks on each native PostgreSQL version (17.6 and 17.11). Local checks also cover actual fulfillment and receipt/routing/notification SQL recovery. The repository migration filename now matches the server-recorded version; SQL bytes are unchanged. See `docs/paid-order-routing.md` and `docs/verification/paid-order-routing-install-20261024.json`.
+- Website integration remains in draft PR #33; Production was not redeployed or promoted. Live receipt-only admission remains off. Installed database prerequisites are not a completed live customer workflow.
 - Live authenticated checkout-intent capture, an explicit selector for multiple services, current ownership revalidation at execution, live completion/credential delivery and coordinated rollout remain open. This draft does not enable payment-to-XUI automation.
 
 # Installed paid-workflow checkpoint — October 24, 2026

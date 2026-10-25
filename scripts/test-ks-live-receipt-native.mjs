@@ -266,7 +266,7 @@ try{
   install(await routingSupportSql());
   const routingPath=new URL(routingMigrationName,new URL('./fixtures/ks-paid-order-routing.mjs',import.meta.url));
   const routingMigration=await readFile(routingPath,'utf8');
-  report.sqlSources['supabase/migrations/20261025030719_add_private_paid_order_routing.sql']=createHash('sha256').update(routingMigration).digest('hex');
+  report.sqlSources['supabase/migrations/20261025031536_add_private_paid_order_routing.sql']=createHash('sha256').update(routingMigration).digest('hex');
   install(routingMigration);
   const routingDb={
     exec:sql=>a.query(sql),

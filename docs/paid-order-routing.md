@@ -1,5 +1,7 @@
 # Paid order routing
 
+Installed in the active Kristal Stream project as migration `20261025031536` on October 24, 2026 (America/New_York). The SQL bytes match the CLI-generated draft tested at `6523e7e`; the filename was aligned to the connected migration history. Three connected function-body hashes match, private permissions/guard are verified and existing customer/payment state is unchanged. Website integration remains in draft PR #33 and has not been promoted to Production.
+
 The receipt-only fulfillment path now saves a private, immutable review destination before requesting its existing pending-order notification. This is a review destination, not provider activation or credit authorization. The live receipt-only flag remains off; no execution gate changes are included.
 
 | Saved evidence | Review destination |
@@ -26,6 +28,6 @@ Installation is additive and performs no backfill or writes to receipts, queues,
 
 ## Verification
 
-The shared SQL suite executes the actual migration in isolated PGlite and native PostgreSQL 17.6/17.11. It covers exact ownership, both receipt modes, ambiguous/stale/absent links, foreign/late intent, retries after identity/link changes, guard enforcement, private grants and unchanged customer/payment state. Native checks additionally observe actual lock waits for duplicate confirmations and rollback recovery. The fulfillment suite exercises the real `fulfill()` path using intercepted transport; the pending-notification integration uses actual receipt/routing/notification SQL and a lost acknowledgement to prove one receipt, route and delivery identity.
+The shared SQL suite executes the actual migration in isolated PGlite and native PostgreSQL 17.6/17.11. Four workflows passed at `6523e7e`, including 34 checks on each native database version. The 14 routing cases cover exact ownership, both receipt modes, ambiguous/stale/absent links, foreign/late intent, retries after identity/link changes, guard enforcement, private grants and unchanged customer/payment state. Native checks additionally observe actual lock waits for duplicate confirmations and rollback recovery. Fifteen fulfillment cases exercise the real `fulfill()` path using intercepted transport; 15 pending-notification integration cases use actual receipt/routing/notification SQL and a lost acknowledgement to prove one receipt, route and delivery identity. The production build, strict TypeScript, zero-warning lint, nine application-quality scenarios and 13 payment-validation cases also passed locally.
 
 Run isolated SQL with `KS_PGLITE_MODULE` pointing to the disposable PGlite 0.5.10 installation and `node scripts/test-ks-paid-order-routing-db.mjs`. Native checks use the existing loopback-only `scripts/test-ks-live-receipt-native.mjs` harness and workflow. No connected customer or provider is used as a test fixture.

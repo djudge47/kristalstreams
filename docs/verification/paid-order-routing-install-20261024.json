@@ -1,0 +1,68 @@
+{
+  "kind": "connected-private-paid-order-routing-installation",
+  "project": "wftfxerblhlsxiijtfbo",
+  "migration": {
+    "version": "20261025031536",
+    "name": "add_private_paid_order_routing",
+    "sourcePath": "supabase/migrations/20261025031536_add_private_paid_order_routing.sql",
+    "sha256": "80f077e8aaf989916268194ad3a4ee4ee0eba982b2c5ff3d20821c4e2297bf01",
+    "testedDraftPath": "supabase/migrations/20261025030719_add_private_paid_order_routing.sql",
+    "sqlBytesChangedAfterNativeTest": false
+  },
+  "testedCommit": "6523e7ecb6a888cc1b321260f623b642c6ac4fd5",
+  "successfulWorkflowRuns": {
+    "applicationQuality": 40157467422,
+    "nativeReceiptAndRouting": 40157467396,
+    "nativePaidRecovery": 40157467376,
+    "nativeSignedHandoff": 40157467365
+  },
+  "nativeReceiptAndRoutingJobs": [
+    { "postgres": "17.6", "jobId": 121061813115, "passed": true },
+    { "postgres": "17.11", "jobId": 121061813245, "passed": true }
+  ],
+  "connectedFunctionBodyMd5": {
+    "ks_paid_order_route_candidate": "382462ff5aa1c3bebe6c98077cfb1793",
+    "ks_guard_paid_order_route": "fccc773181c5c646477e3d53075e3cf7",
+    "ks_route_paid_order": "b983ed26ef9750f98470efc9f80fe700"
+  },
+  "connectedChecks": {
+    "routingRows": 0,
+    "routingRls": true,
+    "routingGuardEnabled": true,
+    "browserTableAccess": false,
+    "browserRoutingExecution": false,
+    "serviceUpdateDelete": false,
+    "allThreeFunctionsSecurityInvoker": true,
+    "allThreeFunctionsEmptySearchPath": true,
+    "allThreeRenewalExecutionControls": false,
+    "newSecurityWarnings": 0,
+    "existingSecurityWarning": "auth_leaked_password_protection",
+    "newPrivateTableNoPolicyInfo": true
+  },
+  "unchangedBeforeAndAfter": {
+    "crmCustomers": 20,
+    "crmServiceBillingDigest": "0adce2c433d59c54126b71a9c9138fd3",
+    "websiteEntitlementDigest": "eae960883bd1639904bf489ec82b2ea2",
+    "paymentReceipts": 2,
+    "liveQueuedOrders": 0,
+    "historicalNotificationRecords": 2,
+    "pendingAlerts": 0
+  },
+  "scope": {
+    "backfill": false,
+    "websiteProductionDeployment": false,
+    "liveRolloutEnabled": false,
+    "realPaymentOrReplay": false,
+    "emailSent": false,
+    "providerRequest": false,
+    "creditsSpent": false,
+    "newRouteIsExecutionAuthority": false
+  },
+  "remaining": [
+    "Live authenticated Checkout purchase-purpose binding",
+    "Explicit verified service selection for owners with multiple services",
+    "Execution-time ownership, package and spend-policy revalidation",
+    "Live completion, recovery and credential delivery",
+    "Coordinated website release and separately authorized provider execution"
+  ]
+}

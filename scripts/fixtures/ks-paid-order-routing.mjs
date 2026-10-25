@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { literal } from './ks-reviewed-handoff/fixtures.mjs';
 
-export const routingMigrationName = '../../supabase/migrations/20261025030719_add_private_paid_order_routing.sql';
+export const routingMigrationName = '../../supabase/migrations/20261025031536_add_private_paid_order_routing.sql';
 export async function routingSupportSql() {
   const portal = await readFile(new URL('../../supabase/migrations/20261022182546_ks_crm_customer_portal.sql', import.meta.url), 'utf8');
   const boundary = portal.indexOf('create function public.ks_crm_portal_link_review');

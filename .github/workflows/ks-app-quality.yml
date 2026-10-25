@@ -58,6 +58,7 @@ jobs:
           node scripts/test-ks-payments.mjs
           node scripts/test-ks-live-receipt-rollout.mjs
           KS_PGLITE_MODULE=/tmp/ks-release-fixtures/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-ks-paid-order-routing-db.mjs
+          KS_PGLITE_MODULE=/tmp/ks-release-fixtures/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-ks-pending-order-email-db.mjs
           node scripts/test-ks-support-client.mjs
           node scripts/test-ks-support-ui.mjs
           node scripts/test-ks-crm-directory.mjs
