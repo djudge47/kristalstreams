@@ -688,7 +688,7 @@ try{
     install(`update auth.users set email_confirmed_at='2026-01-01T00:00:00Z' where id='${liveOwner}'`);
     const acl=await observer.json("select jsonb_build_object('anon',has_function_privilege('anon','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute'),'browser',has_function_privilege('authenticated','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute'),'server',has_function_privilege('service_role','public.ks_client_crm_snapshot_v2(uuid,text,timestamptz,text)','execute'))");assert.deepEqual(acl,{anon:false,browser:false,server:true});
   });
-  const adminHistoryPath='../supabase/migrations/20261025135609_add_private_admin_website_payment_history.sql',adminHistorySql=await readFile(new URL(adminHistoryPath,import.meta.url),'utf8');
+  const adminHistoryPath='../supabase/migrations/20261025141107_add_private_admin_website_payment_history.sql',adminHistorySql=await readFile(new URL(adminHistoryPath,import.meta.url),'utf8');
   report.sqlSources[adminHistoryPath]=createHash('sha256').update(adminHistorySql).digest('hex');install(adminHistorySql);
   const adminHistory=(actor=quoteActor,at='null',id='null')=>`select public.ks_admin_website_payment_history('${actor}',${at},${id})`;
   await check('admin audit returns only committed live website receipts without changing financial rows',async()=>{
