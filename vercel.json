@@ -1,6 +1,14 @@
 {
   "routes": [
     {
+      "src": "^/downloads/KristalStreams\\.apk$",
+      "headers": {
+        "Content-Disposition": "attachment; filename=\"KristalStreams.apk\"",
+        "Content-Type": "application/vnd.android.package-archive"
+      },
+      "continue": true
+    },
+    {
       "src": "/ppv/leagues-cup-2026.jpg",
       "dest": "/ppv/leagues-cup-2026.svg"
     },

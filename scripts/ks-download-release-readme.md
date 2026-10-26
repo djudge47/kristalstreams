@@ -1,5 +1,22 @@
 # Android release reconciliation and download-page guard
 
+## Downloader button compatibility — October 26, 2026
+
+Donald confirmed that build 2026102001 downloads by direct URL, installs and
+works on his Fire TV Cube, while the page button still fails in Downloader.
+The button now uses ordinary navigation to that same APK instead of HTML's
+`download` attribute. The static file response explicitly sets attachment
+disposition and the Android package MIME type before filesystem routing.
+The service worker bypasses `/downloads/` entirely, so native installer handling
+does not depend on an offline-cache response. Version-6 caches replace the old
+website caches; no app data, browser login or saved users are cleared.
+
+The actual APK is unchanged. The extended actual-component/worker tests verify
+the plain link, attachment route, native-download bypass, ordinary asset fetches
+and old-cache cleanup. A real-browser download test must check the click without
+relying on HTML download support. Chromium emulation is not a substitute for
+Donald testing Downloader on the Cube.
+
 ## Download restoration — October 26, 2026
 
 The download page again offers **Download Android APK** at
