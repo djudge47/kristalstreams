@@ -25,9 +25,7 @@ jobs:
         run: npm audit --audit-level=high --ignore-scripts --package-lock-only --fetch-retries=1 --fetch-timeout=15000
       - run: npm run check
       - name: Verify published Android installer identity
-        run: |
-          node scripts/test-ks-android-release.mjs --built
-          node scripts/test-ks-android-restore-release.mjs --built
+        run: node scripts/test-ks-android-release.mjs --built
       - name: Verify reviewed framework versions, parser fix and reviewed stylesheet baseline
         run: node scripts/test-ks-framework-upgrade.mjs
       - name: Verify navigation and responsive customer workspace in an offline browser

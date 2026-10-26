@@ -59,12 +59,12 @@ export default function DownloadApp() {
 
         <section aria-labelledby="android-installer-title" className="mb-8 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 sm:p-8">
           <Smartphone className="mb-4 h-8 w-8 text-amber-300" aria-hidden="true" />
-          <p className="mb-2 text-sm font-semibold text-amber-300">Android installer · Build 2026102601</p>
+          <p className="mb-2 text-sm font-semibold text-amber-300">Android installer · Build 2026102001</p>
           <h2 id="android-installer-title" className="mb-4 text-2xl font-bold text-white">Android streaming app</h2>
           <p className="max-w-3xl text-gray-200">Download the Kristal Streams Android streaming app. On your TV, open this page in Downloader to get the installer.</p>
           <p className="mt-4 max-w-3xl text-gray-300">If Kristal Streams already works on your device, keep your current installation and saved users. Confirm your app version with support before changing or reinstalling it.</p>
           <nav aria-label="Installer assistance" className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <a href="/downloads/KristalStreams.apk?v=2026102601" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-white hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"><Download className="h-5 w-5" aria-hidden="true" />Download Android APK</a>
+            <a href="/downloads/KristalStreams.apk?v=2026102001" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-white hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"><Download className="h-5 w-5" aria-hidden="true" />Download Android APK</a>
             <Link to="/support" className="inline-flex min-h-12 items-center justify-center rounded-lg bg-primary px-5 py-3 font-semibold text-white hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">Contact Support</Link>
             <a href="mailto:support@kristalstream.com" className="inline-flex min-h-12 items-center justify-center break-all rounded-lg border border-gray-600 px-5 py-3 font-semibold text-white hover:bg-dark-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">Email support@kristalstream.com</a>
           </nav>
