@@ -45,18 +45,20 @@ function offer(prompt = async () => {}, userChoice = Promise.resolve({ outcome: 
 }
 try {
   fresh(); render(); let tree = render();
-  assert.match(text(tree), /Installer update in review/); assert.match(text(tree), /download is temporarily unavailable/); assert.match(text(tree), /keep your current installation and saved users/);
+  assert.match(text(tree), /Build 2026102001/); assert.match(text(tree), /Download Android APK/); assert.match(text(tree), /keep your current installation and saved users/);
   assert.match(text(tree), /Signing out of the website does not sign out of the TV app/);
   assert.match(text(tree), /does not install or update the Android streaming app/);
   assert.equal(button(tree), undefined);
   const html = markup(tree);
-  assert.doesNotMatch(html, /href="[^"]*\.apk|download=|Version 9506|Android 7\.0|Supported devices|<video|<iframe/);
+  assert.match(html, /href="\/downloads\/KristalStreams\.apk\?v=2026102001"/);
+  assert.match(html, /download="KristalStreams.apk"/);
+  assert.doesNotMatch(html, /temporarily unavailable|Version 9506|Android 7\.0|Supported devices|<video|<iframe/);
   const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]);
   assert.ok(hrefs.includes('mailto:support@kristalstream.com'));
   const app = await readFile('src/App.tsx', 'utf8');
   const exactPaths = new Set([...app.matchAll(/<Route path="([^"]+)"/g)].map(match => '/' + match[1].split('/').filter(Boolean).join('/')));
-  for (const href of hrefs.filter(link => link.startsWith('/'))) assert.ok(exactPaths.has(href), `Device setup destination missing: ${href}`);
-  console.log('PASS: actual page clearly pauses the old native download, preserves working-install guidance and separates website shortcuts from TV/phone app behavior with real help links');
+  for (const href of hrefs.filter(link => link.startsWith('/') && !link.startsWith('/downloads/'))) assert.ok(exactPaths.has(href), `Device setup destination missing: ${href}`);
+  console.log('PASS: actual page restores the approved Android APK download, preserves saved-user guidance and keeps website shortcuts separate');
 
   fresh(true); render(); tree = render(); assert.match(text(tree), /Website shortcut available/); assert.equal(button(tree), undefined);
   const ignored = offer(() => { throw Error('An installed context must not prompt again'); }); assert.equal(ignored.defaultPrevented, false);

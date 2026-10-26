@@ -1,8 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { loadApprovedAndroidApk } from './scripts/ks-android-release.mjs';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), {
+    name: 'approved-android-installer',
+    apply: 'build',
+    async generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'downloads/KristalStreams.apk', source: await loadApprovedAndroidApk() });
+    },
+  }],
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
   },
