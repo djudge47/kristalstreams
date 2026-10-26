@@ -1,3 +1,11 @@
+# Artwork recovery test — October 26, 2026
+
+The owner reported very slow channel logos and movie/series posters after build 2026102601, on both Cube and phone. Missing-image symptoms remain unresolved. Static file equality is not evidence that runtime artwork delivery works.
+
+The owner-built 2026102602 rollback restores every APK payload to the pre-black-tile 2026102001 release except the manifest versionCode (raised for an in-place update). APK v2 RSA/SHA256 signature and complete content digest verified; original signer retained. All artwork, code, libraries, resources and permissions match the previous APK, with only the manifest version integer different. Size 84,593,786 bytes, SHA256 `52d1094ef9a57f8dec4651eefc83c66d399a7a3ab8628713b74bb16abebbe436`.
+
+Expose the exact supplied signed rollback at `/downloads/KristalStreams-Restore.apk?v=2026102602` for the owner's controlled device test. Preserve the main public download and page until runtime artwork recovery is confirmed. Native-download attachment headers and existing service-worker bypass apply. No claim is made that restoring launcher banners fixes remote artwork loading; device test remains required.
+
 # Fire TV black home screen tile — October 26, 2026
 
 The owner built and supplied `KristalStreams-2026102601-FIRE-TV-BLACK-20261026-094130-03380c73.apk` using the matching existing signing key. VersionCode is 2026102601; size is 84,606,074 bytes; SHA256 is `1f31d53f9e95646a2e40fc6fdf8a9f7d770826d1d605e13af6aa353de235f73d`.
