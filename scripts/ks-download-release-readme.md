@@ -1,5 +1,31 @@
 # Android release reconciliation and download-page guard
 
+## Download restoration — October 26, 2026
+
+The download page again offers **Download Android APK** at
+`/downloads/KristalStreams.apk?v=2026102001`. The build emits the exact
+owner-supplied 84,593,786-byte APK with SHA-256
+`47e4658b604479d9fad04a1876e92de500d6f0808dc67300a20df3ac0699ccd7`.
+The existing signed APK is not changed or re-signed. Device-install and Fire TV
+compatibility claims are not inferred from file identity.
+
+To retain a reproducible release without another full APK in repository history,
+`scripts/releases/KristalStreams-2026102001.release.b64` losslessly represents
+the supplied file relative to the preserved build-9506 binary. The Node-only
+packager copies unchanged byte ranges, restores literal bytes and applies byte
+differences; it never executes APK contents, calls a network service or changes
+ZIP compression/signatures. Both source and final whole-file hashes are pinned.
+Vite emits the verified APK over the old public asset during every build.
+`test-ks-android-release.mjs --built` checks the actual distribution output;
+corrupt inputs fail rather than silently publishing the older file. CI runs
+that identity check after the normal production build and retains download-page
+and website-shortcut regression tests.
+
+This replaces the earlier temporary unavailable notice below. The source copy
+under `public/downloads` remains the build input; the downloadable distribution
+file is the verified newer release. No purchase, provider or activation setting
+is part of this repair.
+
 ## Latest owner-supplied APK — October 23, 2026
 
 Donald supplied `KristalStreams-2026102001-LOGOUT-20261020-230208-623af99c.apk` and explicitly identified it as the latest. This actual finished APK supersedes the earlier attempt to infer the latest release from 1901/1903 builder history. It is preserved as supplied and was not installed, patched, re-signed or published.
