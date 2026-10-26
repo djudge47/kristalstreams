@@ -1,3 +1,11 @@
+# Fire TV black home screen tile — October 26, 2026
+
+The owner built and supplied `KristalStreams-2026102601-FIRE-TV-BLACK-20261026-094130-03380c73.apk` using the matching existing signing key. VersionCode is 2026102601; size is 84,606,074 bytes; SHA256 is `1f31d53f9e95646a2e40fc6fdf8a9f7d770826d1d605e13af6aa353de235f73d`.
+
+Verified APK v2 RSA/SHA256 signature and the complete chunked content digest. The signer remains `459b8227b6f703202277cbb8aca96c33f968fbfc45b2000cf115d6d1cb6dfe57`. Compared with the working 2026102001 APK, only the five mipmap TV-banner density variants and the manifest version number changed. All five banners match the approved black landscape preview; all DEX code, native libraries and other artwork are byte-identical. The APK manifest banner resource resolves to these five files. Physical Fire TV appearance requires the owner to install and check the update.
+
+The download page and exact-release packaging now select 2026102601. The attachment route and service worker download bypass are preserved, and website cache names advance to v7. Release packaging reconstructs the exact owner-supplied signed file relative to the unchanged build-9506 source asset. The historical notes below describe previous releases, not the current downloadable APK.
+
 # Android release reconciliation and download-page guard
 
 ## Downloader button compatibility — October 26, 2026
