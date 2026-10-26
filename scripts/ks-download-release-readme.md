@@ -1,3 +1,13 @@
+# Thumbnail-sizing device test — October 26, 2026
+
+Owner-approved isolated test build 2026102603 is available only through `/test`, redirecting to `/downloads/KristalStreams-Test.apk?v=2026102603`. Main download, /original and /fix retain the exact original 2026102001 APK. No speed or missing-logo fix is claimed until device testing.
+
+Uploaded signed test APK: 84,593,786 bytes; SHA256 `30b2ad30f68d16550bb1e1754703dfb05268787b53f4a506d8ff545e373df20c`. APK v2 RSA/SHA256 signature and full chunked digest verified. Original signer retained. Compared with 2026102001, only classes.dex and manifest versionCode differ. Test DEX exactly matches the planned patch; all images, resources, native libraries, permissions and other APK payloads remain unchanged.
+
+The 122-byte bounded patch changes only `Lf/j/b/x;->h(ImageView,Callback)`. For requests without an explicit size it uses the existing view dimensions and centerInside behavior; existing fit/crop requests retain their scaling choice, explicitly sized requests bypass automatic sizing, and zero-size views retain deferred layout/placeholder/callback handling. No new classes, method references, DEX sections or registers; all other method bodies remain byte-identical. Timeouts, retry policy, URLs, authentication, provider settings and playback are unchanged. Resizing decoded bitmaps does not by itself reduce the network bytes of source images.
+
+Patch bytes, original/patched DEX hashes and decoded control-flow fixtures are in scripts/android-image-sizing. The stdlib Python test executes the encoded Dalvik subset for 32 combinations plus explicit crop+fit. This is a control-flow simulation, not Android runtime certification or a performance measurement. Release CI verifies both actual built signed APK identities and preserves existing download/browser regressions.
+
 # Android release reconciliation and download-page guard
 
 ## Downloader button compatibility — October 26, 2026

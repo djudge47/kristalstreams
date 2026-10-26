@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { loadApprovedAndroidApk } from './scripts/ks-android-release.mjs';
+import { loadApprovedAndroidApk as loadImageTestApk } from './scripts/ks-android-image-test-release.mjs';
 
 export default defineConfig({
   plugins: [react(), {
@@ -8,6 +9,7 @@ export default defineConfig({
     apply: 'build',
     async generateBundle() {
       this.emitFile({ type: 'asset', fileName: 'downloads/KristalStreams.apk', source: await loadApprovedAndroidApk() });
+      this.emitFile({ type: 'asset', fileName: 'downloads/KristalStreams-Test.apk', source: await loadImageTestApk() });
     },
   }],
   optimizeDeps: {

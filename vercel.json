@@ -1,6 +1,14 @@
 {
   "routes": [
     {
+      "src": "^/test/?$",
+      "status": 307,
+      "headers": {
+        "Location": "/downloads/KristalStreams-Test.apk?v=2026102603",
+        "Cache-Control": "no-store"
+      }
+    },
+    {
       "src": "^/(original|fix)/?$",
       "status": 307,
       "headers": {
@@ -12,6 +20,14 @@
       "src": "^/downloads/KristalStreams\\.apk$",
       "headers": {
         "Content-Disposition": "attachment; filename=\"KristalStreams.apk\"",
+        "Content-Type": "application/vnd.android.package-archive"
+      },
+      "continue": true
+    },
+    {
+      "src": "^/downloads/KristalStreams-Test\\.apk$",
+      "headers": {
+        "Content-Disposition": "attachment; filename=\"KristalStreams-Test.apk\"",
         "Content-Type": "application/vnd.android.package-archive"
       },
       "continue": true
