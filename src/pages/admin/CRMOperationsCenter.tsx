@@ -41,6 +41,7 @@ import PaidRenewalReview from './PaidRenewalReview';
 import CustomerPortalLink from './CustomerPortalLink';
 import type { RenewalPaymentReceipt } from '../../../_shared/ks-crm-renewal-payment.js';
 import PreviewPaidOrders from './PreviewPaidOrders';
+import NewServiceOrders from './NewServiceOrders';
 import { billingRenewalAt, customerPaymentLabel, isLegacyPaidCustomer, displayedAccountStatus, isPersonalCustomer, isBillingExcluded, isPreviewPaidCustomer, isBillingOverdue, isDueWithin, isTrialCustomer, isUnpaidCustomer, trialBadge } from '../../../_shared/ks-crm-status.js';
 
 type Customer = {
@@ -537,6 +538,7 @@ const CRMOperationsCenter: React.FC = () => {
       <BulkCrmServiceSync customerIds={customers.map(customer=>customer.id)} visibleCustomerIds={searchMatches.map(customer=>customer.id)} searchActive={Boolean(search.trim())} loading={loading} onApplied={refresh} />
       <details className="rounded-2xl border border-gray-700 p-4"><summary className="cursor-pointer text-sm font-semibold text-gray-300">Read-only comparison without saving</summary><div className="mt-4"><BulkXuiCheck customers={customers} loading={loading} /></div></details>
       <PreviewPaidOrders />
+      <NewServiceOrders />
       <RoombaCrmLink onLinked={refresh} onShowCustomer={(username) => {
         setSearch(username); setFilter('all'); setPage(1);
         document.getElementById('crm-customer-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });

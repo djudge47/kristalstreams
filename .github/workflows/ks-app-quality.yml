@@ -37,6 +37,7 @@ jobs:
           node scripts/test-ks-renewal-status-browser.mjs
           node scripts/test-ks-payment-history-browser.mjs
           node scripts/test-ks-admin-payment-history-browser.mjs
+          node scripts/test-ks-new-service-orders-browser.mjs
       - name: Verify Production and Preview portal and manual receipts with disposable SQL
         run: |
           npm install --prefix /tmp/ks-release-fixtures --no-save --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.5.10
@@ -61,6 +62,7 @@ jobs:
           node scripts/test-ks-password-reset-request.mjs
           node scripts/test-ks-help-content.mjs
           node scripts/test-ks-payments.mjs
+          node scripts/test-ks-paid-new-service-review.mjs
           node scripts/test-ks-live-receipt-rollout.mjs
           node scripts/test-ks-checkout-attempt.mjs
           node scripts/test-ks-checkout-client.mjs

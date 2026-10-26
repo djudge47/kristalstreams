@@ -6,8 +6,10 @@ import { normalizeProviderLine } from './ks-roomba-line-snapshot.js';
 
 const endpoint = 'https://cdn.rooomba.tv/WDXTMHmN/';
 // Read-only adapter. No write action, form builder, Stripe key or execution store.
-export function createPaidReadAdapter({ env = process.env, fetchImpl = fetch, dispatcherFactory = createFixieDispatcher, now = Date.now } = {}) {
-  if (env.VERCEL_ENV !== 'preview' || env.ROOMBA_API_URL !== endpoint || typeof env.ROOMBA_API_KEY !== 'string'
+export function createPaidReadAdapter({ env = process.env, fetchImpl = fetch, dispatcherFactory = createFixieDispatcher, now = Date.now,
+  allowProductionReview = false } = {}) {
+  if (!(env.VERCEL_ENV === 'preview' || (allowProductionReview === true && env.VERCEL_ENV === 'production'))
+    || env.ROOMBA_API_URL !== endpoint || typeof env.ROOMBA_API_KEY !== 'string'
     || !env.ROOMBA_API_KEY || /\s/.test(env.ROOMBA_API_KEY)) throw new Error('paid_provider_unavailable');
   const proxy = fixieProxyUrl(env.FIXIE_URL).href;
   const read = async (action, lineId, expectedLinePassword) => {
