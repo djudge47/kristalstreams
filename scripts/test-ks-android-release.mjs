@@ -4,13 +4,13 @@ import { createHash } from 'node:crypto';
 import { loadApprovedAndroidApk, materializeAndroidRelease, androidRelease } from './ks-android-release.mjs';
 const sha = value => createHash('sha256').update(value).digest('hex');
 const apk = await loadApprovedAndroidApk();
-assert.equal(apk.length, 84606074);
-assert.equal(sha(apk), '1f31d53f9e95646a2e40fc6fdf8a9f7d770826d1d605e13af6aa353de235f73d');
-assert.equal(androidRelease.versionCode, 2026102601);
+assert.equal(apk.length, 84593786);
+assert.equal(sha(apk), '47e4658b604479d9fad04a1876e92de500d6f0808dc67300a20df3ac0699ccd7');
+assert.equal(androidRelease.versionCode, 2026102001);
 console.log('PASS: release packaging reproduces the exact owner-supplied signed APK, not the older website installer');
 const [base, encoded] = await Promise.all([
   readFile(new URL('../public/downloads/KristalStreams.apk', import.meta.url)),
-  readFile(new URL('./releases/KristalStreams-2026102601.release.b64', import.meta.url), 'utf8'),
+  readFile(new URL('./releases/KristalStreams-2026102001.release.b64', import.meta.url), 'utf8'),
 ]);
 const corrupt = Buffer.from(base); corrupt[100] ^= 1;
 assert.throws(() => materializeAndroidRelease(corrupt, encoded));
