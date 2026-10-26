@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { loadApprovedAndroidApk, androidRelease } from './ks-android-image-test-release.mjs';
+const apk = await loadApprovedAndroidApk();
+assert.equal(androidRelease.versionCode, 2026102603);
+assert.equal(apk.length, 84593786);
+assert.equal(createHash('sha256').update(apk).digest('hex'), '30b2ad30f68d16550bb1e1754703dfb05268787b53f4a506d8ff545e373df20c');
+if (process.argv.includes('--built')) assert.deepEqual(await readFile(new URL('../dist/downloads/KristalStreams-Test.apk', import.meta.url)), apk);
+console.log('PASS: separate thumbnail-sizing test download matches the exact owner-signed APK; runtime image loading remains unverified');
