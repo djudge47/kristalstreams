@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
+import { runInNewContext } from 'node:vm';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
@@ -51,7 +52,7 @@ try {
   assert.equal(button(tree), undefined);
   const html = markup(tree);
   assert.match(html, /href="\/downloads\/KristalStreams\.apk\?v=2026102001"/);
-  assert.match(html, /download="KristalStreams.apk"/);
+  assert.doesNotMatch(html, /download=/);
   assert.doesNotMatch(html, /temporarily unavailable|Version 9506|Android 7\.0|Supported devices|<video|<iframe/);
   const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]);
   assert.ok(hrefs.includes('mailto:support@kristalstream.com'));
@@ -102,7 +103,35 @@ try {
   unmount(); assert.equal(cleared, 1);
   fresh(true); assert.equal(renderPrompt(), null);
   console.log('PASS: global setup reminder links only to reviewed help, preserves installed apps, dismisses with blocked storage and cleans its timer; standalone mode stays quiet');
-  console.log('5 device-setup/download regression groups passed. No real installer, browser prompt, connected account, provider, mail or payment was accessed.');
+  const config = JSON.parse(await readFile('vercel.json', 'utf8'));
+  const attachment = config.routes.find(rule => rule.headers?.['Content-Disposition']);
+  assert.ok(attachment && attachment.continue === true);
+  assert.equal(attachment.headers['Content-Disposition'], 'attachment; filename="KristalStreams.apk"');
+  assert.equal(attachment.headers['Content-Type'], 'application/vnd.android.package-archive');
+  assert.ok(config.routes.indexOf(attachment) < config.routes.findIndex(rule => rule.handle === 'filesystem'));
+  assert.ok(new RegExp(attachment.src).test('/downloads/KristalStreams.apk'));
+  assert.ok(!new RegExp(attachment.src).test('/client/dashboard'));
+  const workerEvents = new Map(), intercepted = [], deleted = [];
+  let workerFetches = 0;
+  runInNewContext(await readFile('public/sw.js', 'utf8'), {
+    URL, self: { location: { origin: 'https://fixture.invalid' }, clients: { claim: async () => {} },
+      addEventListener: (name, handler) => workerEvents.set(name, handler) },
+    fetch: async () => { workerFetches++; return { status: 200, clone: () => ({}) }; },
+    caches: { open: async () => ({ put: async () => {} }),
+      keys: async () => ['kristal-streams-v5', 'kristal-runtime-v5', 'kristal-streams-v6', 'kristal-runtime-v6'],
+      delete: async name => { deleted.push(name); } },
+  });
+  for (const path of ['/downloads/KristalStreams.apk', '/downloads/KristalStreams.apk?v=2026102001', '/api/example']) {
+    workerEvents.get('fetch')({ request: { method: 'GET', url: `https://fixture.invalid${path}` }, respondWith: () => assert.fail('Installer/API requests must bypass offline caching') });
+  }
+  assert.equal(workerFetches, 0);
+  workerEvents.get('fetch')({ request: { method: 'GET', url: 'https://fixture.invalid/assets/example.js' }, respondWith: p => intercepted.push(p) });
+  await Promise.all(intercepted); assert.equal(workerFetches, 1);
+  let activated;
+  workerEvents.get('activate')({ waitUntil: p => { activated = p; } }); await activated;
+  assert.deepEqual(deleted.sort(), ['kristal-runtime-v5', 'kristal-streams-v5']);
+  console.log('PASS: ordinary APK navigation receives attachment headers; installer requests bypass the real service worker and old offline caches are removed');
+  console.log('6 device-setup/download regression groups passed. No real installer, browser prompt, connected account, provider, mail or payment was accessed.');
 } finally {
   unmount(); for (const [name, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; }
   await rm(directory, { recursive: true, force: true });

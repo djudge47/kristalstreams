@@ -1,5 +1,5 @@
-const CACHE_NAME = 'kristal-streams-v5';
-const RUNTIME_CACHE = 'kristal-runtime-v5';
+const CACHE_NAME = 'kristal-streams-v6';
+const RUNTIME_CACHE = 'kristal-runtime-v6';
 
 const PRECACHE_URLS = [
   '/',
@@ -31,6 +31,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (event.request.url.includes('/api/')) return;
+  // Native installers belong to the browser/Downloader download handler.
+  // Do not clone an APK into the website's offline cache or return a cached one.
+  if (new URL(event.request.url).pathname.startsWith('/downloads/')) return;
 
   if (event.request.url.startsWith(self.location.origin)) {
     event.respondWith(
