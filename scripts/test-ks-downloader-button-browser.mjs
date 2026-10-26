@@ -48,8 +48,8 @@ try {
     const download = await waiting; assert.equal(download.suggestedFilename(), 'KristalStreams.apk');
     const file = join(directory, `download-${webview}.apk`); await download.saveAs(file);
     assert.equal(await download.failure(), null);
-    assert.equal(createHash('sha256').update(await readFile(file)).digest('hex'), '47e4658b604479d9fad04a1876e92de500d6f0808dc67300a20df3ac0699ccd7');
-    const cached = await page.evaluate(async url => Boolean(await caches.match(url)), `${origin}/downloads/KristalStreams.apk?v=2026102001`);
+    assert.equal(createHash('sha256').update(await readFile(file)).digest('hex'), '1f31d53f9e95646a2e40fc6fdf8a9f7d770826d1d605e13af6aa353de235f73d');
+    const cached = await page.evaluate(async url => Boolean(await caches.match(url)), `${origin}/downloads/KristalStreams.apk?v=2026102601`);
     assert.equal(cached, false);
     console.log(`PASS: ${webview ? 'Android-WebView user-agent' : 'desktop'} plain-link click downloads the full approved APK with the actual service worker active and no installer cache`);
     await context.close();

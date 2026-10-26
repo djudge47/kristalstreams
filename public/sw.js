@@ -1,5 +1,5 @@
-const CACHE_NAME = 'kristal-streams-v6';
-const RUNTIME_CACHE = 'kristal-runtime-v6';
+const CACHE_NAME = 'kristal-streams-v7';
+const RUNTIME_CACHE = 'kristal-runtime-v7';
 
 const PRECACHE_URLS = [
   '/',

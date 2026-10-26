@@ -46,12 +46,12 @@ function offer(prompt = async () => {}, userChoice = Promise.resolve({ outcome: 
 }
 try {
   fresh(); render(); let tree = render();
-  assert.match(text(tree), /Build 2026102001/); assert.match(text(tree), /Download Android APK/); assert.match(text(tree), /keep your current installation and saved users/);
+  assert.match(text(tree), /Build 2026102601/); assert.match(text(tree), /Download Android APK/); assert.match(text(tree), /keep your current installation and saved users/);
   assert.match(text(tree), /Signing out of the website does not sign out of the TV app/);
   assert.match(text(tree), /does not install or update the Android streaming app/);
   assert.equal(button(tree), undefined);
   const html = markup(tree);
-  assert.match(html, /href="\/downloads\/KristalStreams\.apk\?v=2026102001"/);
+  assert.match(html, /href="\/downloads\/KristalStreams\.apk\?v=2026102601"/);
   assert.doesNotMatch(html, /download=/);
   assert.doesNotMatch(html, /temporarily unavailable|Version 9506|Android 7\.0|Supported devices|<video|<iframe/);
   const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]);
@@ -118,10 +118,10 @@ try {
       addEventListener: (name, handler) => workerEvents.set(name, handler) },
     fetch: async () => { workerFetches++; return { status: 200, clone: () => ({}) }; },
     caches: { open: async () => ({ put: async () => {} }),
-      keys: async () => ['kristal-streams-v5', 'kristal-runtime-v5', 'kristal-streams-v6', 'kristal-runtime-v6'],
+      keys: async () => ['kristal-streams-v5', 'kristal-runtime-v5', 'kristal-streams-v7', 'kristal-runtime-v7'],
       delete: async name => { deleted.push(name); } },
   });
-  for (const path of ['/downloads/KristalStreams.apk', '/downloads/KristalStreams.apk?v=2026102001', '/api/example']) {
+  for (const path of ['/downloads/KristalStreams.apk', '/downloads/KristalStreams.apk?v=2026102601', '/api/example']) {
     workerEvents.get('fetch')({ request: { method: 'GET', url: `https://fixture.invalid${path}` }, respondWith: () => assert.fail('Installer/API requests must bypass offline caching') });
   }
   assert.equal(workerFetches, 0);

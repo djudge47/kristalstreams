@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 
-export const androidRelease = Object.freeze({ versionCode: 2026102001, bytes: 84593786,
-  sha256: '47e4658b604479d9fad04a1876e92de500d6f0808dc67300a20df3ac0699ccd7' });
+export const androidRelease = Object.freeze({ versionCode: 2026102601, bytes: 84606074,
+  sha256: '1f31d53f9e95646a2e40fc6fdf8a9f7d770826d1d605e13af6aa353de235f73d' });
 const digest = b => createHash('sha256').update(b).digest('hex');
 const fail = () => { throw Error('Approved Android installer integrity check failed.'); };
 const integer = n => Number.isSafeInteger(n);
@@ -55,7 +55,7 @@ export function materializeAndroidRelease(base, encoded) {
 export async function loadApprovedAndroidApk() {
   const [base, encoded] = await Promise.all([
     readFile(new URL('../public/downloads/KristalStreams.apk', import.meta.url)),
-    readFile(new URL('./releases/KristalStreams-2026102001.release.b64', import.meta.url), 'utf8'),
+    readFile(new URL('./releases/KristalStreams-2026102601.release.b64', import.meta.url), 'utf8'),
   ]);
   return materializeAndroidRelease(base, encoded);
 }
