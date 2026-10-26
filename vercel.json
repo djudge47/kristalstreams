@@ -1,6 +1,14 @@
 {
   "routes": [
     {
+      "src": "^/fix/?$",
+      "status": 307,
+      "headers": {
+        "Location": "/downloads/KristalStreams-Restore.apk?v=2026102602",
+        "Cache-Control": "no-store"
+      }
+    },
+    {
       "src": "^/downloads/KristalStreams\\.apk$",
       "headers": {
         "Content-Disposition": "attachment; filename=\"KristalStreams.apk\"",
