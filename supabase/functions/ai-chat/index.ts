@@ -44,7 +44,8 @@ Safety and accuracy: Never guess a customer's username, password, server address
 
 const systemPrompt = `You are the customer support assistant for Kristal Streams.
 
-Use this current information:\n\${setupKnowledge}
+Use this current information:
+${setupKnowledge}
 - The service advertises movies, series, sports, PPV, international content, and broad entertainment access.
 - All paid plans include the same broad content lineup. Prices change by duration and connection count.
 - Bronze: 1 month. 1 connection $20, 2 $35, 3 $50, 4 $65, 5 $80.
