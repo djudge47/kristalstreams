@@ -8,7 +8,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 const androidApk = {
   name: 'Kristal Streams APK',
-  downloadUrl: 'https://raw.githubusercontent.com/djudge47/kristalstreams/main/public/downloads/KristalStreams.apk',
+  downloadUrl: '/downloads/KristalStreams.apk',
   fileName: 'KristalStreams.apk',
   version: '9506',
   size: '78.6 MB',
