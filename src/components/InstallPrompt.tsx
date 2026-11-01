@@ -56,11 +56,7 @@ const InstallPrompt: React.FC = () => {
     localStorage.setItem(DISMISS_KEY, Date.now().toString());
   };
 
-  if (!showPrompt) return (
-    <a href="/downloads/KristalStreams.apk" aria-label="Download Kristal Streams APK" className="fixed bottom-4 right-4 z-50 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-4 py-3 font-semibold text-white shadow-lg hover:bg-red-700">
-      <span className="whitespace-nowrap">Get App</span>
-    </a>
-  );
+  if (!showPrompt) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 animate-slide-up md:bottom-4 md:left-auto md:right-4 md:w-96">
