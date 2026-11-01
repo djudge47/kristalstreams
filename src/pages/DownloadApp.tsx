@@ -8,7 +8,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 const androidApk = {
   name: 'Kristal Streams APK',
-  downloadUrl: '/downloads/KristalStreams.apk',
+  downloadUrl: 'https://raw.githubusercontent.com/djudge47/kristalstreams/main/public/downloads/KristalStreams.apk',
   fileName: 'KristalStreams.apk',
   version: '9506',
   size: '78.6 MB',
@@ -160,54 +160,104 @@ const DownloadApp: React.FC = () => {
             </div>
           </div>
 
-          <div className="mb-12 grid gap-6 lg:grid-cols-3">
-            <div className="rounded-xl border border-gray-800 bg-dark-100 p-6">
-              <Tv className="mb-4 h-8 w-8 text-primary" />
-              <h3 className="text-xl font-semibold text-white">TV Boxes & Firestick</h3>
-              <ol className="mt-4 space-y-3 text-sm text-gray-300">
-                <li>1. Open Downloader or your device browser.</li>
-                <li>2. Go to the Kristal Stream APK download page.</li>
-                <li>3. Download and open {androidApk.fileName}.</li>
-                <li>4. Allow install from unknown apps when prompted.</li>
-              </ol>
-            </div>
-
-            <div className="rounded-xl border border-gray-800 bg-dark-100 p-6">
-              <Smartphone className="mb-4 h-8 w-8 text-primary" />
-              <h3 className="text-xl font-semibold text-white">Android Phones</h3>
-              <ol className="mt-4 space-y-3 text-sm text-gray-300">
-                <li>1. Tap Download Kristal Stream APK.</li>
-                <li>2. Open {androidApk.fileName}.</li>
-                <li>3. Approve the install permission.</li>
-                <li>4. Open the installed app from your app list.</li>
-              </ol>
-            </div>
-
-            <div className="rounded-xl border border-gray-800 bg-dark-100 p-6">
-              <Monitor className="mb-4 h-8 w-8 text-primary" />
-              <h3 className="text-xl font-semibold text-white">Browser Option</h3>
-              <p className="mt-4 text-sm text-gray-300">
-                The browser version still works without installing the APK. Customers can sign in from the website when they do not want to install the Android file.
-              </p>
-              {isInstalled ? (
-                <div className="mt-4 flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-green-300">
-                  <CheckCircle className="h-5 w-5" />
-                  Web app already installed
+          <section className="mb-12" aria-labelledby="installation-guides">
+            <h2 id="installation-guides" className="mb-3 text-center text-3xl font-bold text-white">Step-by-step installation guides</h2>
+            <p className="mb-8 text-center text-gray-300">Choose your device and follow each step in order. The Android APK is intended for compatible Android-based devices only.</p>
+            <div className="grid gap-6 lg:grid-cols-2">
+                <div className="rounded-xl border border-gray-700 bg-dark-100 p-5 sm:p-7">
+                  <h3 className="mb-4 text-xl font-bold text-white">Firestick / Fire TV</h3>
+                  <ol className="space-y-4">
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">1</span><span className="pt-1 text-sm leading-relaxed text-gray-300">From Fire TV Home, search for Downloader by AFTVnews and install it from the Amazon Appstore.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">2</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Open Settings → My Fire TV or Device & Software → Developer Options → Install Unknown Apps; allow Downloader. If Developer Options is hidden, go to About, highlight the device name and press Select seven times.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">3</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Open Downloader, enter the direct APK address displayed above, and choose Go.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">4</span><span className="pt-1 text-sm leading-relaxed text-gray-300">When the download completes, select Install, then Open. If prompted, grant Downloader installation permission and retry.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">5</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Find Kristal Streams in Your Apps & Channels and sign in with your account details.</span></li>
+                  </ol>
                 </div>
-              ) : deferredPrompt ? (
-                <button
-                  type="button"
-                  onClick={handleInstall}
-                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-white hover:bg-red-700"
-                >
-                  <Download className="h-5 w-5" />
-                  Install Web App
-                </button>
-              ) : (
-                <p className="mt-4 text-sm text-gray-500">Current device detected: {platform}</p>
-              )}
+                <div className="rounded-xl border border-gray-700 bg-dark-100 p-5 sm:p-7">
+                  <h3 className="mb-4 text-xl font-bold text-white">Android TV / Google TV / ONN</h3>
+                  <ol className="space-y-4">
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">1</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Find Downloader in your TV's app store, if offered, or open a browser that can download APKs.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">2</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Allow installation from Downloader or the browser when prompted (often Settings → Apps → Special app access → Install unknown apps).</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">3</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Enter the direct APK link above, download the file and choose Install.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">4</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Open Kristal Streams from the Apps screen and sign in.</span></li>
+                  </ol>
+                </div>
+                <div className="rounded-xl border border-gray-700 bg-dark-100 p-5 sm:p-7">
+                  <h3 className="mb-4 text-xl font-bold text-white">Smart TV (Samsung / LG / other)</h3>
+                  <ol className="space-y-4">
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">1</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Check the TV's operating system in Settings → About or Support → TV Information.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">2</span><span className="pt-1 text-sm leading-relaxed text-gray-300">If your smart TV uses Android TV or Google TV, follow the Android TV steps on this page.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">3</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Samsung Tizen and LG webOS TVs cannot directly install Android APK files. Connect a compatible Fire TV Stick, ONN or Google TV streaming device to an HDMI port.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">4</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Switch the TV to the streaming device's HDMI input, then follow that device's instructions above.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">5</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Alternatively, use the TV's browser to visit kristalstream.com if its browser supports the web service.</span></li>
+                  </ol>
+                </div>
+                <div className="rounded-xl border border-gray-700 bg-dark-100 p-5 sm:p-7">
+                  <h3 className="mb-4 text-xl font-bold text-white">Android phone / tablet</h3>
+                  <ol className="space-y-4">
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">1</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Tap Download Kristal Streams APK above in your phone browser.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">2</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Open the downloaded APK from Downloads or the download notification.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">3</span><span className="pt-1 text-sm leading-relaxed text-gray-300">When asked, allow your browser or file manager to install unknown apps. Return to the installer and select Install.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">4</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Open Kristal Streams from the app list and sign in.</span></li>
+                  </ol>
+                </div>
+                <div className="rounded-xl border border-gray-700 bg-dark-100 p-5 sm:p-7">
+                  <h3 className="mb-4 text-xl font-bold text-white">Mac / Apple computer</h3>
+                  <ol className="space-y-4">
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">1</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Choose Download for Mac / Apple above.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">2</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Open the downloaded ZIP file and extract the application.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">3</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Move the extracted app to Applications if instructed by the package, then open it. Only approve macOS security prompts if you trust the file.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">4</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Sign in, or use kristalstream.com in a supported browser instead.</span></li>
+                  </ol>
+                </div>
+                <div className="rounded-xl border border-gray-700 bg-dark-100 p-5 sm:p-7">
+                  <h3 className="mb-4 text-xl font-bold text-white">Web browser</h3>
+                  <ol className="space-y-4">
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">1</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Open kristalstream.com in a supported browser.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">2</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Choose Sign In and enter your account details.</span></li>
+                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">3</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Navigate to the available streaming sections. No APK is needed.</span></li>
+                  </ol>
+                </div>
             </div>
-          </div>
+          </section>
+
+          <section className="mb-12 rounded-2xl border border-gray-700 bg-dark-100 p-6 sm:p-8" aria-labelledby="using-kristal-streams">
+            <h2 id="using-kristal-streams" className="mb-3 text-3xl font-bold text-white">After installation: using Kristal Streams</h2>
+            <p className="mb-6 text-gray-300">Your available channels and titles depend on your account and service package.</p>
+            <div className="grid gap-6 md:grid-cols-3">
+              <div><h3 className="mb-3 text-xl font-semibold text-white">Live TV</h3>
+                <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-gray-300">
+                  <li>Open the app and sign in with your supplied account details.</li>
+                  <li>On the home screen, select Live TV.</li>
+                  <li>Choose a channel category, then highlight a channel and press Select or OK to play.</li>
+                  <li>Use the remote's Back button to return to the channel list or previous screen.</li>
+                  <li>If a channel does not play, try another channel and check your internet connection.</li>
+                </ol>
+              </div>
+              <div><h3 className="mb-3 text-xl font-semibold text-white">Movies</h3>
+                <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-gray-300">
+                  <li>From the home screen choose Movies.</li>
+                  <li>Browse categories or use Search to find a title.</li>
+                  <li>Select the movie to open details, then choose Play.</li>
+                  <li>If offered, choose Resume or Play From Beginning.</li>
+                  <li>Use the player's controls for pause, seek and audio or subtitles when available.</li>
+                </ol>
+              </div>
+              <div><h3 className="mb-3 text-xl font-semibold text-white">Series</h3>
+                <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-gray-300">
+                  <li>From the home screen choose Series.</li>
+                  <li>Search or browse for the show you want.</li>
+                  <li>Open the show, choose a season, then an episode.</li>
+                  <li>Select Play or Continue Watching when available.</li>
+                  <li>Use Back to return to episode selection.</li>
+                </ol>
+              </div>
+            </div>
+            <div className="mt-7 rounded-lg border border-yellow-500/25 bg-yellow-500/10 p-4 text-sm text-yellow-100/90">
+              <strong>Installation troubleshooting:</strong> If you see “App not installed,” check available storage and whether a different or newer signed version is already installed. Do not uninstall an existing working version unless you have backed up your access details. Newer Fire TV devices running Vega OS do not support Android APK sideloading.
+            </div>
+          </section>
 
           <div className="mb-12 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-8">
             <div className="flex items-start gap-3">
