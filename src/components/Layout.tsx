@@ -2,7 +2,6 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
-import BackToTop from './BackToTop';
 
 const Layout: React.FC = () => {
   const location = useLocation();
@@ -15,7 +14,6 @@ const Layout: React.FC = () => {
         <Outlet />
       </main>
       {!isPasswordReset && <Footer />}
-      {!isPasswordReset && <BackToTop />}
     </div>
   );
 };
