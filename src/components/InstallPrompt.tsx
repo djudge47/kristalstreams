@@ -57,7 +57,7 @@ const InstallPrompt: React.FC = () => {
   };
 
   if (!showPrompt) return (
-    <a href="https://raw.githubusercontent.com/djudge47/kristalstreams/main/public/downloads/KristalStreams.apk" aria-label="Download Kristal Streams APK" className="fixed bottom-4 right-4 z-50 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-4 py-3 font-semibold text-white shadow-lg hover:bg-red-700">
+    <a href="/downloads/KristalStreams.apk" aria-label="Download Kristal Streams APK" className="fixed bottom-4 right-4 z-50 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-4 py-3 font-semibold text-white shadow-lg hover:bg-red-700">
       <span className="whitespace-nowrap">Get App</span>
     </a>
   );
@@ -105,7 +105,7 @@ const InstallPrompt: React.FC = () => {
               {deferredPrompt && (
                 <button onClick={() => void handleInstall()} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-dark-200 px-4 py-2.5 font-medium text-white transition-colors hover:bg-dark-300">Web App</button>
               )}
-              <a href="https://raw.githubusercontent.com/djudge47/kristalstreams/main/public/downloads/KristalStreams.apk" download onClick={handleDismiss} className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-medium text-white transition-colors hover:bg-red-700"><span className="whitespace-nowrap">Get APK</span></a>
+              <a href="/downloads/KristalStreams.apk" download onClick={handleDismiss} className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-medium text-white transition-colors hover:bg-red-700"><span className="whitespace-nowrap">Get APK</span></a>
             </div>
             <p className="text-center text-xs text-gray-500">APK installs directly — allow "unknown sources" if prompted</p>
           </div>
