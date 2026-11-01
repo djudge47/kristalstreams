@@ -37,12 +37,12 @@ const guides = [
   {
     title: 'Samsung / LG Smart TV',
     steps: [
-      'Samsung Tizen and LG webOS televisions cannot install an Android APK.',
-      'Open your TV’s official app store and find a compatible IPTV player, such as IPTV Smarters if available.',
-      'Install the player and select the Xtream Codes login option if supported.',
-      'Enter the server address, username and password supplied with your service.',
+      'Check the TV’s built-in apps or home screen for an IPTV or Live TV player that supports adding your own service.',
+      'If there is no compatible built-in player, open the TV’s official app store and look for an IPTV player, such as IPTV Smarters if available.',
+      'Open the compatible player and choose Xtream Codes login if it offers that option.',
+      'Enter the server address, username and password provided for your Kristal Streams service.',
     ],
-    note: 'The IPTV player is separate from the Kristal Streams Android app. Contact support if you cannot find a compatible player.',
+    note: 'Samsung Tizen and LG webOS cannot install kristalstreams.apk. Built-in Live TV apps do not always accept IPTV service credentials; use a compatible player or contact support for help.',
   },
   {
     title: 'Web browser',
