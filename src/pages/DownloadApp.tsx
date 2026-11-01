@@ -39,10 +39,10 @@ const guides = [
     steps: [
       'Check the TV’s built-in apps or home screen for an IPTV or Live TV player that supports adding your own service.',
       'If there is no compatible built-in player, open the TV’s official app store and look for an IPTV player, such as IPTV Smarters if available.',
-      'Open the compatible player and choose Xtream Codes login if it offers that option.',
-      'Enter the server address, username and password provided for your Kristal Streams service.',
+      'Open the compatible player. For help connecting it to your Kristal Streams service, contact Kristal Streams support.',
+      'Follow the setup instructions provided directly by Kristal Streams support. Do not use or share third-party server addresses.',
     ],
-    note: 'Samsung Tizen and LG webOS cannot install kristalstreams.apk. Built-in Live TV apps do not always accept IPTV service credentials; use a compatible player or contact support for help.',
+    note: 'Samsung Tizen and LG webOS cannot install kristalstreams.apk. Some built-in Live TV apps do not support external services. Contact Kristal Streams support for compatible player configuration.',
   },
   {
     title: 'Web browser',
