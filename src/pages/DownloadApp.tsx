@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Apple, CheckCircle, Download, ExternalLink, Monitor, ShieldCheck, Smartphone, Tv } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Download, ExternalLink, Monitor, ShieldCheck, Smartphone, Tv } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -15,22 +15,12 @@ const androidApk = {
   requirements: 'Android 7.0+',
 };
 
-const macApp = {
-  name: 'Kristal Streams for Mac / Apple',
-  downloadUrl: 'https://zl30hmmadap6eroe.public.blob.vercel-storage.com/KristalStreams-website-style-macOS-app-v3.zip',
-  fileName: 'KristalStreams-website-style-macOS-app-v3.zip',
-  version: '1.8.5',
-  size: '141 MB',
-  requirements: 'macOS 11.0+',
-};
-
 const supportedDevices = [
   'Android phones and tablets',
   'Android TV boxes',
   'Amazon Fire TV / Firestick',
   'NVIDIA Shield',
   'Chromecast with Google TV',
-  'Mac / Apple computers',
   'Web browser option',
 ];
 
@@ -87,7 +77,7 @@ const DownloadApp: React.FC = () => {
               <h1 className="text-4xl font-bold text-white md:text-5xl">Download Kristal Streams Apps</h1>
             </div>
             <p className="mx-auto max-w-3xl text-xl text-gray-400">
-              Download the Kristal Stream APK for Android, Firestick, and Android TV devices. Mac / Apple users can use the Mac download or stream directly in the browser.
+              Download the Kristal Stream APK for Android, Firestick, and Android TV devices. You can also access the browser version without an APK.
             </p>
           </div>
 
@@ -132,34 +122,6 @@ const DownloadApp: React.FC = () => {
             </div>
           </div>
 
-          <div className="mb-12 rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-slate-500/5 p-8">
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-start gap-4">
-                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-blue-500/20">
-                  <Apple className="h-8 w-8 text-gray-200" />
-                </div>
-                <div>
-                  <p className="mb-2 text-sm font-semibold uppercase tracking-[0.22em] text-blue-300">Apple / Mac Download</p>
-                  <h2 className="text-2xl font-bold text-white">{macApp.name}</h2>
-                  <p className="mt-2 text-gray-400">
-                    File: {macApp.fileName} · Version {macApp.version} · {macApp.size} · {macApp.requirements}
-                  </p>
-                  <p className="mt-3 text-sm text-gray-500">
-                    This Mac download is hosted separately because the app package is larger than GitHub’s file limit.
-                  </p>
-                </div>
-              </div>
-
-              <a
-                href={macApp.downloadUrl}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-8 py-4 font-semibold text-white transition-colors hover:bg-blue-600"
-              >
-                <Download className="h-5 w-5" />
-                Download for Mac / Apple
-              </a>
-            </div>
-          </div>
-
           <section className="mb-12" aria-labelledby="installation-guides">
             <h2 id="installation-guides" className="mb-3 text-center text-3xl font-bold text-white">Step-by-step installation guides</h2>
             <p className="mb-8 text-center text-gray-300">Choose your device and follow each step in order. The Android APK is intended for compatible Android-based devices only.</p>
@@ -200,15 +162,6 @@ const DownloadApp: React.FC = () => {
                     <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">2</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Open the downloaded APK from Downloads or the download notification.</span></li>
                     <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">3</span><span className="pt-1 text-sm leading-relaxed text-gray-300">When asked, allow your browser or file manager to install unknown apps. Return to the installer and select Install.</span></li>
                     <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">4</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Open Kristal Streams from the app list and sign in.</span></li>
-                  </ol>
-                </div>
-                <div className="rounded-xl border border-gray-700 bg-dark-100 p-5 sm:p-7">
-                  <h3 className="mb-4 text-xl font-bold text-white">Mac / Apple computer</h3>
-                  <ol className="space-y-4">
-                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">1</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Choose Download for Mac / Apple above.</span></li>
-                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">2</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Open the downloaded ZIP file and extract the application.</span></li>
-                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">3</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Move the extracted app to Applications if instructed by the package, then open it. Only approve macOS security prompts if you trust the file.</span></li>
-                    <li className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">4</span><span className="pt-1 text-sm leading-relaxed text-gray-300">Sign in, or use kristalstream.com in a supported browser instead.</span></li>
                   </ol>
                 </div>
                 <div className="rounded-xl border border-gray-700 bg-dark-100 p-5 sm:p-7">
@@ -281,7 +234,6 @@ const DownloadApp: React.FC = () => {
               <div className="space-y-3 text-gray-300">
                 <p><strong>Internet:</strong> 5 Mbps for HD, 25 Mbps for 4K.</p>
                 <p><strong>Android:</strong> Android 7.0 or newer.</p>
-                <p><strong>Mac:</strong> macOS 11.0 or newer for the Mac download.</p>
                 <p><strong>Account:</strong> Active subscription, IPTV account, or demo access.</p>
                 <p><strong>Storage:</strong> Enough free space to install the download.</p>
               </div>
